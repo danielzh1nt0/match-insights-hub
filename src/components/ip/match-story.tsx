@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { Check, Play, Share2, Shield, TriangleAlert, X } from "lucide-react";
@@ -173,6 +174,8 @@ export function MatchStory({
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
+  const pausedRef = useRef(false);
+  const progressRef = useRef(0);
   const slide = slides[index]!;
 
   const close = useCallback(() => {
@@ -219,8 +222,6 @@ export function MatchStory({
     return () => cancelAnimationFrame(raf);
   }, [index, slide.durationMs, next]);
 
-  const pausedRef = useRef(false);
-  const progressRef = useRef(0);
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
@@ -289,11 +290,11 @@ export function MatchStory({
 
   // Tap / hold / swipe handling
   const gesture = useRef<{ t: number; y: number; hold?: ReturnType<typeof setTimeout> } | null>(null);
-  const onDown = (e: React.PointerEvent) => {
+  const onDown = (e: ReactPointerEvent) => {
     const hold = setTimeout(() => setPaused(true), 220);
     gesture.current = { t: performance.now(), y: e.clientY, hold };
   };
-  const onUp = (side: "left" | "right") => (e: React.PointerEvent) => {
+  const onUp = (side: "left" | "right") => (e: ReactPointerEvent) => {
     const g = gesture.current;
     gesture.current = null;
     if (!g) return;
