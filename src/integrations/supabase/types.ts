@@ -14,7 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      club_settings: {
+        Row: {
+          block_ceiling_min: number
+          club_name: string
+          country: string
+          created_at: string
+          crest_initial: string
+          owner_id: string
+          press_within_2s: number
+          regain_within_5s: number
+          updated_at: string
+        }
+        Insert: {
+          block_ceiling_min?: number
+          club_name?: string
+          country?: string
+          created_at?: string
+          crest_initial?: string
+          owner_id: string
+          press_within_2s?: number
+          regain_within_5s?: number
+          updated_at?: string
+        }
+        Update: {
+          block_ceiling_min?: number
+          club_name?: string
+          country?: string
+          created_at?: string
+          crest_initial?: string
+          owner_id?: string
+          press_within_2s?: number
+          regain_within_5s?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          club_name: string
+          created_at: string
+          full_name: string
+          id: string
+          onboarded: boolean
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          club_name?: string
+          created_at?: string
+          full_name?: string
+          id: string
+          onboarded?: boolean
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          club_name?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          onboarded?: boolean
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      teams: {
+        Row: {
+          age_group: string
+          color_a: string
+          color_b: string
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          age_group?: string
+          color_a?: string
+          color_b?: string
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          age_group?: string
+          color_a?: string
+          color_b?: string
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
