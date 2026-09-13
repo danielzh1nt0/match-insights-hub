@@ -12,25 +12,28 @@ export type Team = {
   colorB: string;
 };
 
+export type Club = { name: string; country: string; crestInitial: string };
+
 type AppState = {
   hydrated: boolean;
-  // auth
+  markHydrated: () => void;
+
   signedIn: boolean;
   user: { name: string; email: string; club: string; role: Role } | null;
   signIn: (email: string, name?: string) => void;
   signOut: () => void;
-  // onboarding
+
   onboarded: boolean;
-  club: { name: string; country: string; crestInitial: string };
+  club: Club;
   teams: Team[];
   targets: typeof DEFAULT_TARGETS;
-  setClub: (club: Partial<AppState["club"]>) => void;
+  setClub: (club: Partial<Club>) => void;
   addTeam: (team: Team) => void;
   updateTeam: (id: string, patch: Partial<Team>) => void;
   removeTeam: (id: string) => void;
   setTargets: (t: Partial<typeof DEFAULT_TARGETS>) => void;
   completeOnboarding: () => void;
-  // library
+
   matches: LibraryMatch[];
   addMatch: (m: LibraryMatch) => void;
   setMatchStatus: (id: string, status: LibraryMatch["status"]) => void;
@@ -42,6 +45,8 @@ export const useApp = create<AppState>()(
   persist(
     (set) => ({
       hydrated: false,
+      markHydrated: () => set({ hydrated: true }),
+
       signedIn: false,
       user: null,
       signIn: (email, name) =>
@@ -79,9 +84,6 @@ export const useApp = create<AppState>()(
     }),
     {
       name: "ipanema-app",
-      onRehydrateStorage: () => (state) => {
-        state?.markHydrated?.();
-      },
       partialize: (s) => ({
         signedIn: s.signedIn,
         user: s.user,
@@ -91,11 +93,9 @@ export const useApp = create<AppState>()(
         targets: s.targets,
         matches: s.matches,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.markHydrated();
+      },
     },
-  ) as never,
-) as unknown as ReturnType<typeof create<AppState & { markHydrated?: () => void }>>;
-
-// Mark hydration on the client so screens can avoid SSR/client mismatches.
-if (typeof window !== "undefined") {
-  useApp.setState({ hydrated: true });
-}
+  ),
+);
