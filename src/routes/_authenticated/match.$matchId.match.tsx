@@ -1,21 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Play } from "lucide-react";
+import { Layers, Pause, Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
+import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
 import { Card, Chip, Pill, Segmented } from "@/components/ip/primitives";
-import { MomentumStrip, Pitch, PitchDots } from "@/components/ip/visual";
-import { useMatch } from "@/hooks/use-match";
+import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
-import {
-  EVENT_GROUPS,
-  fetchMatchData,
-  feedLabel,
-  groupTypes,
-  videoSrc,
-  type FeedEvent,
-} from "@/lib/match-source";
+import { EVENT_GROUPS, feedLabel, groupTypes, videoSrc, type Frame, type FeedEvent } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
@@ -34,27 +27,60 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
 
 type Mode = "video" | "2d" | "both";
 
+const LAYER_STORE = "ipanema-layers";
+const DEFAULT_LAYERS: Record<LayerKey, boolean> = {
+  players: true,
+  ball: true,
+  carrier: true,
+  shapes: false,
+  lanes: false,
+};
+
+function readLayers(): Record<LayerKey, boolean> {
+  if (typeof window === "undefined") return DEFAULT_LAYERS;
+  try {
+    const raw = window.localStorage.getItem(LAYER_STORE);
+    return raw ? { ...DEFAULT_LAYERS, ...(JSON.parse(raw) as Record<LayerKey, boolean>) } : DEFAULT_LAYERS;
+  } catch {
+    return DEFAULT_LAYERS;
+  }
+}
+
+const PHASE_WORD: Record<string, string> = {
+  control: "in control",
+  loose: "ball loose",
+  dead: "ball dead",
+};
+
 function MatchScreen() {
   const { matchId } = Route.useParams();
   const { t: startT } = Route.useSearch();
-  const { match, data, item } = useMatch(matchId);
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
+  const { match, row, label, file, team, loading } = useAnalysis(matchId, scope);
   const [mode, setMode] = useState<Mode>("video");
   const [filter, setFilter] = useState<string>("all");
   const [clock, setClock] = useState<number>(startT ?? 0);
+  const [playing, setPlaying] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
+  const [frame, setFrame] = useState<Frame | null>(null);
+  const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
+  const [layerSheet, setLayerSheet] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const seededRef = useRef(false);
 
-  const row = item?.row ?? null;
+  useEffect(() => setLayers(readLayers()), []);
 
-  const { data: matchData, isPending: dataPending } = useQuery({
-    queryKey: ["match-data", matchId],
-    queryFn: () => fetchMatchData(row!),
-    enabled: Boolean(row),
-    staleTime: Infinity,
-  });
+  const toggleLayer = (key: LayerKey) =>
+    setLayers((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        window.localStorage.setItem(LAYER_STORE, JSON.stringify(next));
+      } catch {
+        /* private mode — layers just won't persist */
+      }
+      return next;
+    });
 
   const { data: videoUrl } = useQuery({
     queryKey: ["match-video", matchId],
@@ -63,8 +89,12 @@ function MatchScreen() {
     staleTime: 30 * 60_000,
   });
 
-  const events: FeedEvent[] = matchData?.events ?? [];
+  const events: FeedEvent[] = file?.events ?? [];
   const total = row?.duration_s ?? match?.durationS ?? 1;
+  const colours = useMemo(
+    () => ({ A: label?.colour_a || "#ef4444", B: label?.colour_b || "#22c55e" }),
+    [label?.colour_a, label?.colour_b],
+  );
 
   // The video clock is the only source of visibility: read it every frame.
   useEffect(() => {
@@ -95,12 +125,29 @@ function MatchScreen() {
     else video.addEventListener("loadedmetadata", seek, { once: true });
   }, [startT, videoUrl]);
 
+  const togglePlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) void video.play();
+    else video.pause();
+  }, []);
+
   const types = groupTypes(filter);
   const shown = useMemo(() => {
     const visible = events.slice(0, visibleCount);
-    const filtered = types ? visible.filter((e) => types.includes(e.type)) : visible;
+    const byTeam = team ? visible.filter((e) => e.team === team) : visible;
+    const filtered = types ? byTeam.filter((e) => types.includes(e.type)) : byTeam;
     return filtered.slice().reverse();
-  }, [events, visibleCount, types]);
+  }, [events, visibleCount, types, team]);
+
+  const ticks = useMemo(() => (team ? events.filter((e) => e.team === team) : events), [events, team]);
+
+  const possessionTeam = frame?.possession;
+  const possessionName =
+    possessionTeam === "A" ? match?.teamA : possessionTeam === "B" ? match?.teamB : null;
+  const possessionLine = possessionName
+    ? `${possessionName.split(" ").at(-1)} · ${PHASE_WORD[frame?.phase ?? ""] ?? "in play"}`
+    : (PHASE_WORD[frame?.phase ?? ""] ?? "No clear possession");
 
   const staleSchema = row ? row.schema_version !== 1 : false;
 
@@ -121,7 +168,7 @@ function MatchScreen() {
         </Card>
       )}
 
-      {dataPending && (
+      {loading && (
         <div
           className="h-1 w-full overflow-hidden rounded-full bg-surface-2"
           role="status"
@@ -135,27 +182,74 @@ function MatchScreen() {
         <>
           <Card className="p-3">
             <div className="relative mx-auto aspect-[16/10] w-full max-w-[880px] overflow-hidden rounded-[12px] bg-surface-2">
+              <video
+                ref={videoRef}
+                {...(videoUrl ? { src: videoUrl } : {})}
+                playsInline
+                preload="metadata"
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+                aria-label={`Match video, ${match.teamA} against ${match.teamB}`}
+                className={cn(
+                  "h-full w-full bg-black object-contain",
+                  mode === "2d" && "invisible",
+                )}
+              />
               {mode === "2d" ? (
-                <Pitch className="h-full">{data && <PitchDots points={data.heat} color="var(--team-a)" radius={1.4} />}</Pitch>
+                <div
+                  className="absolute inset-0"
+                  style={{ background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))" }}
+                >
+                  <MatchCanvas
+                    file={file}
+                    videoRef={videoRef}
+                    team={team}
+                    colours={colours}
+                    layers={layers}
+                    mode="pitch"
+                    onFrame={setFrame}
+                  />
+                </div>
               ) : (
-                <video
-                  ref={videoRef}
-                  {...(videoUrl ? { src: videoUrl } : {})}
-                  controls
-                  playsInline
-                  preload="metadata"
-                  aria-label={`Match video, ${match.teamA} against ${match.teamB}`}
-                  className="h-full w-full bg-black object-contain"
+                <MatchCanvas
+                  file={file}
+                  videoRef={videoRef}
+                  team={team}
+                  colours={colours}
+                  layers={layers}
+                  mode="video"
+                  onFrame={setFrame}
                 />
               )}
+
               <span className="pointer-events-none absolute left-3 top-3">
-                <Pill tone="cream">{`${match.teamA.split(" ").at(-1)} · controlled`}</Pill>
+                <Pill tone="cream">{possessionLine}</Pill>
               </span>
-              {mode === "both" && data && (
-                <div className="pointer-events-none absolute bottom-14 right-3 w-[38%] overflow-hidden rounded-[10px] border border-wire">
-                  <Pitch>
-                    <PitchDots points={data.heat.slice(0, 12)} color="var(--team-a)" radius={1.6} />
-                  </Pitch>
+
+              <button
+                type="button"
+                onClick={() => setLayerSheet(true)}
+                aria-label="Choose layers"
+                className="tap absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md"
+              >
+                <Layers size={15} aria-hidden="true" />
+              </button>
+
+              {mode === "both" && (
+                <div
+                  className="absolute bottom-3 right-3 w-[38%] overflow-hidden rounded-[10px] border border-wire"
+                  style={{ background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))" }}
+                >
+                  <div className="relative aspect-[16/10] w-full">
+                    <MatchCanvas
+                      file={file}
+                      videoRef={videoRef}
+                      team={team}
+                      colours={colours}
+                      layers={layers}
+                      mode="pitch"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -173,40 +267,49 @@ function MatchScreen() {
               />
             </div>
 
-            <div className="mt-3">
-              <div className="relative h-9">
-                <input
-                  type="range"
-                  min={0}
-                  max={total}
-                  step={0.1}
-                  value={clock}
-                  aria-label="Playback position"
-                  onChange={(e) => {
-                    const t = Number(e.target.value);
-                    setClock(t);
-                    if (videoRef.current) videoRef.current.currentTime = t;
-                  }}
-                  className="absolute inset-x-0 top-3 h-2 w-full appearance-none rounded-full bg-surface-3 accent-[var(--cream)]"
-                />
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-2">
-                  {events.map((e) => (
-                    <span
-                      key={e.id}
-                      className="absolute top-0 h-2 w-[2px] rounded-full"
-                      style={{
-                        left: `${Math.min(100, (e.t / total) * 100)}%`,
-                        background: e.team === "A" ? "var(--team-a)" : "var(--team-b)",
-                      }}
-                    />
-                  ))}
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                type="button"
+                onClick={togglePlay}
+                aria-label={playing ? "Pause" : "Play"}
+                className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full bg-cream text-[#111315]"
+              >
+                {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className="relative h-9">
+                  <input
+                    type="range"
+                    min={0}
+                    max={total}
+                    step={0.1}
+                    value={clock}
+                    aria-label="Playback position"
+                    onChange={(e) => {
+                      const t = Number(e.target.value);
+                      setClock(t);
+                      if (videoRef.current) videoRef.current.currentTime = t;
+                    }}
+                    className="absolute inset-x-0 top-3 h-2 w-full appearance-none rounded-full bg-surface-3 accent-[var(--cream)]"
+                  />
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-2">
+                    {ticks.map((e) => (
+                      <span
+                        key={e.id}
+                        className="absolute top-0 h-2 w-[2px] rounded-full"
+                        style={{
+                          left: `${Math.min(100, (e.t / total) * 100)}%`,
+                          background: e.team === "B" ? colours.B : colours.A,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-between text-[11px] text-text-faint">
+                  <span className="num text-cream">{formatClock(clock)}</span>
+                  <span className="num">{formatClock(total)}</span>
                 </div>
               </div>
-              <div className="flex justify-between text-[11px] text-text-faint">
-                <span className="num text-cream">{formatClock(clock)}</span>
-                <span className="num">{formatClock(total)}</span>
-              </div>
-              {data && <MomentumStrip values={data.momentum} className="mt-1 h-8" />}
             </div>
           </Card>
 
@@ -233,7 +336,7 @@ function MatchScreen() {
                     <span className="num w-11 shrink-0 text-[13px] text-cream">{formatClock(e.t)}</span>
                     <span
                       className="h-6 w-1 shrink-0 rounded-full"
-                      style={{ background: e.team === "A" ? "var(--team-a)" : "var(--team-b)" }}
+                      style={{ background: e.team === "B" ? colours.B : colours.A }}
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1">
@@ -265,6 +368,41 @@ function MatchScreen() {
               )}
             </ul>
           </Card>
+
+          {layerSheet && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(0,0,0,0.6)] p-0 md:items-center md:p-6">
+              <button
+                type="button"
+                aria-label="Close layers"
+                onClick={() => setLayerSheet(false)}
+                className="absolute inset-0"
+              />
+              <div className="relative w-full max-w-[420px] rounded-t-[16px] border border-wire bg-surface p-5 md:rounded-[16px]">
+                <h2 className="display text-[17px] uppercase text-cream">Layers</h2>
+                <ul className="mt-3 flex flex-col gap-1">
+                  {LAYERS.map((l) => (
+                    <li key={l.key}>
+                      <button
+                        type="button"
+                        onClick={() => toggleLayer(l.key)}
+                        aria-pressed={layers[l.key]}
+                        className="tap flex w-full items-center justify-between rounded-[10px] px-2 text-left text-[13.5px] text-text hover:bg-surface-2"
+                      >
+                        {l.label}
+                        <span
+                          className={cn(
+                            "h-4 w-4 rounded-[5px] border",
+                            layers[l.key] ? "border-cream bg-cream" : "border-wire",
+                          )}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
         </>
       )}
     </MatchShell>
