@@ -210,8 +210,8 @@ export function Field({
   children,
 }: {
   label: string;
-  help?: string;
-  error?: string;
+  help?: string | undefined;
+  error?: string | undefined;
   children: ReactNode;
 }) {
   return (
