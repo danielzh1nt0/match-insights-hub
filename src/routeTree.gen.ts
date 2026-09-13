@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as GlossaryRouteImport } from './routes/glossary'
 import { Route as ResetRouteImport } from './routes/reset'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SigninRouteImport } from './routes/signin'
@@ -34,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GlossaryRoute = GlossaryRouteImport.update({
+  id: '/glossary',
+  path: '/glossary',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetRoute = ResetRouteImport.update({
@@ -121,6 +127,7 @@ const AuthenticatedMatchMatchIdPlayerPlayerIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/glossary': typeof GlossaryRoute
   '/reset': typeof ResetRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
@@ -139,6 +146,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/glossary': typeof GlossaryRoute
   '/reset': typeof ResetRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
@@ -159,6 +167,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/glossary': typeof GlossaryRoute
   '/reset': typeof ResetRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/glossary'
     | '/reset'
     | '/reset-password'
     | '/signin'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/glossary'
     | '/reset'
     | '/reset-password'
     | '/signin'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/glossary'
     | '/reset'
     | '/reset-password'
     | '/signin'
@@ -236,6 +248,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  GlossaryRoute: typeof GlossaryRoute
   ResetRoute: typeof ResetRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
@@ -256,6 +269,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/glossary': {
+      id: '/glossary'
+      path: '/glossary'
+      fullPath: '/glossary'
+      preLoaderRoute: typeof GlossaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset': {
@@ -403,6 +423,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  GlossaryRoute: GlossaryRoute,
   ResetRoute: ResetRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,

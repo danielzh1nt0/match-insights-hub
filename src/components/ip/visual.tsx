@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
+import { Link } from "@tanstack/react-router";
 import { Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GhostButton, PrimaryButton, SecondaryButton } from "./primitives";
+import { GhostButton, PrimaryButton } from "./primitives";
 
 /* ---------------- stat info sheet ---------------- */
 
@@ -11,8 +12,11 @@ export type InfoRow = { label: string; value: string; cream?: boolean };
 export type StatInfo = {
   title: string;
   rows: InfoRow[];
+  /** Term id in src/lib/glossary.ts, so the glossary opens on the right entry. */
+  glossaryId?: string;
   onSeeMoments?: () => void;
 };
+
 
 function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
   useEffect(() => {
