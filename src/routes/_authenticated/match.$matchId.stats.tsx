@@ -24,7 +24,7 @@ function Stats() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, sections, players, loading } = useAnalysis(matchId, scope);
+  const { match, team, colours, sections, players, loading } = useAnalysis(matchId, scope);
   const [tab, setTab] = useState("ball");
 
   const active = sections.find((t) => t.key === tab);
@@ -97,8 +97,22 @@ function Stats() {
               <div>
                 <div className="flex items-center gap-3 border-b border-wire pb-2 text-[11px] uppercase tracking-[0.06em] text-text-faint">
                   <span className="flex-1" />
-                  <span className="w-20 text-right">{match.teamA.split(" ").at(-1)}</span>
-                  <span className="w-20 text-right">{match.teamB.split(" ").at(-1)}</span>
+                  <span className="flex w-20 items-center justify-end gap-1.5">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ background: colours.A }}
+                      aria-hidden="true"
+                    />
+                    {match.teamA.split(" ").at(-1)}
+                  </span>
+                  <span className="flex w-20 items-center justify-end gap-1.5">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ background: colours.B }}
+                      aria-hidden="true"
+                    />
+                    {match.teamB.split(" ").at(-1)}
+                  </span>
                   <span className="w-20 text-right">Target</span>
                 </div>
                 {active.rows.map((r) => (
