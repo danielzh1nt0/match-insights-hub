@@ -67,9 +67,6 @@ export function MatchShell({
                   {match.teamA} in {team?.colorA ? "your first kit" : "red"}, {match.teamB} in the second kit.
                   Kit colours and targets live in your club settings.
                 </p>
-                <Link to="/settings/club" className="mt-2 inline-block text-[12px] text-cream underline">
-                  Open club settings
-                </Link>
               </Card>
             )}
             <div className="mt-4 flex flex-col gap-3">{children}</div>
