@@ -8,6 +8,7 @@ import { Search, Video } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
 import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitives";
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
+import { StoryLauncher } from "@/components/ip/story-launcher";
 import { useApp } from "@/store/app-store";
 
 export const Route = createFileRoute("/_authenticated/library")({
@@ -173,7 +174,9 @@ function MatchCard({ match }: { match: LibraryMatch }) {
           <SummaryChip label="Shots" value={`${match.summary.shots[0]} / ${match.summary.shots[1]}`} />
         </div>
 
-        <div className="mt-4">
+        {ready && <StoryLauncher matchId={match.id} className="mt-4" />}
+
+        <div className="mt-3">
           {ready ? (
             <Link to="/match/$matchId/insights" params={{ matchId: match.id }}>
               <PrimaryButton className="h-11 w-full">Open analysis</PrimaryButton>
