@@ -51,7 +51,7 @@ export function MatchShell({
                     } · ${formatClock(match.durationS)}`,
                   }
                 : { metaLine: `${match.date} · ${match.competition}` })}
-              {...(setScope ? { onSelectTeamA: () => setScope("A"), onSelectTeamB: () => setScope("B") } : {})}
+              {...(setScope ? { onSelectTeamA: () => setScope("a"), onSelectTeamB: () => setScope("b") } : {})}
               onSetup={() => setSetupOpen((v) => !v)}
             />
             {selectorsVisible && (

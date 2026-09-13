@@ -19,7 +19,7 @@ function StoryPage() {
   const { matchId } = Route.useParams();
   const { match, data } = useMatch(matchId);
 
-  if (!match) {
+  if (!match || !data) {
     return (
       <div className="min-h-screen bg-bg p-4">
         <Card>
