@@ -126,11 +126,15 @@ export function TeamSelector({
   onChange,
   teamA = "Team A",
   teamB = "Team B",
+  colourA = "var(--team-a)",
+  colourB = "var(--team-b)",
 }: {
   value: TeamScope;
   onChange: (v: TeamScope) => void;
   teamA?: string;
   teamB?: string;
+  colourA?: string;
+  colourB?: string;
 }) {
   return (
     <Segmented
@@ -138,9 +142,9 @@ export function TeamSelector({
       value={value}
       onChange={onChange}
       options={[
-        { value: "a", label: teamA, color: "var(--team-a)" },
+        { value: "a", label: teamA, color: colourA },
         { value: "both", label: "Both" },
-        { value: "b", label: teamB, color: "var(--team-b)" },
+        { value: "b", label: teamB, color: colourB },
       ]}
     />
   );

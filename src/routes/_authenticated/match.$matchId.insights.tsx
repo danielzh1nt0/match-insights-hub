@@ -28,7 +28,7 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, stats, findings, summary, territory, loading } = useAnalysis(matchId, scope);
+  const { match, team, colours, stats, findings, summary, territory, loading } = useAnalysis(matchId, scope);
 
   const rowA = teamRow(stats, "A");
   const rowB = teamRow(stats, "B");
