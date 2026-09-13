@@ -1,5 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { getAccount } from "@/lib/profile.functions";
 import { motion } from "motion/react";
 import { Search, Video } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
