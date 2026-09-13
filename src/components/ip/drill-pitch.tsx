@@ -95,6 +95,7 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
   const template = templates[templateId];
   const shouldAnimate = playing && !reducedMotion;
   const duration = 6;
+  const finalBall = template.ball[template.ball.length - 1] ?? { x: 50, y: 31 };
 
   return (
     <div className="relative aspect-[16/10] overflow-hidden rounded-[14px] border border-wire bg-gradient-to-b from-pitch-top to-pitch-bottom">
@@ -118,7 +119,7 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
             </motion.g>
           );
         })}
-        <motion.g key={`ball-${replay}`} initial={{ x: template.ball[0]?.x ?? 50, y: template.ball[0]?.y ?? 31 }} animate={{ x: shouldAnimate ? template.ball.map((p) => p.x) : template.ball.at(-1)?.x, y: shouldAnimate ? template.ball.map((p, i) => p.y - (i % 2 ? 2 : 0)) : template.ball.at(-1)?.y }} transition={{ duration, repeat: shouldAnimate ? Infinity : 0, ease: "easeInOut" }}>
+        <motion.g key={`ball-${replay}`} initial={{ x: template.ball[0]?.x ?? 50, y: template.ball[0]?.y ?? 31 }} animate={{ x: shouldAnimate ? template.ball.map((p) => p.x) : finalBall.x, y: shouldAnimate ? template.ball.map((p, i) => p.y - (i % 2 ? 2 : 0)) : finalBall.y }} transition={{ duration, repeat: shouldAnimate ? Infinity : 0, ease: "easeInOut" }}>
           <circle r="1.65" fill="var(--text)" /><path d="M0 -0.8 .8 -.2 .5 .8 -.5 .8 -.8 -.2Z" fill="var(--ball-detail)" />
         </motion.g>
       </svg>
