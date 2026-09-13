@@ -133,7 +133,8 @@ export function Pitch({
   arrowLabel?: string;
 }) {
   return (
-    <div className={cn("relative w-full overflow-hidden rounded-[12px] bg-surface-2", className)}>
+    <div className={cn("w-full", className)}>
+      <div className="w-full overflow-hidden rounded-[12px] bg-surface-2">
       <svg viewBox="0 0 100 64" className="block h-auto w-full" role="img" aria-label="Pitch">
         <rect x="0" y="0" width="100" height="64" fill="var(--surface-2)" />
         <g stroke="var(--wire)" strokeWidth="0.4" fill="none">
@@ -147,8 +148,9 @@ export function Pitch({
         </g>
         {children}
       </svg>
+      </div>
       {arrowLabel && (
-        <span className="absolute bottom-1.5 right-2 text-[10px] uppercase tracking-[0.08em] text-text-faint">
+        <span className="mt-1 block text-right text-[10px] uppercase tracking-[0.08em] text-text-faint">
           {arrowLabel}
         </span>
       )}
