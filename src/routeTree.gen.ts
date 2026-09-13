@@ -21,6 +21,8 @@ import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
 import { Route as AuthenticatedMatchMatchIdInsightsRouteImport } from './routes/_authenticated/match.$matchId.insights'
 import { Route as AuthenticatedMatchMatchIdMatchRouteImport } from './routes/_authenticated/match.$matchId.match'
+import { Route as AuthenticatedMatchMatchIdStatsRouteImport } from './routes/_authenticated/match.$matchId.stats'
+import { Route as AuthenticatedMatchMatchIdTerritoryRouteImport } from './routes/_authenticated/match.$matchId.territory'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -83,6 +85,18 @@ const AuthenticatedMatchMatchIdMatchRoute =
     path: '/match/$matchId/match',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMatchMatchIdStatsRoute =
+  AuthenticatedMatchMatchIdStatsRouteImport.update({
+    id: '/match/$matchId/stats',
+    path: '/match/$matchId/stats',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMatchMatchIdTerritoryRoute =
+  AuthenticatedMatchMatchIdTerritoryRouteImport.update({
+    id: '/match/$matchId/territory',
+    path: '/match/$matchId/territory',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -96,6 +110,8 @@ export interface FileRoutesByFullPath {
   '/processing': typeof AuthenticatedProcessingRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
+  '/match/$matchId/stats': typeof AuthenticatedMatchMatchIdStatsRoute
+  '/match/$matchId/territory': typeof AuthenticatedMatchMatchIdTerritoryRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -109,6 +125,8 @@ export interface FileRoutesByTo {
   '/processing': typeof AuthenticatedProcessingRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
+  '/match/$matchId/stats': typeof AuthenticatedMatchMatchIdStatsRoute
+  '/match/$matchId/territory': typeof AuthenticatedMatchMatchIdTerritoryRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,6 +142,8 @@ export interface FileRoutesById {
   '/_authenticated/processing': typeof AuthenticatedProcessingRoute
   '/_authenticated/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/_authenticated/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
+  '/_authenticated/match/$matchId/stats': typeof AuthenticatedMatchMatchIdStatsRoute
+  '/_authenticated/match/$matchId/territory': typeof AuthenticatedMatchMatchIdTerritoryRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,6 +159,8 @@ export interface FileRouteTypes {
     | '/processing'
     | '/match/$matchId/insights'
     | '/match/$matchId/match'
+    | '/match/$matchId/stats'
+    | '/match/$matchId/territory'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -152,6 +174,8 @@ export interface FileRouteTypes {
     | '/processing'
     | '/match/$matchId/insights'
     | '/match/$matchId/match'
+    | '/match/$matchId/stats'
+    | '/match/$matchId/territory'
   id:
     | '__root__'
     | '/'
@@ -166,6 +190,8 @@ export interface FileRouteTypes {
     | '/_authenticated/processing'
     | '/_authenticated/match/$matchId/insights'
     | '/_authenticated/match/$matchId/match'
+    | '/_authenticated/match/$matchId/stats'
+    | '/_authenticated/match/$matchId/territory'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -263,6 +289,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMatchMatchIdMatchRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/match/$matchId/stats': {
+      id: '/_authenticated/match/$matchId/stats'
+      path: '/match/$matchId/stats'
+      fullPath: '/match/$matchId/stats'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdStatsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/match/$matchId/territory': {
+      id: '/_authenticated/match/$matchId/territory'
+      path: '/match/$matchId/territory'
+      fullPath: '/match/$matchId/territory'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdTerritoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -273,6 +313,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProcessingRoute: typeof AuthenticatedProcessingRoute
   AuthenticatedMatchMatchIdInsightsRoute: typeof AuthenticatedMatchMatchIdInsightsRoute
   AuthenticatedMatchMatchIdMatchRoute: typeof AuthenticatedMatchMatchIdMatchRoute
+  AuthenticatedMatchMatchIdStatsRoute: typeof AuthenticatedMatchMatchIdStatsRoute
+  AuthenticatedMatchMatchIdTerritoryRoute: typeof AuthenticatedMatchMatchIdTerritoryRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -283,6 +325,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMatchMatchIdInsightsRoute:
     AuthenticatedMatchMatchIdInsightsRoute,
   AuthenticatedMatchMatchIdMatchRoute: AuthenticatedMatchMatchIdMatchRoute,
+  AuthenticatedMatchMatchIdStatsRoute: AuthenticatedMatchMatchIdStatsRoute,
+  AuthenticatedMatchMatchIdTerritoryRoute:
+    AuthenticatedMatchMatchIdTerritoryRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
