@@ -48,7 +48,7 @@ function PlayerPage() {
             <div className="min-w-0">
               <h1 className="display truncate text-[22px] text-text">{player.name}</h1>
               <p className="text-[12px] text-text-faint">
-                {player.position} · {player.minutes} minutes played
+                {player.position} · {player.minutes} {player.minutes === 1 ? "minute" : "minutes"} played
               </p>
             </div>
           </Card>
