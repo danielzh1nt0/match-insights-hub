@@ -50,6 +50,7 @@ function Insights() {
             caption="Darker squares are where the ball spent more time."
             info={{
               title: "Where was the ball?",
+              glossaryId: "heat-map",
               rows: [
                 { label: "What it counts", value: "Ball time per square" },
                 { label: "Squares", value: "24 (6 across, 4 down)" },
@@ -69,6 +70,7 @@ function Insights() {
             caption="Each block is one spell with the ball, in order."
             info={{
               title: "Who had the ball?",
+              glossaryId: "possession",
               rows: [
                 { label: "What it counts", value: "Spells with the ball" },
                 { label: `${match.teamA}`, value: `${match.summary.possession[0]}%`, cream: true },

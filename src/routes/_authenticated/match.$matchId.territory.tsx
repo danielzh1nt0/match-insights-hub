@@ -54,6 +54,7 @@ function Territory() {
             caption="Brighter areas are where players spent more time."
             info={{
               title: "Where did the team live?",
+              glossaryId: "heat-map",
               rows: [
                 { label: "What it counts", value: "Player time per area" },
                 { label: "Window", value: window === "now" ? "Whole half" : `Last ${window}s` },
@@ -110,6 +111,7 @@ function Territory() {
               caption="Each dot is one giveaway by your team."
               info={{
                 title: "Where was the ball lost?",
+                glossaryId: "turnover",
                 rows: [
                   { label: "What it counts", value: "Giveaways by your team" },
                   { label: "Total", value: `${data.losses.length}`, cream: true },
@@ -129,6 +131,7 @@ function Territory() {
               caption="Each dot is one ball your team recovered."
               info={{
                 title: "Where was the ball won back?",
+                glossaryId: "high-turnover",
                 rows: [
                   { label: "What it counts", value: "Recoveries by your team" },
                   { label: "Total", value: `${data.recoveries.length}`, cream: true },
@@ -149,6 +152,7 @@ function Territory() {
             caption="A snapshot of positions every thirty seconds."
             info={{
               title: "How did the shape move?",
+              glossaryId: "shape-snapshot",
               rows: [
                 { label: "What it shows", value: "Player positions" },
                 { label: "Snapshot every", value: "30 s" },
