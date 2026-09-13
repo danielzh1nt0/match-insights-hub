@@ -59,8 +59,8 @@ export function MatchShell({
               teamB={match.teamB}
               scoreA={match.status === "ready" ? match.scoreA : null}
               scoreB={match.status === "ready" ? match.scoreB : null}
-              colourA={team?.colorA ?? "var(--team-a)"}
-              colourB={team?.colorB ?? "var(--team-b)"}
+              colourA={record?.label?.colour_a ?? team?.colorA ?? "var(--team-a)"}
+              colourB={record?.label?.colour_b ?? team?.colorB ?? "var(--team-b)"}
                {...(crestA ? { crestA } : {})}
                {...(crestB ? { crestB } : {})}
               {...(match.status === "ready"
@@ -79,15 +79,15 @@ export function MatchShell({
                 <PeriodSelector value={period!} onChange={setPeriod!} periods={match.durationS > 1500 ? 2 : 1} />
               </div>
             )}
-            {setupOpen && (
-              <Card className="mt-3">
-                <h2 className="display text-[15px] text-text">Match setup</h2>
-                <p className="mt-1 text-[12px] text-text-dim">
-                  {match.teamA} in {team?.colorA ? "your first kit" : "red"}, {match.teamB} in the second kit.
-                  Kit colours and targets live in your club settings.
-                </p>
-              </Card>
+            {record && (
+              <MatchSetupSheet
+                key={record.label ? "labelled" : "unlabelled"}
+                item={record}
+                open={setupOpen}
+                onClose={() => setSetupOpen(false)}
+              />
             )}
+
             <div className="mt-4 flex flex-col gap-3">{children}</div>
           </>
         ) : (
