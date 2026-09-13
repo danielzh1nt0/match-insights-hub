@@ -54,7 +54,7 @@ function TeamTile({
         aria-hidden="true"
       >
         {crestUrl ? (
-          <img src={crestUrl} alt="" className="max-h-full max-w-full object-contain" />
+          <img src={crestUrl} alt="" className="absolute inset-0 h-full w-full object-contain" />
         ) : (
           <>
             <span
