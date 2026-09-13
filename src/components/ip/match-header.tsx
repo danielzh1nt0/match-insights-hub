@@ -29,12 +29,14 @@ function initialOf(name: string) {
 function TeamTile({
   name,
   colour,
+  crestUrl,
   sublabel,
   onSelect,
   side,
 }: {
   name: string;
   colour: string;
+  crestUrl?: string;
   sublabel: string;
   onSelect?: () => void;
   side: "home" | "away";
@@ -47,17 +49,23 @@ function TeamTile({
       className="tap flex flex-col items-center gap-1.5 rounded-[12px]"
     >
       <span
-        className="relative grid h-11 w-11 place-items-center rounded-[12px] md:h-[52px] md:w-[52px]"
-        style={{ background: colour }}
+        className="relative grid h-11 w-11 place-items-center md:h-[52px] md:w-[52px]"
+        style={{ background: crestUrl ? "transparent" : colour }}
         aria-hidden="true"
       >
-        <span
-          className="absolute inset-0 rounded-[12px]"
-          style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.12)" }}
-        />
-        <span className="display-i text-[22px] leading-none tracking-[-0.02em] text-[#ffffff]">
-          {initialOf(name)}
-        </span>
+        {crestUrl ? (
+          <img src={crestUrl} alt="" className="h-full w-full object-contain" />
+        ) : (
+          <>
+            <span
+              className="absolute inset-0 rounded-[12px]"
+              style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.12)" }}
+            />
+            <span className="display-i text-[22px] leading-none tracking-[-0.02em] text-[#ffffff]">
+              {initialOf(name)}
+            </span>
+          </>
+        )}
       </span>
       <span className="text-[9px] font-bold uppercase leading-none tracking-[0.08em] text-text-faint">
         {sublabel || (side === "home" ? "HOME" : "AWAY")}
@@ -77,6 +85,8 @@ export function MatchHeader({
   scoreB,
   colourA = "var(--team-a)",
   colourB = "var(--team-b)",
+  crestA,
+  crestB,
   periodLine,
   metaLine,
   onSelectTeamA,
@@ -91,6 +101,8 @@ export function MatchHeader({
   scoreB: number | null;
   colourA?: string;
   colourB?: string;
+  crestA?: string;
+  crestB?: string;
   /** e.g. "1st half · 1. FC Köln attack right · 0:47". Omitted before kick-off. */
   periodLine?: string;
   /** Shown instead of the period line before kick-off, e.g. the date. */
@@ -122,6 +134,7 @@ export function MatchHeader({
         <TeamTile
           name={teamA}
           colour={colourA}
+          {...(crestA ? { crestUrl: crestA } : {})}
           sublabel={abbreviate(teamA)}
           side="home"
           {...(onSelectTeamA ? { onSelect: onSelectTeamA } : {})}
@@ -138,6 +151,7 @@ export function MatchHeader({
         <TeamTile
           name={teamB}
           colour={colourB}
+          {...(crestB ? { crestUrl: crestB } : {})}
           sublabel={abbreviate(teamB)}
           side="away"
           {...(onSelectTeamB ? { onSelect: onSelectTeamB } : {})}
