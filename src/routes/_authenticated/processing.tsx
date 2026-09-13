@@ -31,18 +31,20 @@ function Processing() {
   const setMatchStatus = useApp((s) => s.setMatchStatus);
   const match = matches.find((m) => m.id === id) ?? matches.find((m) => m.status === "processing") ?? matches[0];
   const failed = match?.status === "failed";
+  const matchId = match?.id;
+  const isReady = match?.status === "ready";
 
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
     if (failed) return;
     if (stage >= PROCESSING_STAGES.length) {
-      if (match) setMatchStatus(match.id, "ready");
+      if (matchId && !isReady) setMatchStatus(matchId, "ready");
       return;
     }
     const t = setTimeout(() => setStage((s) => s + 1), 1400);
     return () => clearTimeout(t);
-  }, [stage, failed, match, setMatchStatus]);
+  }, [stage, failed, matchId, isReady, setMatchStatus]);
 
   const done = !failed && stage >= PROCESSING_STAGES.length;
 
