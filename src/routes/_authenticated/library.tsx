@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccount } from "@/lib/profile.functions";
 import { motion } from "motion/react";
 import { Search, Video } from "lucide-react";
@@ -9,8 +9,9 @@ import { AppHeader, Screen } from "@/components/ip/chrome";
 import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitives";
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
 import { StoryLauncher } from "@/components/ip/story-launcher";
-import { useApp } from "@/store/app-store";
 import { crestForTeam } from "@/lib/team-crests";
+import { matchesDb } from "@/integrations/matches/client";
+import { fetchMatches, toLibraryMatch } from "@/lib/match-source";
 
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
@@ -28,18 +29,33 @@ const statusTone = { ready: "good", processing: "risky", failed: "bad" } as cons
 const statusLabel = { ready: "Ready", processing: "Processing", failed: "Failed" } as const;
 
 function LibraryPage() {
-  const matches = useApp((s) => s.matches);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
   const navigate = useNavigate();
   const fetchAccount = useServerFn(getAccount);
+  const queryClient = useQueryClient();
   const { data: account } = useQuery({ queryKey: ["account"], queryFn: () => fetchAccount() });
+  const { data: items, isPending, error } = useQuery({ queryKey: ["matches"], queryFn: fetchMatches });
 
   useEffect(() => {
     if (account && !account.profile.onboarded) {
       navigate({ to: "/onboarding", replace: true });
     }
   }, [account, navigate]);
+
+  useEffect(() => {
+    const channel = matchesDb
+      .channel("library-matches")
+      .on("postgres_changes", { event: "*", schema: "public", table: "matches" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["matches"] });
+      })
+      .subscribe();
+    return () => {
+      matchesDb.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  const matches = useMemo(() => (items ?? []).map(toLibraryMatch), [items]);
 
   const filters = useMemo(() => {
     const set = new Set<string>();
@@ -65,7 +81,21 @@ function LibraryPage() {
         <h1 className="display text-[26px] text-text">Library</h1>
         <p className="mt-1 text-[13px] text-text-dim">Choose a match to open its analysis workspace.</p>
 
-        {matches.length === 0 ? (
+        {isPending && (
+          <div className="mt-5 h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading matches">
+            <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
+          </div>
+        )}
+
+        {error && (
+          <Card className="mt-5">
+            <p className="text-[13px] text-text-dim">
+              We couldn't reach your matches just now. Check your connection and try again.
+            </p>
+          </Card>
+        )}
+
+        {!isPending && !error && matches.length === 0 ? (
           <EmptyState />
         ) : (
           <>
@@ -109,7 +139,7 @@ function LibraryPage() {
                   <MatchCard match={m} />
                 </motion.div>
               ))}
-              {visible.length === 0 && (
+              {visible.length === 0 && !isPending && (
                 <p className="text-[13px] text-text-faint">No matches for that search.</p>
               )}
             </div>
@@ -144,10 +174,14 @@ function EmptyState() {
 }
 
 function MatchCard({ match }: { match: LibraryMatch }) {
-  const title = match.label ? matchTitle(match) : `${matchTitle(match)} · label needed`;
+  const title = matchTitle(match);
   const ready = match.status === "ready";
   const crestA = crestForTeam(match.teamA);
   const crestB = crestForTeam(match.teamB);
+  const turnovers =
+    match.summary.turnovers[1] === 0
+      ? `${match.summary.turnovers[0]}`
+      : `${match.summary.turnovers[0]} / ${match.summary.turnovers[1]}`;
 
   return (
     <Card className="p-0 overflow-hidden">
@@ -183,7 +217,7 @@ function MatchCard({ match }: { match: LibraryMatch }) {
 
         <div className="mt-3 grid grid-cols-3 gap-2">
           <SummaryChip label="Poss." value={`${match.summary.possession[0]} / ${match.summary.possession[1]}`} />
-          <SummaryChip label="Turnovers" value={`${match.summary.turnovers[0]} / ${match.summary.turnovers[1]}`} />
+          <SummaryChip label="Turnovers" value={turnovers} />
           <SummaryChip label="Shots" value={`${match.summary.shots[0]} / ${match.summary.shots[1]}`} />
         </div>
 
@@ -195,11 +229,9 @@ function MatchCard({ match }: { match: LibraryMatch }) {
               <PrimaryButton className="h-11 w-full">Open analysis</PrimaryButton>
             </Link>
           ) : (
-            <Link to="/processing" search={{ id: match.id }}>
-              <span className="tap flex items-center justify-center rounded-[12px] border border-wire text-[13px] font-semibold text-text-dim">
-                {match.status === "processing" ? "See progress" : "See what went wrong"}
-              </span>
-            </Link>
+            <span className="tap flex items-center justify-center rounded-[12px] border border-wire text-[13px] font-semibold text-text-faint">
+              {match.status === "processing" ? "Still being analysed" : "Analysis failed"}
+            </span>
           )}
         </div>
       </div>

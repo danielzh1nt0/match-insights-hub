@@ -1,11 +1,14 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { AppHeader, FloatingNav, PeriodSelector, Screen, TeamSelector } from "@/components/ip/chrome";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchHeader } from "@/components/ip/match-header";
+import { MatchSetupSheet } from "@/components/ip/match-setup-sheet";
 import { Card } from "@/components/ip/primitives";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
+import { isLabelled } from "@/lib/match-source";
+import { useMatchRecord } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
 
@@ -29,10 +32,21 @@ export function MatchShell({
   showSelectors?: boolean;
 }) {
   const team = useApp((s) => s.teams[0]);
+  const { data: record } = useMatchRecord(matchId);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [prompted, setPrompted] = useState(false);
   const selectorsVisible = showSelectors && Boolean(scope && setScope && period && setPeriod);
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
+
+  useEffect(() => {
+    if (!record || prompted) return;
+    if (!isLabelled(record.label)) {
+      setSetupOpen(true);
+      setPrompted(true);
+    }
+  }, [record, prompted]);
+
 
   return (
     <div className="min-h-screen bg-bg">
@@ -45,8 +59,8 @@ export function MatchShell({
               teamB={match.teamB}
               scoreA={match.status === "ready" ? match.scoreA : null}
               scoreB={match.status === "ready" ? match.scoreB : null}
-              colourA={team?.colorA ?? "var(--team-a)"}
-              colourB={team?.colorB ?? "var(--team-b)"}
+              colourA={record?.label?.colour_a ?? team?.colorA ?? "var(--team-a)"}
+              colourB={record?.label?.colour_b ?? team?.colorB ?? "var(--team-b)"}
                {...(crestA ? { crestA } : {})}
                {...(crestB ? { crestB } : {})}
               {...(match.status === "ready"
@@ -65,15 +79,15 @@ export function MatchShell({
                 <PeriodSelector value={period!} onChange={setPeriod!} periods={match.durationS > 1500 ? 2 : 1} />
               </div>
             )}
-            {setupOpen && (
-              <Card className="mt-3">
-                <h2 className="display text-[15px] text-text">Match setup</h2>
-                <p className="mt-1 text-[12px] text-text-dim">
-                  {match.teamA} in {team?.colorA ? "your first kit" : "red"}, {match.teamB} in the second kit.
-                  Kit colours and targets live in your club settings.
-                </p>
-              </Card>
+            {record && (
+              <MatchSetupSheet
+                key={record.label ? "labelled" : "unlabelled"}
+                item={record}
+                open={setupOpen}
+                onClose={() => setSetupOpen(false)}
+              />
             )}
+
             <div className="mt-4 flex flex-col gap-3">{children}</div>
           </>
         ) : (
