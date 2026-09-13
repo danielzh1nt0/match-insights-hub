@@ -1,10 +1,12 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { AppHeader, FloatingNav, MatchBar, PeriodSelector, Screen, TeamSelector } from "@/components/ip/chrome";
+import { AppHeader, FloatingNav, PeriodSelector, Screen, TeamSelector } from "@/components/ip/chrome";
 import type { Period, TeamScope } from "@/components/ip/chrome";
+import { MatchHeader } from "@/components/ip/match-header";
 import { Card } from "@/components/ip/primitives";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
+import { useApp } from "@/store/app-store";
 
 export function MatchShell({
   matchId,
@@ -25,24 +27,50 @@ export function MatchShell({
   children: ReactNode;
   showSelectors?: boolean;
 }) {
+  const team = useApp((s) => s.teams[0]);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const selectorsVisible = showSelectors && Boolean(scope && setScope && period && setPeriod);
+
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader backTo="/library" />
       <Screen withNav className="pt-4">
         {match ? (
           <>
-            <MatchBar
+            <MatchHeader
               teamA={match.teamA}
               teamB={match.teamB}
-              scoreA={match.scoreA}
-              scoreB={match.scoreB}
-              periodLine={`1st half · ${match.teamA} attack right · ${formatClock(match.durationS)}`}
+              scoreA={match.status === "ready" ? match.scoreA : null}
+              scoreB={match.status === "ready" ? match.scoreB : null}
+              colourA={team?.colorA ?? "var(--team-a)"}
+              colourB={team?.colorB ?? "var(--team-b)"}
+              {...(match.status === "ready"
+                ? {
+                    periodLine: `${period === 2 ? "2nd half" : "1st half"} · ${match.teamA} attack ${
+                      period === 2 ? "left" : "right"
+                    } · ${formatClock(match.durationS)}`,
+                  }
+                : { metaLine: `${match.date} · ${match.competition}` })}
+              {...(setScope ? { onSelectTeamA: () => setScope("A"), onSelectTeamB: () => setScope("B") } : {})}
+              onSetup={() => setSetupOpen((v) => !v)}
             />
-            {showSelectors && scope && setScope && period && setPeriod && (
+            {selectorsVisible && (
               <div className="mt-3 flex flex-col gap-2 md:flex-row">
-                <TeamSelector value={scope} onChange={setScope} teamA={match.teamA} teamB={match.teamB} />
-                <PeriodSelector value={period} onChange={setPeriod} periods={1} />
+                <TeamSelector value={scope!} onChange={setScope!} teamA={match.teamA} teamB={match.teamB} />
+                <PeriodSelector value={period!} onChange={setPeriod!} periods={1} />
               </div>
+            )}
+            {setupOpen && (
+              <Card className="mt-3">
+                <h2 className="display text-[15px] text-text">Match setup</h2>
+                <p className="mt-1 text-[12px] text-text-dim">
+                  {match.teamA} in {team?.colorA ? "your first kit" : "red"}, {match.teamB} in the second kit.
+                  Kit colours and targets live in your club settings.
+                </p>
+                <Link to="/settings/club" className="mt-2 inline-block text-[12px] text-cream underline">
+                  Open club settings
+                </Link>
+              </Card>
             )}
             <div className="mt-4 flex flex-col gap-3">{children}</div>
           </>
