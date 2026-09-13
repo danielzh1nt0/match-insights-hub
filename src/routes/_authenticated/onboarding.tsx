@@ -56,7 +56,11 @@ function Onboarding() {
             colorA: t.colorA,
             colorB: t.colorB,
           })),
-          targets,
+          targets: {
+            pressWithin2s: targets.pressWithin2s,
+            regainWithin5s: targets.regainWithin5s,
+            blockCeilingMin: targets.blockLengthCeiling,
+          },
         },
       });
       await queryClient.invalidateQueries({ queryKey: ["account"] });
