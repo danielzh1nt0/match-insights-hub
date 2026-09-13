@@ -20,6 +20,8 @@ import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
+import { Route as SPlayerTokenRouteImport } from './routes/s.player.$token'
+import { Route as SReelTokenRouteImport } from './routes/s.reel.$token'
 import { Route as AuthenticatedMatchMatchIdInsightsRouteImport } from './routes/_authenticated/match.$matchId.insights'
 import { Route as AuthenticatedMatchMatchIdMatchRouteImport } from './routes/_authenticated/match.$matchId.match'
 import { Route as AuthenticatedMatchMatchIdReelRouteImport } from './routes/_authenticated/match.$matchId.reel'
@@ -82,6 +84,16 @@ const AuthenticatedProcessingRoute = AuthenticatedProcessingRouteImport.update({
   path: '/processing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const SPlayerTokenRoute = SPlayerTokenRouteImport.update({
+  id: '/s/player/$token',
+  path: '/s/player/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SReelTokenRoute = SReelTokenRouteImport.update({
+  id: '/s/reel/$token',
+  path: '/s/reel/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedMatchMatchIdInsightsRoute =
   AuthenticatedMatchMatchIdInsightsRouteImport.update({
     id: '/match/$matchId/insights',
@@ -136,6 +148,8 @@ export interface FileRoutesByFullPath {
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/s/player/$token': typeof SPlayerTokenRoute
+  '/s/reel/$token': typeof SReelTokenRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
@@ -155,6 +169,8 @@ export interface FileRoutesByTo {
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/s/player/$token': typeof SPlayerTokenRoute
+  '/s/reel/$token': typeof SReelTokenRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
@@ -176,6 +192,8 @@ export interface FileRoutesById {
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/processing': typeof AuthenticatedProcessingRoute
+  '/s/player/$token': typeof SPlayerTokenRoute
+  '/s/reel/$token': typeof SReelTokenRoute
   '/_authenticated/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/_authenticated/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/_authenticated/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
@@ -197,6 +215,8 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/s/player/$token'
+    | '/s/reel/$token'
     | '/match/$matchId/insights'
     | '/match/$matchId/match'
     | '/match/$matchId/reel'
@@ -216,6 +236,8 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/s/player/$token'
+    | '/s/reel/$token'
     | '/match/$matchId/insights'
     | '/match/$matchId/match'
     | '/match/$matchId/reel'
@@ -236,6 +258,8 @@ export interface FileRouteTypes {
     | '/_authenticated/new'
     | '/_authenticated/onboarding'
     | '/_authenticated/processing'
+    | '/s/player/$token'
+    | '/s/reel/$token'
     | '/_authenticated/match/$matchId/insights'
     | '/_authenticated/match/$matchId/match'
     | '/_authenticated/match/$matchId/reel'
@@ -253,6 +277,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
+  SPlayerTokenRoute: typeof SPlayerTokenRoute
+  SReelTokenRoute: typeof SReelTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -333,6 +359,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/processing'
       preLoaderRoute: typeof AuthenticatedProcessingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/s/player/$token': {
+      id: '/s/player/$token'
+      path: '/s/player/$token'
+      fullPath: '/s/player/$token'
+      preLoaderRoute: typeof SPlayerTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/s/reel/$token': {
+      id: '/s/reel/$token'
+      path: '/s/reel/$token'
+      fullPath: '/s/reel/$token'
+      preLoaderRoute: typeof SReelTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/match/$matchId/insights': {
       id: '/_authenticated/match/$matchId/insights'
@@ -428,6 +468,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
+  SPlayerTokenRoute: SPlayerTokenRoute,
+  SReelTokenRoute: SReelTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
