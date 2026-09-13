@@ -83,9 +83,9 @@ function Stats() {
               <div>
                 <div className="flex items-center gap-3 border-b border-wire pb-2 text-[11px] uppercase tracking-[0.06em] text-text-faint">
                   <span className="flex-1" />
-                  <span className="w-16 text-right">{match.teamA.split(" ").at(-1)}</span>
-                  <span className="w-16 text-right">{match.teamB.split(" ").at(-1)}</span>
-                  <span className="w-16 text-right">Target</span>
+                  <span className="w-20 text-right">{match.teamA.split(" ").at(-1)}</span>
+                  <span className="w-20 text-right">{match.teamB.split(" ").at(-1)}</span>
+                  <span className="w-20 text-right">Target</span>
                 </div>
                 {active.rows.map((r) => (
                   <div
@@ -93,9 +93,9 @@ function Stats() {
                     className="flex items-center gap-3 border-b border-wire-2 py-2.5 text-[13px] last:border-0"
                   >
                     <span className="min-w-0 flex-1 text-text-dim">{r.label}</span>
-                    <span className="num w-16 text-right text-text">{r.a}</span>
-                    <span className="num w-16 text-right text-text-dim">{r.b}</span>
-                    <span className="num w-16 text-right text-cream">{r.target ?? "—"}</span>
+                    <span className="num w-20 text-right text-text">{r.a}</span>
+                    <span className="num w-20 text-right text-text-dim">{r.b}</span>
+                    <span className="num w-20 text-right text-cream">{r.target ?? "—"}</span>
                   </div>
                 ))}
               </div>
