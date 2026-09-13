@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Layers, Pause, Play } from "lucide-react";
+import { Layers, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
@@ -129,6 +129,21 @@ function MatchScreen() {
     else video.pause();
   }, []);
 
+  // Fullscreen the whole stage (video + overlay canvas + playback bar) so the
+  // chosen layers stay visible.
+  const toggleFullscreen = useCallback(() => {
+    const node = stageRef.current;
+    if (!node) return;
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void node.requestFullscreen?.().catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const onChange = () => setFullscreen(document.fullscreenElement === stageRef.current);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
   const types = groupTypes(filter);
   const shown = useMemo(() => {
     const visible = events.slice(0, visibleCount);
@@ -178,7 +193,19 @@ function MatchScreen() {
       {match && (
         <>
           <Card className="p-3">
-            <div className="relative mx-auto aspect-[16/10] w-full max-w-[880px] overflow-hidden rounded-[12px] bg-surface-2">
+            <div
+              ref={stageRef}
+              className={cn(
+                "flex flex-col",
+                fullscreen && "h-screen w-screen justify-center bg-bg p-3",
+              )}
+            >
+            <div
+              className={cn(
+                "relative mx-auto w-full overflow-hidden rounded-[12px] bg-surface-2",
+                fullscreen ? "min-h-0 flex-1" : "aspect-[16/10] max-w-[880px]",
+              )}
+            >
               <video
                 ref={videoRef}
                 {...(videoUrl ? { src: videoUrl } : {})}
@@ -223,14 +250,28 @@ function MatchScreen() {
                 <Pill tone="cream">{possessionLine}</Pill>
               </span>
 
-              <button
-                type="button"
-                onClick={() => setLayerSheet(true)}
-                aria-label="Choose layers"
-                className="tap absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md"
-              >
-                <Layers size={15} aria-hidden="true" />
-              </button>
+              <div className="absolute right-3 top-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setLayerSheet(true)}
+                  aria-label="Choose layers"
+                  className="tap grid h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md"
+                >
+                  <Layers size={15} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  aria-label={fullscreen ? "Leave fullscreen" : "Fullscreen"}
+                  className="tap grid h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md"
+                >
+                  {fullscreen ? (
+                    <Minimize2 size={15} aria-hidden="true" />
+                  ) : (
+                    <Maximize2 size={15} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
 
               {mode === "both" && (
                 <div
@@ -307,6 +348,7 @@ function MatchScreen() {
                   <span className="num">{formatClock(total)}</span>
                 </div>
               </div>
+            </div>
             </div>
           </Card>
 
