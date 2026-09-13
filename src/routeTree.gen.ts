@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ResetRouteImport } from './routes/reset'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -37,6 +38,11 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProcessingRoute = ProcessingRouteImport.update({
+  id: '/processing',
+  path: '/processing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetRoute = ResetRouteImport.update({
   id: '/reset',
   path: '/reset',
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
   '/onboarding': typeof OnboardingRoute
+  '/processing': typeof ProcessingRoute
   '/reset': typeof ResetRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
   '/onboarding': typeof OnboardingRoute
+  '/processing': typeof ProcessingRoute
   '/reset': typeof ResetRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/library': typeof LibraryRoute
   '/new': typeof NewRoute
   '/onboarding': typeof OnboardingRoute
+  '/processing': typeof ProcessingRoute
   '/reset': typeof ResetRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
@@ -84,16 +93,31 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/library' | '/new' | '/onboarding' | '/reset' | '/signin' | '/signup'
+    | '/'
+    | '/library'
+    | '/new'
+    | '/onboarding'
+    | '/processing'
+    | '/reset'
+    | '/signin'
+    | '/signup'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/library' | '/new' | '/onboarding' | '/reset' | '/signin' | '/signup'
+    | '/'
+    | '/library'
+    | '/new'
+    | '/onboarding'
+    | '/processing'
+    | '/reset'
+    | '/signin'
+    | '/signup'
   id:
     | '__root__'
     | '/'
     | '/library'
     | '/new'
     | '/onboarding'
+    | '/processing'
     | '/reset'
     | '/signin'
     | '/signup'
@@ -104,6 +128,7 @@ export interface RootRouteChildren {
   LibraryRoute: typeof LibraryRoute
   NewRoute: typeof NewRoute
   OnboardingRoute: typeof OnboardingRoute
+  ProcessingRoute: typeof ProcessingRoute
   ResetRoute: typeof ResetRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
@@ -139,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/processing': {
+      id: '/processing'
+      path: '/processing'
+      fullPath: '/processing'
+      preLoaderRoute: typeof ProcessingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset': {
       id: '/reset'
       path: '/reset'
@@ -168,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryRoute: LibraryRoute,
   NewRoute: NewRoute,
   OnboardingRoute: OnboardingRoute,
+  ProcessingRoute: ProcessingRoute,
   ResetRoute: ResetRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
