@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
-import { Card, Chip, Segmented } from "@/components/ip/primitives";
+import { Card, Chip } from "@/components/ip/primitives";
 import { HeatBlobs, Pitch, PitchDots, PitchShirts, Visual } from "@/components/ip/visual";
-import { useMatch } from "@/hooks/use-match";
+import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/territory")({
@@ -19,24 +19,16 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/territory")
   component: Territory,
 });
 
-type Window = "now" | "15" | "30" | "60";
-type BallState = "with" | "without" | "both";
-
 function Territory() {
   const { matchId } = Route.useParams();
-  const { match, data } = useMatch(matchId);
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const [window, setWindow] = useState<Window>("now");
-  const [ball, setBall] = useState<BallState>("both");
+  const { match, team, territory, loading } = useAnalysis(matchId, scope);
   const [snapIndex, setSnapIndex] = useState(0);
 
-  const total = match?.durationS ?? 1;
-  const teamColor = scope === "b" ? "var(--team-b)" : "var(--team-a)";
-  const heat = data
-    ? data.heat.slice(0, window === "now" ? data.heat.length : window === "15" ? 8 : window === "30" ? 14 : 20)
-    : [];
-  const snapshot = data?.snapshots[Math.min(snapIndex, data.snapshots.length - 1)];
+  const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
+  const teamColour = team === "B" ? "var(--team-b)" : "var(--team-a)";
+  const snapshot = territory?.snapshots[Math.min(snapIndex, territory.snapshots.length - 1)];
 
   return (
     <MatchShell
@@ -47,7 +39,13 @@ function Territory() {
       period={period}
       setPeriod={setPeriod}
     >
-      {data && match && (
+      {loading && (
+        <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading">
+          <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
+        </div>
+      )}
+
+      {territory && match && (
         <>
           <Visual
             question="Where did the team live?"
@@ -57,50 +55,30 @@ function Territory() {
               glossaryId: "heat-map",
               rows: [
                 { label: "What it counts", value: "Player time per area" },
-                { label: "Window", value: window === "now" ? "Whole half" : `Last ${window}s` },
-                { label: "Ball state", value: ball === "both" ? "With and without" : ball === "with" ? "With ball" : "Without ball" },
-                { label: "Your average height", value: "41 m", cream: true },
-                { label: "Target", value: "No target", cream: true },
+                { label: "Team", value: teamName ?? "Both teams", cream: true },
+                { label: "Players tracked", value: `${territory.playerCount}` },
+                { label: "Frames used", value: territory.frameCount.toLocaleString() },
+                { label: "Height of the last line", value: `${territory.lineHeightM} m`, cream: true },
               ],
             }}
           >
             <Pitch arrowLabel={`${match.teamA} attack →`}>
-              <HeatBlobs points={heat} color={teamColor} />
+              <HeatBlobs points={territory.heat} color={teamColour} />
             </Pitch>
-            <div className="mt-3 flex flex-col gap-2">
-              <Segmented
-                ariaLabel="Time window"
-                value={window}
-                onChange={setWindow}
-                options={[
-                  { value: "now", label: "Up to now" },
-                  { value: "15", label: "15 s" },
-                  { value: "30", label: "30 s" },
-                  { value: "60", label: "60 s" },
-                ]}
-              />
-              <Segmented
-                ariaLabel="Ball state"
-                value={ball}
-                onChange={setBall}
-                options={[
-                  { value: "with", label: "With ball" },
-                  { value: "without", label: "Without ball" },
-                  { value: "both", label: "Both" },
-                ]}
-              />
-            </div>
+            <p className="num mt-2 text-[11.5px] text-text-faint">
+              n = {territory.playerCount} players · {territory.frameCount.toLocaleString()} frames
+            </p>
           </Visual>
 
           <Card className="flex items-center justify-between gap-4">
             <div>
               <h2 className="display text-[17px] uppercase text-cream">How compact?</h2>
               <p className="mt-1 text-[11.5px] text-text-faint">
-                Distance from the deepest to the highest player, on average.
+                Typical width side to side for {teamName}.
               </p>
             </div>
             <span className="num text-[30px] leading-none text-cream">
-              {data.compactBandM}
+              {territory.compactBandM}
               <span className="text-[14px] text-cream-dim"> m</span>
             </span>
           </Card>
@@ -108,41 +86,39 @@ function Territory() {
           <div className="grid gap-3 md:grid-cols-2">
             <Visual
               question="Where was the ball lost?"
-              caption="Each dot is one giveaway by your team."
+              caption="Each dot is one giveaway, at the ball's position."
               info={{
                 title: "Where was the ball lost?",
                 glossaryId: "turnover",
                 rows: [
-                  { label: "What it counts", value: "Giveaways by your team" },
-                  { label: "Total", value: `${data.losses.length}`, cream: true },
-                  { label: "In your own half", value: "5" },
-                  { label: "In the middle", value: "6" },
-                  { label: "Target", value: "No target", cream: true },
+                  { label: "What it counts", value: "Balls given away" },
+                  { label: "Team", value: teamName ?? "Both teams", cream: true },
+                  { label: "Total", value: `${territory.losses.length}`, cream: true },
+                  { label: "Read it as", value: "Where possession broke down" },
                 ],
               }}
             >
               <Pitch>
-                <PitchDots points={data.losses} color="var(--quality-bad)" />
+                <PitchDots points={territory.losses} color="var(--quality-bad)" />
               </Pitch>
             </Visual>
 
             <Visual
               question="Where was the ball won back?"
-              caption="Each dot is one ball your team recovered."
+              caption="Each dot is one ball recovered, at the ball's position."
               info={{
                 title: "Where was the ball won back?",
                 glossaryId: "high-turnover",
                 rows: [
-                  { label: "What it counts", value: "Recoveries by your team" },
-                  { label: "Total", value: `${data.recoveries.length}`, cream: true },
-                  { label: "High up the pitch", value: "4" },
-                  { label: "Inside 5 s of losing it", value: "41%" },
-                  { label: "Target", value: "60%", cream: true },
+                  { label: "What it counts", value: "Balls recovered" },
+                  { label: "Team", value: teamName ?? "Both teams", cream: true },
+                  { label: "Total", value: `${territory.recoveries.length}`, cream: true },
+                  { label: "Read it as", value: "Where pressure paid off" },
                 ],
               }}
             >
               <Pitch>
-                <PitchDots points={data.recoveries} color="var(--quality-good)" />
+                <PitchDots points={territory.recoveries} color="var(--quality-good)" />
               </Pitch>
             </Visual>
           </div>
@@ -155,20 +131,23 @@ function Territory() {
               glossaryId: "shape-snapshot",
               rows: [
                 { label: "What it shows", value: "Player positions" },
-                { label: "Snapshot every", value: "30 s" },
-                { label: "Snapshots", value: `${data.snapshots.length}`, cream: true },
-                { label: "Length back to front", value: `${data.blockLengthM} m`, cream: true },
-                { label: "Target", value: "38 m", cream: true },
+                { label: "Team", value: teamName ?? "Both teams", cream: true },
+                { label: "Snapshots", value: `${territory.snapshots.length}` },
+                { label: "Length back to front", value: `${snapshot?.lengthM ?? 0} m`, cream: true },
+                { label: "Width side to side", value: `${snapshot?.widthM ?? 0} m` },
               ],
             }}
           >
             <Pitch arrowLabel={`${match.teamA} attack →`}>
-              {snapshot && <PitchShirts players={snapshot.players} color={teamColor} />}
+              {snapshot && <PitchShirts players={snapshot.players} color={teamColour} />}
             </Pitch>
+            <p className="num mt-2 text-[11.5px] text-text-faint">
+              {snapshot?.players.length ?? 0} players on the pitch · {snapshot?.lengthM ?? 0} m long
+            </p>
             <div className="mt-3 flex flex-wrap gap-2">
-              {data.snapshots.map((s, i) => (
+              {territory.snapshots.map((s, i) => (
                 <Chip key={s.t} active={i === snapIndex} onClick={() => setSnapIndex(i)}>
-                  {formatClock(Math.min(s.t, total))}
+                  {formatClock(s.t)}
                 </Chip>
               ))}
             </div>
