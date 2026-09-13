@@ -7,7 +7,7 @@ import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitiv
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
 
-export const Route = createFileRoute("/library")({
+export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
     meta: [
       { title: "Library — Ipanema" },

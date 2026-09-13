@@ -15,7 +15,7 @@ import { TARGET_COPY } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/onboarding")({
+export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
     meta: [
       { title: "Set up your club — Ipanema" },
