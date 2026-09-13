@@ -1,11 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AuthShell } from "@/components/ip/auth-shell";
 import { Field, Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { getAccount } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/signin")({
+  validateSearch: (search: Record<string, unknown>): { redirect?: string } =>
+    typeof search["redirect"] === "string" ? { redirect: search["redirect"] as string } : {},
   head: () => ({
     meta: [
       { title: "Sign in — Ipanema" },
@@ -19,35 +23,71 @@ export const Route = createFileRoute("/signin")({
 
 function SignIn() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
+  const account = useServerFn(getAccount);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  /** Back where they were, or onboarding on a first sign-in, otherwise the library. */
+  async function land() {
+    const back = search.redirect;
+    if (back && back.startsWith("/") && !back.startsWith("//") && !back.startsWith("/signin")) {
+      navigate({ href: back, replace: true });
+      return;
+    }
+    try {
+      const data = await account();
+      if (!data.profile.onboarded) {
+        navigate({ to: "/onboarding", replace: true });
+        return;
+      }
+    } catch {
+      /* fall through to the library */
+    }
+    navigate({ to: "/library", replace: true });
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
     if (signInError) {
-      setError("That email and password don't match. Check the password and try again.");
+      setBusy(false);
+      const message = signInError.message.toLowerCase();
+      setError(
+        message.includes("confirm")
+          ? "This email hasn't been confirmed yet. Open the link we emailed you, then sign in."
+          : "That email and password don't match. Check the password and try again.",
+      );
       return;
     }
-    navigate({ to: "/library" });
+    await land();
+    setBusy(false);
   }
 
   async function google() {
     setError(null);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setError("Google sign-in didn't complete. Try again.");
-      return;
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (result.error) {
+        const message = String((result.error as { message?: string }).message ?? "").toLowerCase();
+        setError(
+          message.includes("provider") || message.includes("not enabled") || message.includes("unsupported")
+            ? "Google sign-in not enabled."
+            : "Google sign-in didn't complete. Try again.",
+        );
+        return;
+      }
+      if (result.redirected) return;
+      await land();
+    } catch {
+      setError("Google sign-in not enabled.");
     }
-    if (result.redirected) return;
-    navigate({ to: "/library" });
   }
 
   return (

@@ -192,12 +192,25 @@ export function buildTerritory(
   }
 
   /* losses and recoveries — the ball's position at the turnover */
-  const positionAt = (t: number) => {
+  const positionIn = (t: number) => {
     const frame = frameAt(frames, t);
-    const m = frame?.ball?.m;
+    if (!frame) return null;
+    const m = frame.ball?.m;
     if (m) return toPercent(m as [number, number], length, width);
-    const carrier = frame?.players.find((p) => p.id === (frame as any)?.carrier);
+    const carrierId = (frame as { carrier?: number | null }).carrier;
+    const carrier =
+      carrierId === null || carrierId === undefined
+        ? undefined
+        : frame.players.find((p) => p.id === carrierId);
     return carrier ? toPercent(carrier.m, length, width) : null;
+  };
+  /* the tracker loses the ball on some frames — look a little either side of the moment */
+  const positionAt = (t: number) => {
+    for (const offset of [0, -0.5, 0.5, -1, 1, -2, 2, -3, 3]) {
+      const at = positionIn(t + offset);
+      if (at) return at;
+    }
+    return null;
   };
   const pick = (type: string) =>
     (data.events ?? [])

@@ -101,6 +101,9 @@ function Territory() {
               <Pitch>
                 <PitchDots points={territory.losses} color="var(--quality-bad)" />
               </Pitch>
+              <p className="num mt-2 text-[11.5px] text-text-faint">
+                {territory.losses.length} losses · {territory.recoveries.length} recoveries
+              </p>
             </Visual>
 
             <Visual
@@ -120,6 +123,9 @@ function Territory() {
               <Pitch>
                 <PitchDots points={territory.recoveries} color="var(--quality-good)" />
               </Pitch>
+              <p className="num mt-2 text-[11.5px] text-text-faint">
+                {territory.recoveries.length} recoveries · {territory.losses.length} losses
+              </p>
             </Visual>
           </div>
 
