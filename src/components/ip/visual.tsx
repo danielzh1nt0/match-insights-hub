@@ -145,7 +145,7 @@ export function Pitch({
 }) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="w-full overflow-hidden rounded-[12px] bg-surface-2">
+      <div className="mx-auto w-full max-w-[640px] overflow-hidden rounded-[12px] bg-surface-2">
       <svg viewBox="0 0 100 64" className="block h-auto w-full" role="img" aria-label="Pitch">
         <rect x="0" y="0" width="100" height="64" fill="var(--surface-2)" />
         <g stroke="var(--wire)" strokeWidth="0.4" fill="none">
@@ -197,7 +197,7 @@ export function ZoneGrid({ values, color = "var(--cream)" }: { values: number[];
             x={2 + col * 16 + 8}
             y={2 + row * 15 + 9}
             textAnchor="middle"
-            fontSize="3.6"
+            fontSize="2.8"
             fill="var(--text-dim)"
           >
             {v.toFixed(1)}
