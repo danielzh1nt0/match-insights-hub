@@ -46,7 +46,7 @@ function TeamTile({
         aria-hidden="true"
       >
         <span
-          className="absolute inset-0 rounded-[12px] ring-[1.5px] ring-inset"
+          className="absolute inset-0 rounded-[12px]"
           style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.12)" }}
         />
         <span className="display-i text-[22px] leading-none tracking-[-0.02em] text-[#ffffff]">
@@ -124,7 +124,7 @@ export function MatchHeader({
           type="button"
           onClick={onSetup}
           aria-label="Match setup"
-          className="display-i num-tab text-[40px] leading-none tracking-[0.02em] text-cream md:text-[48px]"
+          className="display-i text-[40px] leading-none tracking-[0.02em] text-cream md:text-[48px]"
           style={{ fontVariantNumeric: "tabular-nums" }}
         >
           {played ? `${scoreA}\u2009:\u2009${scoreB}` : "—\u2009:\u2009—"}
@@ -143,7 +143,7 @@ export function MatchHeader({
 
       {/* Row 3 — meta */}
       <div className="relative flex items-center justify-between gap-3 px-5 pb-3.5 pt-3 md:px-7">
-        <p className="num truncate text-[11.5px] font-medium tracking-[0.01em] text-text-dim">
+        <p className="truncate text-[11.5px] font-medium tracking-[0.01em] text-text-dim [font-variant-numeric:tabular-nums]">
           {periodLine ?? metaLine ?? ""}
         </p>
         <button
