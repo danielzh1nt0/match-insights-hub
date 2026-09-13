@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
+import { DrillCard } from "@/components/ip/drill-card";
 import { MatchShell } from "@/components/ip/match-shell";
-import { Card, SecondaryButton } from "@/components/ip/primitives";
+import { PrimaryButton } from "@/components/ip/primitives";
 import { useMatch } from "@/hooks/use-match";
+import { buildSessionPlan } from "@/lib/session-plan";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/session")({
   validateSearch: (search: Record<string, unknown>): { finding?: string } =>
@@ -29,25 +31,18 @@ function Session() {
   const [seed, setSeed] = useState(0);
 
   const finding = data?.findings.find((f) => f.id === findingId) ?? data?.findings[0];
+  const playerCount = data?.players.length;
+  const drills = useMemo(
+    () => (finding ? buildSessionPlan(finding, playerCount, seed) : []),
+    [finding, playerCount, seed],
+  );
 
-  const blocks = [
-    {
-      title: "Warm-up · 12 minutes",
-      body: "Passing in fours with one player closing down. The moment the pass is played, the presser steps to the next receiver, so everyone feels the two-second clock.",
-    },
-    {
-      title: "Main exercise · 20 minutes",
-      body: "Six against six in the middle third with two small goals. Every time a team loses the ball, they have five seconds to win it back before play restarts with the other team.",
-    },
-    {
-      title: "Game · 20 minutes",
-      body: "Nine against nine, normal rules, one condition: pressure inside two seconds after a loss earns a free restart in the opponent half.",
-    },
-    {
-      title: "What to look for",
-      body: "The nearest player stepping in rather than dropping off, and the two players behind him sliding across so the middle stays closed.",
-    },
-  ];
+  const metric = finding
+    ? `${finding.value}${finding.unit === "%" ? "%" : ` ${finding.unit}`}`
+    : "—";
+  const target = finding
+    ? `${finding.target}${finding.unit === "%" ? "%" : ` ${finding.unit}`}`
+    : "—";
 
   return (
     <MatchShell
@@ -61,31 +56,23 @@ function Session() {
     >
       {finding && (
         <>
-          <Card className="bg-surface-2">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-faint">
+          <section className="border-b border-wire-2 px-1 pb-4 pt-1">
+            <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-faint">
               Session built from
             </span>
-            <h1 className="display mt-1 text-[20px] leading-tight text-cream">{finding.headline}</h1>
-            <p className="mt-2 text-[12.5px] text-text-dim">
-              Your number {finding.value}
-              {finding.unit === "%" ? "%" : ` ${finding.unit}`} · target {finding.target}
-              {finding.unit === "%" ? "%" : ` ${finding.unit}`} · {finding.events} moments
+            <h1 className="display-i mt-1 max-w-[900px] text-[22px] leading-tight text-cream">{finding.headline}</h1>
+            <p className="mt-2 text-[12px] text-text-dim">
+              Your number {metric} · target {target} · {finding.events} moments
             </p>
-          </Card>
+          </section>
 
-          {blocks.map((b) => (
-            <Card key={b.title}>
-              <h2 className="display text-[17px] uppercase text-text">{b.title}</h2>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-text-dim">
-                {b.body}
-                {seed > 0 && " Keep the pitch narrow so the distances stay short."}
-              </p>
-            </Card>
+          {drills.map((drill) => (
+            <DrillCard key={`${drill.id}-${seed}`} drill={drill} />
           ))}
 
-          <SecondaryButton className="h-12" onClick={() => setSeed((s) => s + 1)}>
+          <PrimaryButton block className="min-h-12" onClick={() => setSeed((s) => s + 1)}>
             <RotateCcw size={15} aria-hidden="true" /> Regenerate session
-          </SecondaryButton>
+          </PrimaryButton>
         </>
       )}
     </MatchShell>

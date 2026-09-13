@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Done
+- Session screen rebuild: animated tactical drill pitches, setup/instructions/cues/progressions, regeneration, and responsive QA
 - Phase 1: brand, auth, onboarding, library, upload, processing
 - Real accounts (email + Google), club/teams/targets saved to the account
 - Phase 2: insights, match, territory, stats, player, clip reel, session
