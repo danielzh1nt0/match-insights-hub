@@ -8,9 +8,8 @@ import { useApp } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/processing")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    id: typeof search.id === "string" ? search.id : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { id?: string } =>
+    typeof search["id"] === "string" ? { id: search["id"] } : {},
   head: () => ({
     meta: [
       { title: "Analysing your match — Ipanema" },
