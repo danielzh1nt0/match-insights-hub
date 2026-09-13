@@ -70,7 +70,10 @@ function tickLabel(e: MatchEvent) {
 
 export function buildStorySlides(match: LibraryMatch, data: MatchData): Slide[] {
   const findings = data.findings;
-  const good = findings.find(meetsTarget) ?? [...findings].sort((a, b) => gap(a) - gap(b))[0];
+  const good =
+    findings.find((f) => meetsTarget(f) && !f.higherIsWorse) ??
+    findings.find(meetsTarget) ??
+    [...findings].sort((a, b) => gap(a) - gap(b))[0];
   const fix = [...findings].sort((a, b) => gap(b) - gap(a))[0];
   const moment =
     data.events.find((e) => e.kind === "goal") ??
@@ -104,7 +107,7 @@ export function buildStorySlides(match: LibraryMatch, data: MatchData): Slide[] 
       tint: "good",
       tag: "Keep doing this",
       tagIcon: "check",
-      headline: good.headline,
+      headline: good.higherIsWorse && meetsTarget(good) ? `Inside target: ${good.headline}` : good.headline,
       sub: good.interpretation,
       metric: {
         value: `${good.value}${good.unit === "%" ? "%" : ""}`,
@@ -249,7 +252,7 @@ export function MatchStory({
       const f = data.findings.find((x) => x.headline === slide.headline);
       return [
         {
-          label: slide.id === "fix" ? `See the ${f?.value ?? ""} moments`.trim() : "Watch the moments",
+          label: slide.id === "fix" ? `See the ${f?.events ?? 0} moments` : "Watch the moments",
           kind: "secondary",
           icon: "play",
           run: () =>
