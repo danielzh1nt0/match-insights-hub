@@ -77,10 +77,16 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
               See the moments
             </PrimaryButton>
           )}
-          <SecondaryButton className="h-12 flex-1" onClick={onClose}>
+          <Link
+            to="/glossary"
+            hash={info.glossaryId}
+            onClick={onClose}
+            className="tap inline-flex h-12 flex-1 items-center justify-center rounded-[12px] border border-cream/60 px-5 text-sm font-semibold text-cream transition-colors duration-150 ease-out hover:bg-cream/10"
+          >
             Glossary
-          </SecondaryButton>
+          </Link>
         </div>
+
       </motion.div>
     </div>
   );
