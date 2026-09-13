@@ -55,6 +55,17 @@ function num(v: unknown, fallback: number) {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
 
+/**
+ * Kit colours for drawing. These come from the saved match labels, so a club's
+ * own colour is used everywhere (heat maps, dots, ticks, bars).
+ */
+export function teamColours(label: { colour_a?: string | null; colour_b?: string | null } | null | undefined) {
+  return {
+    A: label?.colour_a || "#ef4444",
+    B: label?.colour_b || "#22c55e",
+  };
+}
+
 export function pitchSize(data: MatchDataFile | undefined, stats: StatsFile | undefined) {
   const p = (data as any)?.pitch ?? stats?.pitch;
   return { length: num(p?.length, 105), width: num(p?.width, 68) };

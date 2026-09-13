@@ -57,7 +57,7 @@ function MatchScreen() {
   const { t: startT } = Route.useSearch();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, row, label, file, team, loading } = useAnalysis(matchId, scope);
+  const { match, row, label, file, team, colours, loading } = useAnalysis(matchId, scope);
   const [mode, setMode] = useState<Mode>("video");
   const [filter, setFilter] = useState<string>("all");
   const [clock, setClock] = useState<number>(startT ?? 0);
@@ -91,10 +91,7 @@ function MatchScreen() {
 
   const events: FeedEvent[] = file?.events ?? [];
   const total = row?.duration_s ?? match?.durationS ?? 1;
-  const colours = useMemo(
-    () => ({ A: label?.colour_a || "#ef4444", B: label?.colour_b || "#22c55e" }),
-    [label?.colour_a, label?.colour_b],
-  );
+
 
   // The video clock is the only source of visibility: read it every frame.
   useEffect(() => {

@@ -8,6 +8,7 @@ import {
   buildStatSections,
   buildSummary,
   buildTerritory,
+  teamColours,
   teamKey,
   thresholdsFrom,
   type StatsFile,
@@ -72,6 +73,7 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
   const stats = statsQuery.data;
   const team = teamKey(scope);
   const thresholds = useMemo(() => thresholdsFrom(label), [label]);
+  const colours = useMemo(() => teamColours(label), [label]);
 
   const match = useMemo(() => (item ? toLibraryMatch(item) : undefined), [item]);
 
@@ -99,6 +101,7 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     file,
     stats,
     team,
+    colours,
     thresholds,
     territory,
     findings,
