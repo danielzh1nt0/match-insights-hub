@@ -18,10 +18,6 @@ type AppState = {
   hydrated: boolean;
   markHydrated: () => void;
 
-  signedIn: boolean;
-  user: { name: string; email: string; club: string; role: Role } | null;
-  signIn: (email: string, name?: string) => void;
-  signOut: () => void;
 
   onboarded: boolean;
   club: Club;
@@ -47,19 +43,6 @@ export const useApp = create<AppState>()(
       hydrated: false,
       markHydrated: () => set({ hydrated: true }),
 
-      signedIn: false,
-      user: null,
-      signIn: (email, name) =>
-        set({
-          signedIn: true,
-          user: {
-            name: name ?? "Sam Moreau",
-            email,
-            club: "1. FC Köln P2009",
-            role: "Head coach",
-          },
-        }),
-      signOut: () => set({ signedIn: false, user: null }),
 
       onboarded: false,
       club: { name: "1. FC Köln P2009", country: "Germany", crestInitial: "K" },
@@ -85,8 +68,6 @@ export const useApp = create<AppState>()(
     {
       name: "ipanema-app",
       partialize: (s) => ({
-        signedIn: s.signedIn,
-        user: s.user,
         onboarded: s.onboarded,
         club: s.club,
         teams: s.teams,

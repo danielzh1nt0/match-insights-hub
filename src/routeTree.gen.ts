@@ -10,43 +10,34 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as LibraryRouteImport } from './routes/library'
-import { Route as NewRouteImport } from './routes/new'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as ProcessingRouteImport } from './routes/processing'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as ResetRouteImport } from './routes/reset'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
-import { Route as MatchMatchIdInsightsRouteImport } from './routes/match.$matchId.insights'
+import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
+import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
+import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
+import { Route as AuthenticatedMatchMatchIdInsightsRouteImport } from './routes/_authenticated/match.$matchId.insights'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LibraryRoute = LibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NewRoute = NewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProcessingRoute = ProcessingRouteImport.update({
-  id: '/processing',
-  path: '/processing',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetRoute = ResetRouteImport.update({
   id: '/reset',
   path: '/reset',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SigninRoute = SigninRouteImport.update({
@@ -59,92 +50,118 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MatchMatchIdInsightsRoute = MatchMatchIdInsightsRouteImport.update({
-  id: '/match/$matchId/insights',
-  path: '/match/$matchId/insights',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedNewRoute = AuthenticatedNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProcessingRoute = AuthenticatedProcessingRouteImport.update({
+  id: '/processing',
+  path: '/processing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedMatchMatchIdInsightsRoute =
+  AuthenticatedMatchMatchIdInsightsRouteImport.update({
+    id: '/match/$matchId/insights',
+    path: '/match/$matchId/insights',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/library': typeof LibraryRoute
-  '/new': typeof NewRoute
-  '/onboarding': typeof OnboardingRoute
-  '/processing': typeof ProcessingRoute
   '/reset': typeof ResetRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
-  '/match/$matchId/insights': typeof MatchMatchIdInsightsRoute
+  '/library': typeof AuthenticatedLibraryRoute
+  '/new': typeof AuthenticatedNewRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/processing': typeof AuthenticatedProcessingRoute
+  '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/library': typeof LibraryRoute
-  '/new': typeof NewRoute
-  '/onboarding': typeof OnboardingRoute
-  '/processing': typeof ProcessingRoute
   '/reset': typeof ResetRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
-  '/match/$matchId/insights': typeof MatchMatchIdInsightsRoute
+  '/library': typeof AuthenticatedLibraryRoute
+  '/new': typeof AuthenticatedNewRoute
+  '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/processing': typeof AuthenticatedProcessingRoute
+  '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/library': typeof LibraryRoute
-  '/new': typeof NewRoute
-  '/onboarding': typeof OnboardingRoute
-  '/processing': typeof ProcessingRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/reset': typeof ResetRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
-  '/match/$matchId/insights': typeof MatchMatchIdInsightsRoute
+  '/_authenticated/library': typeof AuthenticatedLibraryRoute
+  '/_authenticated/new': typeof AuthenticatedNewRoute
+  '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/_authenticated/processing': typeof AuthenticatedProcessingRoute
+  '/_authenticated/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/reset'
+    | '/reset-password'
+    | '/signin'
+    | '/signup'
     | '/library'
     | '/new'
     | '/onboarding'
     | '/processing'
-    | '/reset'
-    | '/signin'
-    | '/signup'
     | '/match/$matchId/insights'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/reset'
+    | '/reset-password'
+    | '/signin'
+    | '/signup'
     | '/library'
     | '/new'
     | '/onboarding'
     | '/processing'
-    | '/reset'
-    | '/signin'
-    | '/signup'
     | '/match/$matchId/insights'
   id:
     | '__root__'
     | '/'
-    | '/library'
-    | '/new'
-    | '/onboarding'
-    | '/processing'
+    | '/_authenticated'
     | '/reset'
+    | '/reset-password'
     | '/signin'
     | '/signup'
-    | '/match/$matchId/insights'
+    | '/_authenticated/library'
+    | '/_authenticated/new'
+    | '/_authenticated/onboarding'
+    | '/_authenticated/processing'
+    | '/_authenticated/match/$matchId/insights'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  LibraryRoute: typeof LibraryRoute
-  NewRoute: typeof NewRoute
-  OnboardingRoute: typeof OnboardingRoute
-  ProcessingRoute: typeof ProcessingRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   ResetRoute: typeof ResetRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRoute
-  MatchMatchIdInsightsRoute: typeof MatchMatchIdInsightsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -156,32 +173,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/library': {
-      id: '/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof LibraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/new': {
-      id: '/new'
-      path: '/new'
-      fullPath: '/new'
-      preLoaderRoute: typeof NewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/processing': {
-      id: '/processing'
-      path: '/processing'
-      fullPath: '/processing'
-      preLoaderRoute: typeof ProcessingRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset': {
@@ -189,6 +185,13 @@ declare module '@tanstack/react-router' {
       path: '/reset'
       fullPath: '/reset'
       preLoaderRoute: typeof ResetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signin': {
@@ -205,26 +208,71 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/match/$matchId/insights': {
-      id: '/match/$matchId/insights'
+    '/_authenticated/library': {
+      id: '/_authenticated/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AuthenticatedLibraryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/new': {
+      id: '/_authenticated/new'
+      path: '/new'
+      fullPath: '/new'
+      preLoaderRoute: typeof AuthenticatedNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/onboarding': {
+      id: '/_authenticated/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/processing': {
+      id: '/_authenticated/processing'
+      path: '/processing'
+      fullPath: '/processing'
+      preLoaderRoute: typeof AuthenticatedProcessingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/match/$matchId/insights': {
+      id: '/_authenticated/match/$matchId/insights'
       path: '/match/$matchId/insights'
       fullPath: '/match/$matchId/insights'
-      preLoaderRoute: typeof MatchMatchIdInsightsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdInsightsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
+  AuthenticatedNewRoute: typeof AuthenticatedNewRoute
+  AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
+  AuthenticatedProcessingRoute: typeof AuthenticatedProcessingRoute
+  AuthenticatedMatchMatchIdInsightsRoute: typeof AuthenticatedMatchMatchIdInsightsRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
+  AuthenticatedNewRoute: AuthenticatedNewRoute,
+  AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
+  AuthenticatedProcessingRoute: AuthenticatedProcessingRoute,
+  AuthenticatedMatchMatchIdInsightsRoute:
+    AuthenticatedMatchMatchIdInsightsRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  LibraryRoute: LibraryRoute,
-  NewRoute: NewRoute,
-  OnboardingRoute: OnboardingRoute,
-  ProcessingRoute: ProcessingRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   ResetRoute: ResetRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRoute,
-  MatchMatchIdInsightsRoute: MatchMatchIdInsightsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

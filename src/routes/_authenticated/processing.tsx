@@ -7,7 +7,7 @@ import { PROCESSING_STAGES, formatClock, matchTitle } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/processing")({
+export const Route = createFileRoute("/_authenticated/processing")({
   validateSearch: (search: Record<string, unknown>): { id?: string } =>
     typeof search["id"] === "string" ? { id: search["id"] } : {},
   head: () => ({

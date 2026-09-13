@@ -6,7 +6,7 @@ import { useState } from "react";
 import { formatClock } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
 
-export const Route = createFileRoute("/match/$matchId/insights")({
+export const Route = createFileRoute("/_authenticated/match/$matchId/insights")({
   head: () => ({
     meta: [
       { title: "Match insights — Ipanema" },

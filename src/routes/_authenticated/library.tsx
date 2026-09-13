@@ -1,5 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
+import { getAccount } from "@/lib/profile.functions";
 import { motion } from "motion/react";
 import { Search, Video } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
@@ -7,7 +10,7 @@ import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitiv
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
 
-export const Route = createFileRoute("/library")({
+export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
     meta: [
       { title: "Library — Ipanema" },
@@ -26,6 +29,15 @@ function LibraryPage() {
   const matches = useApp((s) => s.matches);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const fetchAccount = useServerFn(getAccount);
+  const { data: account } = useQuery({ queryKey: ["account"], queryFn: () => fetchAccount() });
+
+  useEffect(() => {
+    if (account && !account.profile.onboarded) {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [account, navigate]);
 
   const filters = useMemo(() => {
     const set = new Set<string>();

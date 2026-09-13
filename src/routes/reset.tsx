@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Mail } from "lucide-react";
 import { AuthShell } from "@/components/ip/auth-shell";
-import { Field, Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
+import { Field, Input, PrimaryButton } from "@/components/ip/primitives";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/reset")({
   head: () => ({
@@ -16,61 +17,43 @@ export const Route = createFileRoute("/reset")({
   component: Reset,
 });
 
-type Stage = "email" | "sent" | "password";
-
 function Reset() {
-  const navigate = useNavigate();
-  const [stage, setStage] = useState<Stage>("email");
-  const [email, setEmail] = useState("coach@koln.de");
-  const [password, setPassword] = useState("");
+  const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  if (stage === "sent") {
+  if (sent) {
     return (
       <AuthShell sub="Reset your password">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <Mail size={30} className="text-cream" aria-hidden="true" />
           <h1 className="display text-[20px] text-text">Check your email</h1>
           <p className="text-[13px] text-text-dim">
-            We sent a reset link to <strong className="text-text">{email}</strong>.
+            We sent a reset link to <strong className="text-text">{email}</strong>. Open it on this device to
+            set a new password.
           </p>
-          <SecondaryButton className="mt-2 h-12" onClick={() => setStage("password")}>
-            I have the link
-          </SecondaryButton>
+          <Link to="/signin" className="tap text-[12.5px] text-text-dim hover:text-text">
+            Back to sign in
+          </Link>
         </div>
       </AuthShell>
     );
   }
 
-  if (stage === "password") {
-    return (
-      <AuthShell sub="Set a new password">
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (password.length < 8) {
-              setError("At least 8 characters, one number, one capital.");
-              return;
-            }
-            navigate({ to: "/signin" });
-          }}
-        >
-          <Field label="New password" error={error ?? undefined}>
-            <Input
-              type="password"
-              value={password}
-              placeholder="••••••••"
-              onChange={(e) => setPassword(e.target.value)}
-              aria-label="New password"
-            />
-          </Field>
-          <PrimaryButton type="submit" block className="h-12">
-            Save password
-          </PrimaryButton>
-        </form>
-      </AuthShell>
-    );
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setBusy(false);
+    if (resetError) {
+      setError("We couldn't send that link. Check the email address and try again.");
+      return;
+    }
+    setSent(true);
   }
 
   return (
@@ -82,18 +65,23 @@ function Reset() {
         </Link>
       }
     >
-      <form
-        className="flex flex-col gap-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setStage("sent");
-        }}
-      >
-        <Field label="Email" help="We'll send a link that lets you set a new password.">
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-label="Email" />
+      <form className="flex flex-col gap-4" onSubmit={submit}>
+        <Field
+          label="Email"
+          help="We'll send a link that lets you set a new password."
+          error={error ?? undefined}
+        >
+          <Input
+            type="email"
+            value={email}
+            required
+            autoComplete="email"
+            onChange={(e) => setEmail(e.target.value)}
+            aria-label="Email"
+          />
         </Field>
-        <PrimaryButton type="submit" block className="h-12">
-          Send reset link
+        <PrimaryButton type="submit" block className="h-12" disabled={busy}>
+          {busy ? "Sending…" : "Send reset link"}
         </PrimaryButton>
       </form>
     </AuthShell>

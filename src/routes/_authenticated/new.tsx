@@ -6,7 +6,7 @@ import { AppHeader, Screen } from "@/components/ip/chrome";
 import { Field, Input, PrimaryButton, Segmented } from "@/components/ip/primitives";
 import { useApp } from "@/store/app-store";
 
-export const Route = createFileRoute("/new")({
+export const Route = createFileRoute("/_authenticated/new")({
   head: () => ({
     meta: [
       { title: "New analysis — Ipanema" },

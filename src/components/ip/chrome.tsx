@@ -3,18 +3,11 @@ import type { ReactNode } from "react";
 import { ArrowLeft, ChartNoAxesColumn, Film, Map, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Wordmark, Segmented } from "./primitives";
+import { AccountMenu } from "./account-menu";
 
 /* ---------------- AppHeader (3 column grid) ---------------- */
 
-export function AppHeader({
-  backTo,
-  onBack,
-  initials = "SM",
-}: {
-  backTo?: string;
-  onBack?: () => void;
-  initials?: string;
-}) {
+export function AppHeader({ backTo, onBack }: { backTo?: string; onBack?: () => void }) {
   return (
     <header className="sticky top-0 z-40 grid grid-cols-[44px_1fr_44px] items-center border-b border-wire-2 bg-bg/95 px-4 py-2 backdrop-blur md:px-7">
       <div className="flex items-center">
@@ -43,12 +36,7 @@ export function AppHeader({
         </Link>
       </div>
       <div className="flex justify-end">
-        <span
-          aria-label="Your account"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-wire bg-surface-2 text-[11px] font-bold text-text-dim"
-        >
-          {initials}
-        </span>
+        <AccountMenu />
       </div>
     </header>
   );

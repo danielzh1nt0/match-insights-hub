@@ -2,7 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AuthShell } from "@/components/ip/auth-shell";
 import { Field, Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
-import { useApp } from "@/store/app-store";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/signin")({
   head: () => ({
@@ -18,21 +19,35 @@ export const Route = createFileRoute("/signin")({
 
 function SignIn() {
   const navigate = useNavigate();
-  const signIn = useApp((s) => s.signIn);
-  const onboarded = useApp((s) => s.onboarded);
-  const [email, setEmail] = useState("coach@koln.de");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < 8) {
+    setBusy(true);
+    setError(null);
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    setBusy(false);
+    if (signInError) {
       setError("That email and password don't match. Check the password and try again.");
       return;
     }
+    navigate({ to: "/library" });
+  }
+
+  async function google() {
     setError(null);
-    signIn(email);
-    navigate({ to: onboarded ? "/library" : "/onboarding" });
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setError("Google sign-in didn't complete. Try again.");
+      return;
+    }
+    if (result.redirected) return;
+    navigate({ to: "/library" });
   }
 
   return (
@@ -52,7 +67,9 @@ function SignIn() {
           <Input
             type="email"
             value={email}
+            required
             autoComplete="email"
+            placeholder="you@club.com"
             onChange={(e) => setEmail(e.target.value)}
             aria-label="Email"
           />
@@ -61,14 +78,15 @@ function SignIn() {
           <Input
             type="password"
             value={password}
+            required
             autoComplete="current-password"
             placeholder="••••••••"
             onChange={(e) => setPassword(e.target.value)}
             aria-label="Password"
           />
         </Field>
-        <PrimaryButton type="submit" block className="h-12">
-          Sign in
+        <PrimaryButton type="submit" block className="h-12" disabled={busy}>
+          {busy ? "Signing in…" : "Sign in"}
         </PrimaryButton>
       </form>
 
@@ -78,14 +96,7 @@ function SignIn() {
         <span className="h-px flex-1 bg-wire-2" />
       </div>
 
-      <SecondaryButton
-        block
-        className="h-12"
-        onClick={() => {
-          signIn(email);
-          navigate({ to: onboarded ? "/library" : "/onboarding" });
-        }}
-      >
+      <SecondaryButton block className="h-12" onClick={google}>
         Continue with Google
       </SecondaryButton>
 

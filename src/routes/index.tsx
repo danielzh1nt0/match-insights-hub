@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
+import { useSession } from "@/hooks/use-session";
 import { Wordmark, PrimaryButton, SecondaryButton, Card } from "@/components/ip/primitives";
 
 export const Route = createFileRoute("/")({
@@ -78,17 +79,28 @@ function SectionTitle({ children }: { children: string }) {
 }
 
 function Landing() {
+  const { session } = useSession();
+  const signedIn = Boolean(session);
+
   return (
     <div className="min-h-screen bg-bg">
       <header className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-4 md:px-7">
         <Wordmark size="sm" />
         <nav className="flex items-center gap-2">
-          <Link to="/signin">
-            <SecondaryButton className="h-11">Sign in</SecondaryButton>
-          </Link>
-          <Link to="/signup" className="hidden sm:block">
-            <PrimaryButton className="h-11">Request access</PrimaryButton>
-          </Link>
+          {signedIn ? (
+            <Link to="/library">
+              <PrimaryButton className="h-11">Open your library</PrimaryButton>
+            </Link>
+          ) : (
+            <>
+              <Link to="/signin">
+                <SecondaryButton className="h-11">Sign in</SecondaryButton>
+              </Link>
+              <Link to="/signup" className="hidden sm:block">
+                <PrimaryButton className="h-11">Request access</PrimaryButton>
+              </Link>
+            </>
+          )}
         </nav>
       </header>
 
@@ -106,12 +118,20 @@ function Landing() {
             Match analysis that ends in Tuesday's session.
           </h1>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to="/signin">
-              <PrimaryButton className="h-12 px-7">Sign in</PrimaryButton>
-            </Link>
-            <Link to="/signup">
-              <SecondaryButton className="h-12 px-7">Request access</SecondaryButton>
-            </Link>
+            {signedIn ? (
+              <Link to="/library">
+                <PrimaryButton className="h-12 px-7">Open your library</PrimaryButton>
+              </Link>
+            ) : (
+              <>
+                <Link to="/signin">
+                  <PrimaryButton className="h-12 px-7">Sign in</PrimaryButton>
+                </Link>
+                <Link to="/signup">
+                  <SecondaryButton className="h-12 px-7">Request access</SecondaryButton>
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="relative mx-auto mt-10 aspect-[16/9] w-full max-w-[900px] overflow-hidden rounded-[16px] border border-wire pitch-turf">

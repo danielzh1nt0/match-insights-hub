@@ -14,8 +14,12 @@ import {
 import { TARGET_COPY } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
 import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { saveOnboarding } from "@/lib/profile.functions";
 
-export const Route = createFileRoute("/onboarding")({
+export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
     meta: [
       { title: "Set up your club — Ipanema" },
@@ -36,10 +40,38 @@ function Onboarding() {
     useApp();
   const [step, setStep] = useState(0);
   const [editTargets, setEditTargets] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const save = useServerFn(saveOnboarding);
+  const queryClient = useQueryClient();
 
-  function finish() {
+  async function finish() {
+    setSaving(true);
+    try {
+      await save({
+        data: {
+          club: { name: club.name, country: club.country, crestInitial: club.crestInitial },
+          teams: teams.map((t) => ({
+            name: t.name,
+            ageGroup: t.ageGroup,
+            colorA: t.colorA,
+            colorB: t.colorB,
+          })),
+          targets: {
+            pressWithin2s: targets.pressWithin2s,
+            regainWithin5s: targets.regainWithin5s,
+            blockCeilingMin: targets.blockLengthCeiling,
+          },
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["account"] });
+    } catch {
+      toast.error("We couldn't save your setup. Check your connection and try again.");
+      setSaving(false);
+      return;
+    }
     completeOnboarding();
     clearMatches();
+    setSaving(false);
     navigate({ to: "/library" });
   }
 
@@ -200,8 +232,8 @@ function Onboarding() {
                 </Card>
               ))}
               <div className="mt-1 flex gap-2">
-                <PrimaryButton block className="h-12" onClick={finish}>
-                  {editTargets ? "Save and finish" : "Use defaults"}
+                <PrimaryButton block className="h-12" onClick={finish} disabled={saving}>
+                  {saving ? "Saving…" : editTargets ? "Save and finish" : "Use defaults"}
                 </PrimaryButton>
                 {!editTargets && (
                   <SecondaryButton className="h-12" onClick={() => setEditTargets(true)}>
