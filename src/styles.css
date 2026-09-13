@@ -39,6 +39,12 @@
   --color-quality-good: var(--quality-good);
   --color-quality-risky: var(--quality-risky);
   --color-quality-bad: var(--quality-bad);
+  --color-pitch-top: var(--pitch-top);
+  --color-pitch-bottom: var(--pitch-bottom);
+  --color-pitch-line: var(--pitch-line);
+  --color-pitch-control: var(--pitch-control);
+  --color-ball-detail: var(--ball-detail);
+  --color-team-gk: var(--team-gk);
 
   --color-card: var(--surface);
   --color-card-foreground: var(--text);
@@ -77,6 +83,12 @@
   --quality-good: #34d399;
   --quality-risky: #f59e0b;
   --quality-bad: #ef4444;
+  --pitch-top: #2d5c30;
+  --pitch-bottom: #244a26;
+  --pitch-line: rgba(255, 255, 255, 0.25);
+  --pitch-control: rgba(0, 0, 0, 0.5);
+  --ball-detail: #111315;
+  --team-gk: #eab308;
   --radius: 16px;
   color-scheme: dark;
 }
