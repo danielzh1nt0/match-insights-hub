@@ -14,6 +14,10 @@ import {
 import { TARGET_COPY } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
 import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { saveOnboarding } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({
@@ -36,10 +40,34 @@ function Onboarding() {
     useApp();
   const [step, setStep] = useState(0);
   const [editTargets, setEditTargets] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const save = useServerFn(saveOnboarding);
+  const queryClient = useQueryClient();
 
-  function finish() {
+  async function finish() {
+    setSaving(true);
+    try {
+      await save({
+        data: {
+          club: { name: club.name, country: club.country, crestInitial: club.crestInitial },
+          teams: teams.map((t) => ({
+            name: t.name,
+            ageGroup: t.ageGroup,
+            colorA: t.colorA,
+            colorB: t.colorB,
+          })),
+          targets,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["account"] });
+    } catch {
+      toast.error("We couldn't save your setup. Check your connection and try again.");
+      setSaving(false);
+      return;
+    }
     completeOnboarding();
     clearMatches();
+    setSaving(false);
     navigate({ to: "/library" });
   }
 
