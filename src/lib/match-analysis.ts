@@ -619,3 +619,29 @@ export function attacksRight(
   const value = override?.[team] ?? attackRight?.[team];
   return value === true;
 }
+
+/** Positions from the frame at a moment's time, for the recap illustration. */
+export function buildMomentShape(
+  data: MatchDataFile | undefined,
+  t: number | undefined,
+): {
+  dots: { x: number; y: number; team: TeamKey }[];
+  carrier?: { x: number; y: number };
+  target?: { x: number; y: number };
+} | null {
+  if (!data || t == null) return null;
+  const frame = frameAt(data.frames ?? [], t);
+  if (!frame) return null;
+  const { length, width } = pitchSize(data, undefined);
+  const dots = frame.players
+    .filter((p) => p.state !== "stale")
+    .map((p) => ({ ...toPercent(p.m, length, width), team: p.team as TeamKey }));
+  const carrierPlayer = frame.players.find((p) => p.id === frame.carrier);
+  const openLane = (frame.lanes ?? []).find((l) => l.open && l.forward) ?? (frame.lanes ?? [])[0];
+  const targetPlayer = openLane ? frame.players.find((p) => p.id === openLane.to) : undefined;
+  return {
+    dots,
+    ...(carrierPlayer ? { carrier: toPercent(carrierPlayer.m, length, width) } : {}),
+    ...(targetPlayer ? { target: toPercent(targetPlayer.m, length, width) } : {}),
+  };
+}

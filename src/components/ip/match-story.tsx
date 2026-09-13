@@ -623,7 +623,12 @@ function StoryPitch({
     <span
       aria-hidden="true"
       className="absolute inset-0 overflow-hidden"
-      style={{ background: "linear-gradient(180deg, #2d5c30 0%, #244a26 100%)" }}
+      style={{
+        background:
+          variant === "missed"
+            ? "linear-gradient(180deg, #2d5c30 0%, #1f3f21 100%)"
+            : "linear-gradient(180deg, #2d5c30 0%, #244a26 100%)",
+      }}
     >
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
         <g stroke="rgba(255,255,255,0.25)" strokeWidth="0.3" fill="none">
