@@ -155,11 +155,17 @@ function MatchCard({ match }: { match: LibraryMatch }) {
         <span className="absolute left-3 top-3">
           <Pill tone={statusTone[match.status]}>{statusLabel[match.status]}</Pill>
         </span>
-        <span className="absolute left-[32%] top-[46%] h-2.5 w-2.5 rounded-full bg-team-a" />
-        <span className="absolute left-[58%] top-[60%] h-2.5 w-2.5 rounded-full bg-team-b" />
         <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-5" aria-hidden="true">
-          {crestA ? <img src={crestA} alt="" className="h-12 w-12 object-contain" /> : null}
-          {crestB ? <img src={crestB} alt="" className="h-12 w-12 object-contain" /> : null}
+          {crestA ? (
+            <img src={crestA} alt="" className="h-12 w-12 object-contain" />
+          ) : (
+            <span className="h-3 w-3 rounded-full bg-team-a" />
+          )}
+          {crestB ? (
+            <img src={crestB} alt="" className="h-12 w-12 object-contain" />
+          ) : (
+            <span className="h-3 w-3 rounded-full bg-team-b" />
+          )}
         </div>
         <span className="num absolute bottom-3 right-3 text-[13px] text-cream">
           {formatClock(match.durationS)}

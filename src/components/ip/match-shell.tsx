@@ -31,6 +31,8 @@ export function MatchShell({
   const team = useApp((s) => s.teams[0]);
   const [setupOpen, setSetupOpen] = useState(false);
   const selectorsVisible = showSelectors && Boolean(scope && setScope && period && setPeriod);
+  const crestA = match ? crestForTeam(match.teamA) : undefined;
+  const crestB = match ? crestForTeam(match.teamB) : undefined;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -45,8 +47,8 @@ export function MatchShell({
               scoreB={match.status === "ready" ? match.scoreB : null}
               colourA={team?.colorA ?? "var(--team-a)"}
               colourB={team?.colorB ?? "var(--team-b)"}
-               {...(crestForTeam(match.teamA) ? { crestA: crestForTeam(match.teamA) } : {})}
-               {...(crestForTeam(match.teamB) ? { crestB: crestForTeam(match.teamB) } : {})}
+               {...(crestA ? { crestA } : {})}
+               {...(crestB ? { crestB } : {})}
               {...(match.status === "ready"
                 ? {
                     periodLine: `${period === "2nd" ? "2nd half" : "1st half"} · ${match.teamA} attack ${
