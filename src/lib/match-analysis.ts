@@ -42,6 +42,15 @@ export function thresholdsFrom(label: MatchLabelRow | null | undefined): Thresho
   };
 }
 
+function median(values: number[]) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? (sorted[mid] ?? 0)
+    : Math.round(((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2);
+}
+
 function num(v: unknown, fallback: number) {
   return typeof v === "number" && Number.isFinite(v) ? v : fallback;
 }
@@ -113,22 +122,24 @@ export function buildTerritory(
   const { length, width } = pitchSize(data, stats);
   const frames = data.frames ?? [];
   const cells = new Float64Array(HEAT_COLS * HEAT_ROWS);
-  const ids = new Set<number>();
+  const perFrame: number[] = [];
   let frameCount = 0;
 
   for (const frame of frames) {
-    let counted = false;
+    let counted = 0;
     for (const p of frame.players) {
       if (team && p.team !== team) continue;
       if (p.state === "stale") continue;
-      counted = true;
-      ids.add(p.id);
+      counted += 1;
       const col = Math.min(HEAT_COLS - 1, Math.max(0, Math.floor((p.m[0] / length) * HEAT_COLS)));
       const row = Math.min(HEAT_ROWS - 1, Math.max(0, Math.floor((p.m[1] / width) * HEAT_ROWS)));
       const cell = row * HEAT_COLS + col;
       cells[cell] = (cells[cell] ?? 0) + 1;
     }
-    if (counted) frameCount += 1;
+    if (counted > 0) {
+      frameCount += 1;
+      perFrame.push(counted);
+    }
   }
 
   const max = Math.max(...Array.from(cells), 1);
@@ -187,7 +198,7 @@ export function buildTerritory(
   return {
     heat,
     frameCount,
-    playerCount: ids.size,
+    playerCount: median(perFrame),
     snapshots,
     losses: pick("turnover_lost"),
     recoveries: pick("turnover_won"),
@@ -445,10 +456,7 @@ export function buildSummary(
     `${shots} shot${shots === 1 ? "" : "s"} came from ${num(
       stats?.metrics?.["field"]?.[team]?.entries_count,
       0,
-    )} entries into the final third, with the team typically ${num(
-      row.block_length_median_m,
-      0,
-    )} m long from back to front.`,
+    )} entries into the final third, with the team typically ${Math.round(num(row.block_length_median_m, 0))} m long from back to front.`,
   ];
   if (findings.length === 0) {
     lines.push("Every target you set was met in this match, so there is nothing flagged to train.");
