@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
-import { Card, Pill, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
+import { Card, Pill } from "@/components/ip/primitives";
 import { CoachMark, MomentumStrip, Pitch, PossessionRibbon, Visual, ZoneGrid } from "@/components/ip/visual";
 import { useMatch } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
