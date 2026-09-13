@@ -68,8 +68,17 @@ function tickLabel(e: MatchEvent) {
   return `${kind}${who} · ${formatClock(e.t)}`;
 }
 
-export function buildStorySlides(match: LibraryMatch, data: MatchData): Slide[] {
-  const findings = data.findings;
+export type StoryShape = {
+  dots: { x: number; y: number; team: "A" | "B" }[];
+  carrier?: { x: number; y: number };
+  target?: { x: number; y: number };
+};
+
+export function buildStorySlides(
+  match: LibraryMatch,
+  data: MatchData,
+  findings: Finding[] = data.findings,
+): Slide[] {
   const good =
     findings.find((f) => meetsTarget(f) && !f.higherIsWorse) ??
     findings.find(meetsTarget) ??
@@ -149,6 +158,20 @@ export function buildStorySlides(match: LibraryMatch, data: MatchData): Slide[] 
     durationMs: 12000,
   });
 
+  if (findings.length === 0) {
+    slides.push({
+      id: "clean",
+      backdrop: "pitch",
+      pitch: "moment",
+      tint: "good",
+      tag: "Nothing flagged",
+      tagIcon: "check",
+      headline: "Every target was met",
+      sub: "No rule fired for this team in this match, so there is nothing to train from here.",
+      durationMs: 8000,
+    });
+  }
+
   slides.push({
     id: "end",
     backdrop: "gradient",
@@ -167,13 +190,22 @@ export function MatchStory({
   matchId,
   match,
   data,
+  findings,
+  shape,
 }: {
   matchId: string;
   match: LibraryMatch;
   data: MatchData;
+  /** The findings this match's rules produced, for the selected team. */
+  findings?: Finding[];
+  /** Positions from the frame at the first moment behind the fix finding. */
+  shape?: StoryShape | null;
 }) {
   const navigate = useNavigate();
-  const slides = useMemo(() => buildStorySlides(match, data), [match, data]);
+  const slides = useMemo(
+    () => buildStorySlides(match, data, findings ?? data.findings),
+    [match, data, findings],
+  );
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -316,7 +348,7 @@ export function MatchStory({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#000000]">
-      <StoryBackdrop slide={slide} match={match} />
+      <StoryBackdrop slide={slide} match={match} shape={shape ?? null} />
       <span
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-[1]"
@@ -522,7 +554,15 @@ function EndCard({ actions, data }: { actions: Action[]; data: MatchData }) {
   );
 }
 
-function StoryBackdrop({ slide, match }: { slide: Slide; match: LibraryMatch }) {
+function StoryBackdrop({
+  slide,
+  match,
+  shape,
+}: {
+  slide: Slide;
+  match: LibraryMatch;
+  shape: StoryShape | null;
+}) {
   if (slide.backdrop === "gradient") {
     return (
       <span
@@ -549,11 +589,17 @@ function StoryBackdrop({ slide, match }: { slide: Slide; match: LibraryMatch }) 
       </span>
     );
   }
-  return <StoryPitch variant={slide.pitch ?? "moment"} />;
+  return <StoryPitch variant={slide.pitch ?? "moment"} shape={shape} />;
 }
 
-function StoryPitch({ variant }: { variant: "moment" | "missed" }) {
-  const dots = [
+function StoryPitch({
+  variant,
+  shape,
+}: {
+  variant: "moment" | "missed";
+  shape: StoryShape | null;
+}) {
+  const fallback = [
     [10, 50],
     [24, 22],
     [24, 42],
@@ -566,12 +612,23 @@ function StoryPitch({ variant }: { variant: "moment" | "missed" }) {
     [66, 52],
     [66, 78],
   ] as const;
+  const dots: { x: number; y: number; team: "A" | "B" }[] =
+    shape && shape.dots.length > 0
+      ? shape.dots
+      : fallback.map(([x, y]) => ({ x, y, team: "A" as const }));
+  const carrier = shape?.carrier;
+  const target = shape?.target;
 
   return (
     <span
       aria-hidden="true"
       className="absolute inset-0 overflow-hidden"
-      style={{ background: "linear-gradient(180deg, #2d5c30 0%, #244a26 100%)" }}
+      style={{
+        background:
+          variant === "missed"
+            ? "linear-gradient(180deg, #2d5c30 0%, #1f3f21 100%)"
+            : "linear-gradient(180deg, #2d5c30 0%, #244a26 100%)",
+      }}
     >
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
         <g stroke="rgba(255,255,255,0.25)" strokeWidth="0.3" fill="none">
@@ -581,39 +638,38 @@ function StoryPitch({ variant }: { variant: "moment" | "missed" }) {
           <rect x="5" y="30" width="12" height="40" />
           <rect x="83" y="30" width="12" height="40" />
         </g>
-        {variant === "missed" && (
+        {carrier && target && (
           <>
-            <line x1="46" y1="52" x2="72" y2="86" stroke="var(--team-a)" strokeWidth="0.9" />
             <line
-              x1="46"
-              y1="52"
-              x2="80"
-              y2="34"
-              stroke="var(--quality-risky)"
+              x1={carrier.x}
+              y1={carrier.y}
+              x2={target.x}
+              y2={target.y}
+              stroke="var(--cream)"
               strokeWidth="0.9"
               strokeDasharray="3 2"
             />
             <circle
-              cx="80"
-              cy="34"
+              cx={target.x}
+              cy={target.y}
               r="4"
               fill="none"
-              stroke="var(--quality-risky)"
+              stroke="var(--cream)"
               strokeWidth="0.7"
               strokeDasharray="2 2"
             />
           </>
         )}
       </svg>
-      {dots.map(([x, y], i) => (
+      {dots.map((d, i) => (
         <span
-          key={`${x}-${y}`}
+          key={`${d.x}-${d.y}-${i}`}
           className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full"
           style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            background: i === 6 ? "var(--cream)" : "rgba(255,255,255,0.55)",
-            boxShadow: i === 6 ? "0 0 0 3px rgba(237,230,214,0.25)" : "none",
+            left: `${d.x}%`,
+            top: `${d.y}%`,
+            background: d.team === "B" ? "var(--team-b)" : "var(--team-a)",
+            boxShadow: "0 0 0 1.5px rgba(255,255,255,0.5)",
           }}
         />
       ))}

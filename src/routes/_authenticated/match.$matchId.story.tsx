@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { MatchStory } from "@/components/ip/match-story";
 import { Card } from "@/components/ip/primitives";
-import { useMatch } from "@/hooks/use-match";
+import { useAnalysis, useMatch } from "@/hooks/use-match";
+import { buildMomentShape } from "@/lib/match-analysis";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/story")({
   head: () => ({
@@ -35,6 +37,12 @@ function StoryFallback({ title }: { title: string }) {
 function StoryPage() {
   const { matchId } = Route.useParams();
   const { match, data, loading } = useMatch(matchId);
+  const { findings, file } = useAnalysis(matchId, "a");
+
+  const shape = useMemo(
+    () => buildMomentShape(file, findings.find((f) => f.timestamps.length > 0)?.timestamps[0]),
+    [file, findings],
+  );
 
   if (loading) {
     return (
@@ -50,6 +58,5 @@ function StoryPage() {
     return <StoryFallback title="That match isn't in your library" />;
   }
 
-
-  return <MatchStory matchId={matchId} match={match} data={data} />;
+  return <MatchStory matchId={matchId} match={match} data={data} findings={findings} shape={shape} />;
 }

@@ -8,6 +8,7 @@ import { Card } from "@/components/ip/primitives";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
 import { isLabelled } from "@/lib/match-source";
+import { attacksRight } from "@/lib/match-analysis";
 import { useMatchRecord } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
@@ -66,7 +67,13 @@ export function MatchShell({
               {...(match.status === "ready"
                 ? {
                     periodLine: `${period === "2nd" ? "2nd half" : "1st half"} · ${match.teamA} attack ${
-                      period === "2nd" ? "left" : "right"
+                      attacksRight(
+                        record?.row.attack_right,
+                        record?.label?.attack_right_override,
+                        "A",
+                      ) === (period !== "2nd")
+                        ? "right"
+                        : "left"
                     } · ${formatClock(match.durationS)}`,
                   }
                 : { metaLine: `${match.date} · ${match.competition}` })}

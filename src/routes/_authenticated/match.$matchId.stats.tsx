@@ -5,7 +5,8 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Card, Chip } from "@/components/ip/primitives";
 import { Visual } from "@/components/ip/visual";
-import { useMatch } from "@/hooks/use-match";
+import { useAnalysis } from "@/hooks/use-match";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/stats")({
   head: () => ({
@@ -21,12 +22,12 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/stats")({
 
 function Stats() {
   const { matchId } = Route.useParams();
-  const { match, data } = useMatch(matchId);
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
+  const { match, team, sections, players, loading } = useAnalysis(matchId, scope);
   const [tab, setTab] = useState("ball");
 
-  const active = data?.stats.find((t) => t.key === tab);
+  const active = sections.find((t) => t.key === tab);
 
   return (
     <MatchShell
@@ -37,10 +38,16 @@ function Stats() {
       period={period}
       setPeriod={setPeriod}
     >
-      {data && match && active && (
+      {loading && (
+        <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading">
+          <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
+        </div>
+      )}
+
+      {match && active && (
         <>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-            {data.stats.map((t) => (
+            {sections.map((t) => (
               <Chip key={t.key} active={tab === t.key} onClick={() => setTab(t.key)}>
                 {t.label}
               </Chip>
@@ -54,30 +61,37 @@ function Stats() {
               title: active.label,
               rows: [
                 { label: "What it covers", value: active.caption },
-                { label: "Rows", value: `${active.rows.length || data.players.length}` },
+                { label: "Rows", value: `${active.rows.length || players.length}` },
                 { label: "Left column", value: match.teamA, cream: true },
                 { label: "Right column", value: match.teamB },
-                { label: "Target column", value: "Shown in cream", cream: true },
+                { label: "Showing", value: team ? (team === "A" ? match.teamA : match.teamB) : "Both teams", cream: true },
               ],
             }}
           >
             {active.key === "players" ? (
               <ul>
-                {data.players.map((p) => (
-                  <li key={p.id}>
+                {players.map((p) => (
+                  <li key={`${p.team}-${p.id}`}>
                     <Link
                       to="/match/$matchId/player/$playerId"
-                      params={{ matchId, playerId: p.id }}
+                      params={{ matchId, playerId: String(p.id) }}
                       className="tap flex items-center gap-3 border-b border-wire-2 py-2.5 last:border-0 hover:bg-surface-2"
                     >
-                      <span className="num w-7 shrink-0 text-[13px] text-cream">{p.shirt}</span>
-                      <span className="min-w-0 flex-1 truncate text-[13.5px] text-text">{p.name}</span>
-                      <span className="shrink-0 text-[11.5px] text-text-faint">{p.position}</span>
+                      <span className="num w-7 shrink-0 text-[13px] text-cream">{p.id}</span>
+                      <span className="min-w-0 flex-1 truncate text-[13.5px] text-text">
+                        {p.team === "A" ? match.teamA : match.teamB}
+                      </span>
+                      <span className="num shrink-0 text-[11.5px] text-text-faint">{p.distanceM} m</span>
                       <span className="num shrink-0 text-[12.5px] text-text-dim">{p.touches} touches</span>
                       <ChevronRight size={15} className="shrink-0 text-text-faint" aria-hidden="true" />
                     </Link>
                   </li>
                 ))}
+                {players.length === 0 && (
+                  <li className="py-6 text-center text-[12.5px] text-text-faint">
+                    No player numbers in this match.
+                  </li>
+                )}
               </ul>
             ) : (
               <div>
@@ -93,8 +107,16 @@ function Stats() {
                     className="flex items-center gap-3 border-b border-wire-2 py-2.5 text-[13px] last:border-0"
                   >
                     <span className="min-w-0 flex-1 text-text-dim">{r.label}</span>
-                    <span className="num w-20 text-right text-text">{r.a}</span>
-                    <span className="num w-20 text-right text-text-dim">{r.b}</span>
+                    <span
+                      className={cn("num w-20 text-right", team === "B" ? "text-text-faint" : "text-text")}
+                    >
+                      {r.a}
+                    </span>
+                    <span
+                      className={cn("num w-20 text-right", team === "A" ? "text-text-faint" : "text-text-dim")}
+                    >
+                      {r.b}
+                    </span>
                     <span className="num w-20 text-right text-cream">{r.target ?? "—"}</span>
                   </div>
                 ))}
@@ -104,8 +126,8 @@ function Stats() {
 
           <Card>
             <p className="text-[12.5px] leading-relaxed text-text-dim">
-              Numbers in cream are the targets from your club setup. Anything without a target is there for
-              context, not judgement.
+              Numbers in cream are the targets from this match's setup. Anything without a target is there
+              for context, not judgement.
             </p>
           </Card>
         </>

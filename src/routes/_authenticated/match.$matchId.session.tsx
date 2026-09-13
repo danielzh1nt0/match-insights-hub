@@ -5,7 +5,7 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { DrillCard } from "@/components/ip/drill-card";
 import { MatchShell } from "@/components/ip/match-shell";
 import { PrimaryButton } from "@/components/ip/primitives";
-import { useMatch } from "@/hooks/use-match";
+import { useAnalysis } from "@/hooks/use-match";
 import { buildSessionPlan } from "@/lib/session-plan";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/session")({
@@ -25,13 +25,13 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/session")({
 function Session() {
   const { matchId } = Route.useParams();
   const { finding: findingId } = Route.useSearch();
-  const { match, data } = useMatch(matchId);
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
   const [seed, setSeed] = useState(0);
+  const { match, findings, players } = useAnalysis(matchId, scope);
 
-  const finding = data?.findings.find((f) => f.id === findingId) ?? data?.findings[0];
-  const playerCount = data?.players.length;
+  const finding = findings.find((f) => f.id === findingId) ?? findings[0];
+  const playerCount = players.length || undefined;
   const drills = useMemo(
     () => (finding ? buildSessionPlan(finding, playerCount, seed) : []),
     [finding, playerCount, seed],
