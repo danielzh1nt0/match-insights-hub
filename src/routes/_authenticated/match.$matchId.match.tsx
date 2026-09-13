@@ -66,6 +66,8 @@ function MatchScreen() {
   const [frame, setFrame] = useState<Frame | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
   const [layerSheet, setLayerSheet] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const seededRef = useRef(false);
 
