@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
+import { StoryLauncher } from "@/components/ip/story-launcher";
 import { Card, Pill } from "@/components/ip/primitives";
 import { CoachMark, MomentumStrip, Pitch, PossessionRibbon, Visual, ZoneGrid } from "@/components/ip/visual";
 import { useMatch } from "@/hooks/use-match";
@@ -41,6 +42,8 @@ function Insights() {
     >
       {data && match && (
         <>
+          <StoryLauncher matchId={matchId} />
+
           <CoachMark id="insights">
             Start with the three sentences, then open a finding to see the moments behind it.
           </CoachMark>

@@ -46,8 +46,8 @@ export function MatchShell({
               colourB={team?.colorB ?? "var(--team-b)"}
               {...(match.status === "ready"
                 ? {
-                    periodLine: `${period === 2 ? "2nd half" : "1st half"} · ${match.teamA} attack ${
-                      period === 2 ? "left" : "right"
+                    periodLine: `${period === "2nd" ? "2nd half" : "1st half"} · ${match.teamA} attack ${
+                      period === "2nd" ? "left" : "right"
                     } · ${formatClock(match.durationS)}`,
                   }
                 : { metaLine: `${match.date} · ${match.competition}` })}
