@@ -142,7 +142,7 @@ export function buildStorySlides(match: LibraryMatch, data: MatchData): Slide[] 
     tagIcon: "play",
     headline: moment?.player ? `${moment.player} makes it ${match.scoreA}–${match.scoreB}` : "The moment it turned",
     sub: moment?.note ?? "The passage the rest of the analysis keeps pointing back to.",
-    metric: moment ? { value: formatClock(moment.t), unit: "on the clock" } : undefined,
+    ...(moment ? { metric: { value: formatClock(moment.t), unit: "on the clock" } } : {}),
     durationMs: 12000,
   });
 
