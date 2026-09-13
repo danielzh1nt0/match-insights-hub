@@ -175,10 +175,10 @@ export function PeriodSelector({
 /* ---------------- FloatingNav ---------------- */
 
 const navItems = [
-  { label: "Insights", suffix: "insights", icon: Sparkles },
-  { label: "Match", suffix: "match", icon: Film },
-  { label: "Territory", suffix: "territory", icon: Map },
-  { label: "Stats", suffix: "stats", icon: ChartNoAxesColumn },
+  { label: "Insights", to: "/match/$matchId/insights", icon: Sparkles },
+  { label: "Match", to: "/match/$matchId/match", icon: Film },
+  { label: "Territory", to: "/match/$matchId/territory", icon: Map },
+  { label: "Stats", to: "/match/$matchId/stats", icon: ChartNoAxesColumn },
 ] as const;
 
 export function FloatingNav({ matchId }: { matchId: string }) {
@@ -190,13 +190,13 @@ export function FloatingNav({ matchId }: { matchId: string }) {
     >
       <div className="mx-auto grid max-w-[520px] grid-cols-4 gap-1">
         {navItems.map((item) => {
-          const href = `/match/${matchId}/${item.suffix}`;
-          const active = pathname === href;
+          const active = pathname === item.to.replace("$matchId", matchId);
           const Icon = item.icon;
           return (
-            <a
-              key={item.suffix}
-              href={href}
+            <Link
+              key={item.to}
+              to={item.to}
+              params={{ matchId }}
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
@@ -206,7 +206,7 @@ export function FloatingNav({ matchId }: { matchId: string }) {
             >
               <Icon size={17} />
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </div>

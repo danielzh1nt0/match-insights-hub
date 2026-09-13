@@ -20,6 +20,12 @@ import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/ne
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
 import { Route as AuthenticatedMatchMatchIdInsightsRouteImport } from './routes/_authenticated/match.$matchId.insights'
+import { Route as AuthenticatedMatchMatchIdMatchRouteImport } from './routes/_authenticated/match.$matchId.match'
+import { Route as AuthenticatedMatchMatchIdReelRouteImport } from './routes/_authenticated/match.$matchId.reel'
+import { Route as AuthenticatedMatchMatchIdSessionRouteImport } from './routes/_authenticated/match.$matchId.session'
+import { Route as AuthenticatedMatchMatchIdStatsRouteImport } from './routes/_authenticated/match.$matchId.stats'
+import { Route as AuthenticatedMatchMatchIdTerritoryRouteImport } from './routes/_authenticated/match.$matchId.territory'
+import { Route as AuthenticatedMatchMatchIdPlayerPlayerIdRouteImport } from './routes/_authenticated/match.$matchId.player.$playerId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +82,42 @@ const AuthenticatedMatchMatchIdInsightsRoute =
     path: '/match/$matchId/insights',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedMatchMatchIdMatchRoute =
+  AuthenticatedMatchMatchIdMatchRouteImport.update({
+    id: '/match/$matchId/match',
+    path: '/match/$matchId/match',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMatchMatchIdReelRoute =
+  AuthenticatedMatchMatchIdReelRouteImport.update({
+    id: '/match/$matchId/reel',
+    path: '/match/$matchId/reel',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMatchMatchIdSessionRoute =
+  AuthenticatedMatchMatchIdSessionRouteImport.update({
+    id: '/match/$matchId/session',
+    path: '/match/$matchId/session',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMatchMatchIdStatsRoute =
+  AuthenticatedMatchMatchIdStatsRouteImport.update({
+    id: '/match/$matchId/stats',
+    path: '/match/$matchId/stats',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMatchMatchIdTerritoryRoute =
+  AuthenticatedMatchMatchIdTerritoryRouteImport.update({
+    id: '/match/$matchId/territory',
+    path: '/match/$matchId/territory',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMatchMatchIdPlayerPlayerIdRoute =
+  AuthenticatedMatchMatchIdPlayerPlayerIdRouteImport.update({
+    id: '/match/$matchId/player/$playerId',
+    path: '/match/$matchId/player/$playerId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,6 +130,12 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
+  '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
+  '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
+  '/match/$matchId/session': typeof AuthenticatedMatchMatchIdSessionRoute
+  '/match/$matchId/stats': typeof AuthenticatedMatchMatchIdStatsRoute
+  '/match/$matchId/territory': typeof AuthenticatedMatchMatchIdTerritoryRoute
+  '/match/$matchId/player/$playerId': typeof AuthenticatedMatchMatchIdPlayerPlayerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -100,6 +148,12 @@ export interface FileRoutesByTo {
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
+  '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
+  '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
+  '/match/$matchId/session': typeof AuthenticatedMatchMatchIdSessionRoute
+  '/match/$matchId/stats': typeof AuthenticatedMatchMatchIdStatsRoute
+  '/match/$matchId/territory': typeof AuthenticatedMatchMatchIdTerritoryRoute
+  '/match/$matchId/player/$playerId': typeof AuthenticatedMatchMatchIdPlayerPlayerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -114,6 +168,12 @@ export interface FileRoutesById {
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/processing': typeof AuthenticatedProcessingRoute
   '/_authenticated/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
+  '/_authenticated/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
+  '/_authenticated/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
+  '/_authenticated/match/$matchId/session': typeof AuthenticatedMatchMatchIdSessionRoute
+  '/_authenticated/match/$matchId/stats': typeof AuthenticatedMatchMatchIdStatsRoute
+  '/_authenticated/match/$matchId/territory': typeof AuthenticatedMatchMatchIdTerritoryRoute
+  '/_authenticated/match/$matchId/player/$playerId': typeof AuthenticatedMatchMatchIdPlayerPlayerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -128,6 +188,12 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/processing'
     | '/match/$matchId/insights'
+    | '/match/$matchId/match'
+    | '/match/$matchId/reel'
+    | '/match/$matchId/session'
+    | '/match/$matchId/stats'
+    | '/match/$matchId/territory'
+    | '/match/$matchId/player/$playerId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -140,6 +206,12 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/processing'
     | '/match/$matchId/insights'
+    | '/match/$matchId/match'
+    | '/match/$matchId/reel'
+    | '/match/$matchId/session'
+    | '/match/$matchId/stats'
+    | '/match/$matchId/territory'
+    | '/match/$matchId/player/$playerId'
   id:
     | '__root__'
     | '/'
@@ -153,6 +225,12 @@ export interface FileRouteTypes {
     | '/_authenticated/onboarding'
     | '/_authenticated/processing'
     | '/_authenticated/match/$matchId/insights'
+    | '/_authenticated/match/$matchId/match'
+    | '/_authenticated/match/$matchId/reel'
+    | '/_authenticated/match/$matchId/session'
+    | '/_authenticated/match/$matchId/stats'
+    | '/_authenticated/match/$matchId/territory'
+    | '/_authenticated/match/$matchId/player/$playerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -243,6 +321,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMatchMatchIdInsightsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/match/$matchId/match': {
+      id: '/_authenticated/match/$matchId/match'
+      path: '/match/$matchId/match'
+      fullPath: '/match/$matchId/match'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdMatchRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/match/$matchId/reel': {
+      id: '/_authenticated/match/$matchId/reel'
+      path: '/match/$matchId/reel'
+      fullPath: '/match/$matchId/reel'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdReelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/match/$matchId/session': {
+      id: '/_authenticated/match/$matchId/session'
+      path: '/match/$matchId/session'
+      fullPath: '/match/$matchId/session'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdSessionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/match/$matchId/stats': {
+      id: '/_authenticated/match/$matchId/stats'
+      path: '/match/$matchId/stats'
+      fullPath: '/match/$matchId/stats'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdStatsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/match/$matchId/territory': {
+      id: '/_authenticated/match/$matchId/territory'
+      path: '/match/$matchId/territory'
+      fullPath: '/match/$matchId/territory'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdTerritoryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/match/$matchId/player/$playerId': {
+      id: '/_authenticated/match/$matchId/player/$playerId'
+      path: '/match/$matchId/player/$playerId'
+      fullPath: '/match/$matchId/player/$playerId'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdPlayerPlayerIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -252,6 +372,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProcessingRoute: typeof AuthenticatedProcessingRoute
   AuthenticatedMatchMatchIdInsightsRoute: typeof AuthenticatedMatchMatchIdInsightsRoute
+  AuthenticatedMatchMatchIdMatchRoute: typeof AuthenticatedMatchMatchIdMatchRoute
+  AuthenticatedMatchMatchIdReelRoute: typeof AuthenticatedMatchMatchIdReelRoute
+  AuthenticatedMatchMatchIdSessionRoute: typeof AuthenticatedMatchMatchIdSessionRoute
+  AuthenticatedMatchMatchIdStatsRoute: typeof AuthenticatedMatchMatchIdStatsRoute
+  AuthenticatedMatchMatchIdTerritoryRoute: typeof AuthenticatedMatchMatchIdTerritoryRoute
+  AuthenticatedMatchMatchIdPlayerPlayerIdRoute: typeof AuthenticatedMatchMatchIdPlayerPlayerIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -261,6 +387,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProcessingRoute: AuthenticatedProcessingRoute,
   AuthenticatedMatchMatchIdInsightsRoute:
     AuthenticatedMatchMatchIdInsightsRoute,
+  AuthenticatedMatchMatchIdMatchRoute: AuthenticatedMatchMatchIdMatchRoute,
+  AuthenticatedMatchMatchIdReelRoute: AuthenticatedMatchMatchIdReelRoute,
+  AuthenticatedMatchMatchIdSessionRoute: AuthenticatedMatchMatchIdSessionRoute,
+  AuthenticatedMatchMatchIdStatsRoute: AuthenticatedMatchMatchIdStatsRoute,
+  AuthenticatedMatchMatchIdTerritoryRoute:
+    AuthenticatedMatchMatchIdTerritoryRoute,
+  AuthenticatedMatchMatchIdPlayerPlayerIdRoute:
+    AuthenticatedMatchMatchIdPlayerPlayerIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
