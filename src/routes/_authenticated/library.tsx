@@ -10,6 +10,7 @@ import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitiv
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
 import { StoryLauncher } from "@/components/ip/story-launcher";
 import { useApp } from "@/store/app-store";
+import { crestForTeam } from "@/lib/team-crests";
 
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
@@ -145,6 +146,8 @@ function EmptyState() {
 function MatchCard({ match }: { match: LibraryMatch }) {
   const title = match.label ? matchTitle(match) : `${matchTitle(match)} · label needed`;
   const ready = match.status === "ready";
+  const crestA = crestForTeam(match.teamA);
+  const crestB = crestForTeam(match.teamB);
 
   return (
     <Card className="p-0 overflow-hidden">
@@ -154,6 +157,10 @@ function MatchCard({ match }: { match: LibraryMatch }) {
         </span>
         <span className="absolute left-[32%] top-[46%] h-2.5 w-2.5 rounded-full bg-team-a" />
         <span className="absolute left-[58%] top-[60%] h-2.5 w-2.5 rounded-full bg-team-b" />
+        <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-5" aria-hidden="true">
+          {crestA ? <img src={crestA} alt="" className="h-12 w-12 object-contain" /> : null}
+          {crestB ? <img src={crestB} alt="" className="h-12 w-12 object-contain" /> : null}
+        </div>
         <span className="num absolute bottom-3 right-3 text-[13px] text-cream">
           {formatClock(match.durationS)}
         </span>
