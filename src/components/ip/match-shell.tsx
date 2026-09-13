@@ -8,6 +8,7 @@ import { Card } from "@/components/ip/primitives";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
 import { isLabelled } from "@/lib/match-source";
+import { attacksRight } from "@/lib/match-analysis";
 import { useMatchRecord } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
