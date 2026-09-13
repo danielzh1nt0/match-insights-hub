@@ -63,12 +63,20 @@ export type FramePlayer = {
   px: [number, number] | null;
 };
 
+export type Lane = { to: number; open: boolean; forward: boolean };
+
 export type Frame = {
   t: number;
   players: FramePlayer[];
-  ball: { m?: [number, number]; px?: [number, number] } | null;
+  ball: { m?: [number, number]; px?: [number, number] | null; state?: string } | null;
   possession: "A" | "B" | null;
   phase: "control" | "loose" | "dead" | null;
+  carrier?: number | null;
+  pressure_m?: number | null;
+  near_opps?: number | null;
+  lanes?: Lane[] | null;
+  /** 3x3 homography, row-major, metres -> pixels. */
+  pitch_lines?: number[] | null;
   shape: Record<string, { hull_m: [number, number][]; n: number; length: number; width: number }> | null;
 };
 
@@ -77,6 +85,9 @@ export type MatchDataFile = {
   fps?: number;
   width?: number;
   height?: number;
+  pitch?: { length: number; width: number };
+  teams?: Record<string, string>;
+  attack_right?: Record<string, boolean>;
   frames: Frame[];
   events: FeedEvent[];
 };

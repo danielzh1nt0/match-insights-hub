@@ -13,3 +13,5 @@
 - [ ] `<MatchStory>` full-screen 5-slide recap + route `/match/:id/story` + `<StoryLauncher>` pill on library cards (ready matches) and top of insights
 - [ ] QA pass against the uploaded wireframe HTML: colours, fonts, spacing, functionality; fix inconsistencies
 - [ ] Phase 3 remainder: settings screens, coach marks per screen, skeleton/empty/error/offline states
+
+- [ ] Name the Bundesliga sample match BVB vs FC Bayern and add both crests (BVB = uploaded yellow crest)
