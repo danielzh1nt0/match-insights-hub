@@ -1,11 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AuthShell } from "@/components/ip/auth-shell";
 import { Field, Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { getAccount } from "@/lib/profile.functions";
 
 export const Route = createFileRoute("/signin")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search["redirect"] === "string" ? (search["redirect"] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Sign in — Ipanema" },
