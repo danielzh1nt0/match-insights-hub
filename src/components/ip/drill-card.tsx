@@ -33,7 +33,7 @@ export function DrillCard({ drill, defaultExpanded = false }: { drill: DrillPlan
         <p className="mt-2 text-[13px] leading-relaxed text-text-dim">{drill.description}</p>
       </header>
 
-      <div className="mt-4"><DrillPitch templateId={drill.template} drillName={drill.title} /></div>
+      <div className="mx-auto mt-4 w-full max-w-[880px]"><DrillPitch templateId={drill.template} drillName={drill.title} /></div>
 
       <dl className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         {setupItems.map(([label, value]) => (

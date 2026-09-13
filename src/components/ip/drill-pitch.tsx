@@ -94,6 +94,7 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
   const [infoOpen, setInfoOpen] = useState(false);
   const template = templates[templateId];
   const shouldAnimate = playing && !reducedMotion;
+  const showPause = playing && !reducedMotion;
   const duration = 6;
   const finalBall = template.ball[template.ball.length - 1] ?? { x: 50, y: 31 };
 
@@ -125,7 +126,7 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
       </svg>
       <button type="button" aria-label={`Open ${drillName} glossary entry`} onClick={() => setInfoOpen(true)} className="tap absolute right-1 top-1 flex items-center justify-center text-text hover:text-cream"><span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-pitch-control backdrop-blur-md"><Info size={13} /></span></button>
       <div className="absolute bottom-2 right-2 flex gap-1.5">
-        <button type="button" aria-label={playing ? `Pause ${drillName} animation` : `Play ${drillName} animation`} onClick={() => setPlaying((value) => !value)} className="flex h-8 w-8 items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream">{playing ? <Pause size={14} /> : <Play size={14} />}</button>
+        <button type="button" aria-label={showPause ? `Pause ${drillName} animation` : `Play ${drillName} animation`} onClick={() => setPlaying((value) => !value)} className="flex h-8 w-8 items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream">{showPause ? <Pause size={14} /> : <Play size={14} />}</button>
         <button type="button" aria-label={`Replay ${drillName} animation`} onClick={() => { setReplay((value) => value + 1); setPlaying(true); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream"><RotateCcw size={14} /></button>
       </div>
       <AnimatePresence>{infoOpen && <DrillInfo name={drillName} onClose={() => setInfoOpen(false)} />}</AnimatePresence>
