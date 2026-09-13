@@ -314,15 +314,21 @@ export function buildMatchData(matchId: string, durationS: number): MatchData {
     .filter((e) => e.team === "a" && (e.kind === "turnover_won" || e.kind === "high_turnover"))
     .map((e) => ({ x: e.x, y: e.y }));
 
-  /* ---------- shape snapshots ---------- */
+  /* ---------- shape snapshots ----------
+     The ten outfield players are placed inside one block: how long that block is
+     from back to front is the number the shape finding checks. */
+  const outfield = players.slice(1);
+  const baseXs = outfield.map((p) => p.base.x);
+  const baseMin = Math.min(...baseXs);
+  const baseSpan = Math.max(1, Math.max(...baseXs) - baseMin);
   const snapshots: Snapshot[] = Array.from(
     { length: Math.max(2, Math.min(8, Math.round(span / 30) + 1)) },
     (_, i) => {
-      const shift = (rand() - 0.5) * 16;
-      const stretch = 0.85 + rand() * 0.5;
-      const shape = players.slice(1).map((p) => ({
+      const blockUnits = 30 + rand() * 20; // 32 m to 53 m once scaled
+      const lineX = 12 + rand() * (86 - blockUnits);
+      const shape = outfield.map((p) => ({
         shirt: p.shirt,
-        x: clamp(Math.round(50 + (p.base.x - 50) * stretch + shift), 4, 96),
+        x: clamp(Math.round(lineX + ((p.base.x - baseMin) / baseSpan) * blockUnits), 4, 96),
         y: clamp(Math.round(50 + (p.base.y - 50) * (0.8 + rand() * 0.4)), 4, 96),
       }));
       const xs = shape.map((s) => s.x);
@@ -335,6 +341,7 @@ export function buildMatchData(matchId: string, durationS: number): MatchData {
       };
     },
   );
+
   const blockLengthM = Math.round(
     snapshots.reduce((sum, s) => sum + s.lengthM, 0) / snapshots.length,
   );
