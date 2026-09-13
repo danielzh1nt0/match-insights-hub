@@ -57,7 +57,7 @@ export function MatchShell({
             {selectorsVisible && (
               <div className="mt-3 flex flex-col gap-2 md:flex-row">
                 <TeamSelector value={scope!} onChange={setScope!} teamA={match.teamA} teamB={match.teamB} />
-                <PeriodSelector value={period!} onChange={setPeriod!} periods={1} />
+                <PeriodSelector value={period!} onChange={setPeriod!} periods={match.durationS > 1500 ? 2 : 1} />
               </div>
             )}
             {setupOpen && (
