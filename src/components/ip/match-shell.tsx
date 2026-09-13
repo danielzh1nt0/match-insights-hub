@@ -4,6 +4,8 @@ import { AppHeader, FloatingNav, PeriodSelector, Screen, TeamSelector } from "@/
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchHeader } from "@/components/ip/match-header";
 import { Card } from "@/components/ip/primitives";
+import kolnCrest from "@/assets/fc-koln-crest.png.asset.json";
+import wolfsburgCrest from "@/assets/wolfsburg-crest.png.asset.json";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
 import { useApp } from "@/store/app-store";
@@ -44,6 +46,8 @@ export function MatchShell({
               scoreB={match.status === "ready" ? match.scoreB : null}
               colourA={team?.colorA ?? "var(--team-a)"}
               colourB={team?.colorB ?? "var(--team-b)"}
+              {...(match.teamA === "1. FC Köln" ? { crestA: kolnCrest.url } : {})}
+              {...(match.teamB === "Wolfsburg" ? { crestB: wolfsburgCrest.url } : {})}
               {...(match.status === "ready"
                 ? {
                     periodLine: `${period === "2nd" ? "2nd half" : "1st half"} · ${match.teamA} attack ${
