@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import * as motion from "motion/react-client";
+import { motion } from "motion/react";
 import { Wordmark } from "./primitives";
 
 export function AuthShell({

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import * as motion from "motion/react-client";
+import { motion } from "motion/react";
 import { Wordmark, PrimaryButton, SecondaryButton, Card } from "@/components/ip/primitives";
 
 export const Route = createFileRoute("/")({

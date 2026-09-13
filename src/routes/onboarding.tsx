@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import * as motion from "motion/react-client";
+import { motion } from "motion/react";
 import { Upload } from "lucide-react";
 import {
   Card,

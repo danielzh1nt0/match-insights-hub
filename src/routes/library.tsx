@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import * as motion from "motion/react-client";
+import { motion } from "motion/react";
 import { Search, Video } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
 import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitives";
