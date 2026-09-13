@@ -125,7 +125,8 @@ export function buildTerritory(
       ids.add(p.id);
       const col = Math.min(HEAT_COLS - 1, Math.max(0, Math.floor((p.m[0] / length) * HEAT_COLS)));
       const row = Math.min(HEAT_ROWS - 1, Math.max(0, Math.floor((p.m[1] / width) * HEAT_ROWS)));
-      cells[row * HEAT_COLS + col] += 1;
+      const cell = row * HEAT_COLS + col;
+      cells[cell] = (cells[cell] ?? 0) + 1;
     }
     if (counted) frameCount += 1;
   }
