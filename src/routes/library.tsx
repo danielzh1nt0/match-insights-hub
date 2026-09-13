@@ -167,7 +167,7 @@ function MatchCard({ match }: { match: LibraryMatch }) {
               <PrimaryButton className="h-11 w-full">Open analysis</PrimaryButton>
             </Link>
           ) : (
-            <Link to="/processing">
+            <Link to="/processing" search={{ id: match.id }}>
               <span className="tap flex items-center justify-center rounded-[12px] border border-wire text-[13px] font-semibold text-text-dim">
                 {match.status === "processing" ? "See progress" : "See what went wrong"}
               </span>
