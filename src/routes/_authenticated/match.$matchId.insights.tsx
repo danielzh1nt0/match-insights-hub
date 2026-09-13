@@ -155,16 +155,21 @@ function FindingCard({ finding, matchId }: { finding: Finding; matchId: string }
       </div>
 
       <div className="flex gap-2">
-        <PrimaryButton className="h-12 flex-1" asChild={false}>
-          <Link to="/match/$matchId/session" params={{ matchId }} search={{ finding: finding.id }}>
-            Build session
-          </Link>
-        </PrimaryButton>
-        <SecondaryButton className="h-12 flex-1">
-          <Link to="/match/$matchId/reel" params={{ matchId }}>
-            Clip reel
-          </Link>
-        </SecondaryButton>
+        <Link
+          to="/match/$matchId/session"
+          params={{ matchId }}
+          search={{ finding: finding.id }}
+          className="tap flex flex-1 items-center justify-center rounded-[12px] bg-cream px-5 text-sm font-semibold text-[#111315] hover:bg-cream-dim"
+        >
+          Build session
+        </Link>
+        <Link
+          to="/match/$matchId/reel"
+          params={{ matchId }}
+          className="tap flex flex-1 items-center justify-center rounded-[12px] border border-cream/60 px-5 text-sm font-semibold text-cream hover:bg-cream/10"
+        >
+          Clip reel
+        </Link>
       </div>
     </Card>
   );

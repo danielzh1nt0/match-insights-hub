@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/session")({
       { property: "og:description", content: "Warm-up, main exercise, game and what to look for." },
     ],
   }),
-  component: Session;
+  component: Session,
 });
 
 function Session() {
