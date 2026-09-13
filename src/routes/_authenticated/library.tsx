@@ -26,6 +26,15 @@ function LibraryPage() {
   const matches = useApp((s) => s.matches);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const fetchAccount = useServerFn(getAccount);
+  const { data: account } = useQuery({ queryKey: ["account"], queryFn: () => fetchAccount() });
+
+  useEffect(() => {
+    if (account && !account.profile.onboarded) {
+      navigate({ to: "/onboarding", replace: true });
+    }
+  }, [account, navigate]);
 
   const filters = useMemo(() => {
     const set = new Set<string>();

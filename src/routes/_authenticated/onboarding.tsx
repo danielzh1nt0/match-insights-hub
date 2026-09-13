@@ -228,8 +228,8 @@ function Onboarding() {
                 </Card>
               ))}
               <div className="mt-1 flex gap-2">
-                <PrimaryButton block className="h-12" onClick={finish}>
-                  {editTargets ? "Save and finish" : "Use defaults"}
+                <PrimaryButton block className="h-12" onClick={finish} disabled={saving}>
+                  {saving ? "Saving…" : editTargets ? "Save and finish" : "Use defaults"}
                 </PrimaryButton>
                 {!editTargets && (
                   <SecondaryButton className="h-12" onClick={() => setEditTargets(true)}>
