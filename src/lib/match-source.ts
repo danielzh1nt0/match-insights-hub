@@ -226,6 +226,8 @@ export function toLibraryMatch({ row, label }: MatchListItem): LibraryMatch {
     status: row.status,
     scoreA: label?.score_a ?? 0,
     scoreB: label?.score_b ?? 0,
+    ...(label?.colour_a ? { colourA: label.colour_a } : {}),
+    ...(label?.colour_b ? { colourB: label.colour_b } : {}),
     tags: label?.tags ?? [],
     summary: {
       possession: pair(summary["possession_pct"]),

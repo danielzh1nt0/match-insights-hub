@@ -28,7 +28,7 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, stats, findings, summary, territory, loading } = useAnalysis(matchId, scope);
+  const { match, team, colours, stats, findings, summary, territory, loading } = useAnalysis(matchId, scope);
 
   const rowA = teamRow(stats, "A");
   const rowB = teamRow(stats, "B");
@@ -73,7 +73,7 @@ function Insights() {
             }}
           >
             <Pitch arrowLabel={`${match.teamA} attack →`}>
-              <HeatBlobs points={territory.heat} color={team === "B" ? "var(--team-b)" : "var(--team-a)"} />
+              <HeatBlobs points={territory.heat} color={team === "B" ? colours.B : colours.A} />
             </Pitch>
             <p className="num mt-2 text-[11.5px] text-text-faint">
               n = {territory.playerCount} players · {territory.frameCount.toLocaleString()} frames
@@ -85,9 +85,9 @@ function Insights() {
             <div className="mt-3 flex h-3 w-full overflow-hidden rounded-full bg-surface-3">
               <span
                 className="h-full"
-                style={{ width: `${rowA?.possession_pct ?? 50}%`, background: "var(--team-a)" }}
+                style={{ width: `${rowA?.possession_pct ?? 50}%`, background: colours.A }}
               />
-              <span className="h-full flex-1" style={{ background: "var(--team-b)" }} />
+              <span className="h-full flex-1" style={{ background: colours.B }} />
             </div>
             <p className="num mt-2 text-[12px] text-text-dim">
               {match.teamA} {rowA?.possession_pct ?? 0}% · {match.teamB} {rowB?.possession_pct ?? 0}%

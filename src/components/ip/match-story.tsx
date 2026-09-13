@@ -589,15 +589,23 @@ function StoryBackdrop({
       </span>
     );
   }
-  return <StoryPitch variant={slide.pitch ?? "moment"} shape={shape} />;
+  return (
+    <StoryPitch
+      variant={slide.pitch ?? "moment"}
+      shape={shape}
+      colours={{ A: match.colourA ?? "var(--team-a)", B: match.colourB ?? "var(--team-b)" }}
+    />
+  );
 }
 
 function StoryPitch({
   variant,
   shape,
+  colours,
 }: {
   variant: "moment" | "missed";
   shape: StoryShape | null;
+  colours: { A: string; B: string };
 }) {
   const fallback = [
     [10, 50],
@@ -668,7 +676,7 @@ function StoryPitch({
           style={{
             left: `${d.x}%`,
             top: `${d.y}%`,
-            background: d.team === "B" ? "var(--team-b)" : "var(--team-a)",
+            background: d.team === "B" ? colours.B : colours.A,
             boxShadow: "0 0 0 1.5px rgba(255,255,255,0.5)",
           }}
         />

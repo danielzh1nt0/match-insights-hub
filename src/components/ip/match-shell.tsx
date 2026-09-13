@@ -8,7 +8,7 @@ import { Card } from "@/components/ip/primitives";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
 import { isLabelled } from "@/lib/match-source";
-import { attacksRight } from "@/lib/match-analysis";
+import { attacksRight, teamColours } from "@/lib/match-analysis";
 import { useMatchRecord } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
@@ -37,6 +37,7 @@ export function MatchShell({
   const [setupOpen, setSetupOpen] = useState(false);
   const [prompted, setPrompted] = useState(false);
   const selectorsVisible = showSelectors && Boolean(scope && setScope && period && setPeriod);
+  const colours = teamColours(record?.label ?? null);
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
 
@@ -60,8 +61,8 @@ export function MatchShell({
               teamB={match.teamB}
               scoreA={match.status === "ready" ? match.scoreA : null}
               scoreB={match.status === "ready" ? match.scoreB : null}
-              colourA={record?.label?.colour_a ?? team?.colorA ?? "var(--team-a)"}
-              colourB={record?.label?.colour_b ?? team?.colorB ?? "var(--team-b)"}
+              colourA={record?.label?.colour_a ?? team?.colorA ?? colours.A}
+              colourB={record?.label?.colour_b ?? team?.colorB ?? colours.B}
                {...(crestA ? { crestA } : {})}
                {...(crestB ? { crestB } : {})}
               {...(match.status === "ready"
@@ -82,7 +83,14 @@ export function MatchShell({
             />
             {selectorsVisible && (
               <div className="mt-3 flex flex-col gap-2 md:flex-row">
-                <TeamSelector value={scope!} onChange={setScope!} teamA={match.teamA} teamB={match.teamB} />
+                <TeamSelector
+                  value={scope!}
+                  onChange={setScope!}
+                  teamA={match.teamA}
+                  teamB={match.teamB}
+                  colourA={colours.A}
+                  colourB={colours.B}
+                />
                 <PeriodSelector value={period!} onChange={setPeriod!} periods={match.durationS > 1500 ? 2 : 1} />
               </div>
             )}

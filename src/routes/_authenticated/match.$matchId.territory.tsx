@@ -23,11 +23,11 @@ function Territory() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, territory, loading } = useAnalysis(matchId, scope);
+  const { match, team, colours, territory, loading } = useAnalysis(matchId, scope);
   const [snapIndex, setSnapIndex] = useState(0);
 
   const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
-  const teamColour = team === "B" ? "var(--team-b)" : "var(--team-a)";
+  const teamColour = team === "B" ? colours.B : colours.A;
   const snapshot = territory?.snapshots[Math.min(snapIndex, territory.snapshots.length - 1)];
 
   return (

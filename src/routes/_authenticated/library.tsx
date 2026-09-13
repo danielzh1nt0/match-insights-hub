@@ -193,12 +193,18 @@ function MatchCard({ match }: { match: LibraryMatch }) {
           {crestA ? (
             <img src={crestA} alt="" className="h-12 w-12 object-contain" />
           ) : (
-            <span className="h-3 w-3 rounded-full bg-team-a" />
+            <span
+              className="h-3 w-3 rounded-full"
+              style={{ background: match.colourA ?? "var(--team-a)" }}
+            />
           )}
           {crestB ? (
             <img src={crestB} alt="" className="h-12 w-12 object-contain" />
           ) : (
-            <span className="h-3 w-3 rounded-full bg-team-b" />
+            <span
+              className="h-3 w-3 rounded-full"
+              style={{ background: match.colourB ?? "var(--team-b)" }}
+            />
           )}
         </div>
         <span className="num absolute bottom-3 right-3 text-[13px] text-cream">

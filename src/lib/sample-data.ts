@@ -11,6 +11,9 @@ export type LibraryMatch = {
   status: MatchStatus;
   scoreA: number;
   scoreB: number;
+  /** Kit colours from the saved labels, used for dots and bars. */
+  colourA?: string;
+  colourB?: string;
   tags: string[];
   summary: {
     possession: [number, number];
