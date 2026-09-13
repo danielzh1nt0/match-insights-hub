@@ -2,22 +2,28 @@ import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** 3-4 letter cue under a team tile, e.g. FCK. */
-function abbreviate(name: string) {
-  const words = name.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    return words
-      .map((w) => w[0])
-      .join("")
-      .slice(0, 4)
-      .toUpperCase();
-  }
-  return (words[0] ?? name).slice(0, 3).toUpperCase();
+function tokens(name: string) {
+  return name
+    .replace(/[^\p{L}\p{N} ]/gu, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 0 && /\p{L}/u.test(w));
 }
 
+/** 3-4 letter cue under a team tile: "1. FC Köln" reads FCK. */
+function abbreviate(name: string) {
+  const words = tokens(name);
+  if (words.length === 0) return name.slice(0, 3).toUpperCase();
+  if (words.length === 1) return words[0]!.slice(0, 3).toUpperCase();
+  const head = words[0]!;
+  const prefix = head.length <= 2 ? head : head[0]!;
+  return (prefix + words.slice(1).map((w) => w[0]!).join("")).slice(0, 4).toUpperCase();
+}
+
+/** Glyph inside the colour tile: the club's name letter, e.g. K for 1. FC Köln. */
 function initialOf(name: string) {
-  const words = name.replace(/[^\p{L}\p{N} ]/gu, "").split(/\s+/).filter(Boolean);
-  const first = words.find((w) => w.length > 1) ?? words[0] ?? name;
-  return (first[0] ?? "?").toUpperCase();
+  const words = tokens(name);
+  const main = [...words].reverse().find((w) => w.length > 2) ?? words[0] ?? name;
+  return (main[0] ?? "?").toUpperCase();
 }
 
 function TeamTile({
