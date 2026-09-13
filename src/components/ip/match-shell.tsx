@@ -1,11 +1,14 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { AppHeader, FloatingNav, PeriodSelector, Screen, TeamSelector } from "@/components/ip/chrome";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchHeader } from "@/components/ip/match-header";
+import { MatchSetupSheet } from "@/components/ip/match-setup-sheet";
 import { Card } from "@/components/ip/primitives";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
+import { isLabelled } from "@/lib/match-source";
+import { useMatchRecord } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
 
@@ -29,10 +32,21 @@ export function MatchShell({
   showSelectors?: boolean;
 }) {
   const team = useApp((s) => s.teams[0]);
+  const { data: record } = useMatchRecord(matchId);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [prompted, setPrompted] = useState(false);
   const selectorsVisible = showSelectors && Boolean(scope && setScope && period && setPeriod);
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
+
+  useEffect(() => {
+    if (!record || prompted) return;
+    if (!isLabelled(record.label)) {
+      setSetupOpen(true);
+      setPrompted(true);
+    }
+  }, [record, prompted]);
+
 
   return (
     <div className="min-h-screen bg-bg">
