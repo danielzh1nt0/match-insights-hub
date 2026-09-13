@@ -97,8 +97,8 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
   const duration = 6;
 
   return (
-    <div className="relative aspect-[16/10] overflow-hidden rounded-[14px] border border-wire bg-gradient-to-b from-pitch-top to-pitch-bottom" role="img" aria-label={template.label}>
-      <svg viewBox="0 0 100 62.5" className="h-full w-full" aria-hidden="true">
+    <div className="relative aspect-[16/10] overflow-hidden rounded-[14px] border border-wire bg-gradient-to-b from-pitch-top to-pitch-bottom">
+      <svg viewBox="0 0 100 62.5" className="h-full w-full" role="img" aria-label={template.label}>
         <defs>
           <marker id={`arrow-${templateId}`} markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="var(--cream)" /></marker>
         </defs>
