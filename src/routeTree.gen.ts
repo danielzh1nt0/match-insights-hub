@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LibraryRouteImport } from './routes/library'
+import { Route as NewRouteImport } from './routes/new'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as ResetRouteImport } from './routes/reset'
 import { Route as SigninRouteImport } from './routes/signin'
@@ -24,6 +25,11 @@ const IndexRoute = IndexRouteImport.update({
 const LibraryRoute = LibraryRouteImport.update({
   id: '/library',
   path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewRoute = NewRouteImport.update({
+  id: '/new',
+  path: '/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -50,6 +56,7 @@ const SignupRoute = SignupRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/library': typeof LibraryRoute
+  '/new': typeof NewRoute
   '/onboarding': typeof OnboardingRoute
   '/reset': typeof ResetRoute
   '/signin': typeof SigninRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/library': typeof LibraryRoute
+  '/new': typeof NewRoute
   '/onboarding': typeof OnboardingRoute
   '/reset': typeof ResetRoute
   '/signin': typeof SigninRoute
@@ -67,6 +75,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/library': typeof LibraryRoute
+  '/new': typeof NewRoute
   '/onboarding': typeof OnboardingRoute
   '/reset': typeof ResetRoute
   '/signin': typeof SigninRoute
@@ -74,13 +83,16 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/library' | '/onboarding' | '/reset' | '/signin' | '/signup'
+  fullPaths:
+    '/' | '/library' | '/new' | '/onboarding' | '/reset' | '/signin' | '/signup'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/library' | '/onboarding' | '/reset' | '/signin' | '/signup'
+  to:
+    '/' | '/library' | '/new' | '/onboarding' | '/reset' | '/signin' | '/signup'
   id:
     | '__root__'
     | '/'
     | '/library'
+    | '/new'
     | '/onboarding'
     | '/reset'
     | '/signin'
@@ -90,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LibraryRoute: typeof LibraryRoute
+  NewRoute: typeof NewRoute
   OnboardingRoute: typeof OnboardingRoute
   ResetRoute: typeof ResetRoute
   SigninRoute: typeof SigninRoute
@@ -110,6 +123,13 @@ declare module '@tanstack/react-router' {
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/new': {
+      id: '/new'
+      path: '/new'
+      fullPath: '/new'
+      preLoaderRoute: typeof NewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -146,6 +166,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LibraryRoute: LibraryRoute,
+  NewRoute: NewRoute,
   OnboardingRoute: OnboardingRoute,
   ResetRoute: ResetRoute,
   SigninRoute: SigninRoute,
