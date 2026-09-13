@@ -78,7 +78,14 @@ function SignIn() {
         <span className="h-px flex-1 bg-wire-2" />
       </div>
 
-      <SecondaryButton block className="h-12" onClick={() => submit({ preventDefault() {} } as React.FormEvent)}>
+      <SecondaryButton
+        block
+        className="h-12"
+        onClick={() => {
+          signIn(email);
+          navigate({ to: onboarded ? "/library" : "/onboarding" });
+        }}
+      >
         Continue with Google
       </SecondaryButton>
 
