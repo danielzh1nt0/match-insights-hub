@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
+import { StoryLauncher } from "@/components/ip/story-launcher";
 import { Card, Pill } from "@/components/ip/primitives";
 import { CoachMark, MomentumStrip, Pitch, PossessionRibbon, Visual, ZoneGrid } from "@/components/ip/visual";
 import { useMatch } from "@/hooks/use-match";
@@ -41,6 +42,8 @@ function Insights() {
     >
       {data && match && (
         <>
+          <StoryLauncher matchId={matchId} />
+
           <CoachMark id="insights">
             Start with the three sentences, then open a finding to see the moments behind it.
           </CoachMark>
@@ -50,6 +53,7 @@ function Insights() {
             caption="Darker squares are where the ball spent more time."
             info={{
               title: "Where was the ball?",
+              glossaryId: "heat-map",
               rows: [
                 { label: "What it counts", value: "Ball time per square" },
                 { label: "Squares", value: "24 (6 across, 4 down)" },
@@ -69,6 +73,7 @@ function Insights() {
             caption="Each block is one spell with the ball, in order."
             info={{
               title: "Who had the ball?",
+              glossaryId: "possession",
               rows: [
                 { label: "What it counts", value: "Spells with the ball" },
                 { label: `${match.teamA}`, value: `${match.summary.possession[0]}%`, cream: true },

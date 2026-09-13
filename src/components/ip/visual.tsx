@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "motion/react";
+import { Link } from "@tanstack/react-router";
 import { Info, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { GhostButton, PrimaryButton, SecondaryButton } from "./primitives";
+import { GhostButton, PrimaryButton } from "./primitives";
 
 /* ---------------- stat info sheet ---------------- */
 
@@ -11,8 +12,11 @@ export type InfoRow = { label: string; value: string; cream?: boolean };
 export type StatInfo = {
   title: string;
   rows: InfoRow[];
+  /** Term id in src/lib/glossary.ts, so the glossary opens on the right entry. */
+  glossaryId?: string;
   onSeeMoments?: () => void;
 };
+
 
 function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
   useEffect(() => {
@@ -73,10 +77,17 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
               See the moments
             </PrimaryButton>
           )}
-          <SecondaryButton className="h-12 flex-1" onClick={onClose}>
+          <Link
+            to="/glossary"
+            {...(info.glossaryId ? { hash: info.glossaryId } : {})}
+            onClick={onClose}
+            className="tap inline-flex h-12 flex-1 items-center justify-center rounded-[12px] border border-cream/60 px-5 text-sm font-semibold text-cream transition-colors duration-150 ease-out hover:bg-cream/10"
+          >
             Glossary
-          </SecondaryButton>
+          </Link>
+
         </div>
+
       </motion.div>
     </div>
   );
@@ -134,7 +145,7 @@ export function Pitch({
 }) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="w-full overflow-hidden rounded-[12px] bg-surface-2">
+      <div className="mx-auto w-full max-w-[640px] overflow-hidden rounded-[12px] bg-surface-2">
       <svg viewBox="0 0 100 64" className="block h-auto w-full" role="img" aria-label="Pitch">
         <rect x="0" y="0" width="100" height="64" fill="var(--surface-2)" />
         <g stroke="var(--wire)" strokeWidth="0.4" fill="none">
@@ -186,7 +197,7 @@ export function ZoneGrid({ values, color = "var(--cream)" }: { values: number[];
             x={2 + col * 16 + 8}
             y={2 + row * 15 + 9}
             textAnchor="middle"
-            fontSize="3.6"
+            fontSize="2.8"
             fill="var(--text-dim)"
           >
             {v.toFixed(1)}

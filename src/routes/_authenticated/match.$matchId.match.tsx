@@ -51,7 +51,7 @@ function MatchScreen() {
       {data && match && (
         <>
           <Card className="p-3">
-            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px] bg-surface-2">
+            <div className="relative mx-auto aspect-[16/10] w-full max-w-[880px] overflow-hidden rounded-[12px] bg-surface-2">
               {mode === "2d" ? (
                 <Pitch className="h-full">
                   <PitchDots points={data.heat} color="var(--team-a)" radius={1.4} />

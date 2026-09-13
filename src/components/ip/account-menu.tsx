@@ -75,6 +75,18 @@ export function AccountMenu() {
           <button
             type="button"
             role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              navigate({ to: "/glossary" });
+            }}
+            className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
+          >
+            Glossary
+          </button>
+
+          <button
+            type="button"
+            role="menuitem"
             onClick={signOut}
             className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
           >

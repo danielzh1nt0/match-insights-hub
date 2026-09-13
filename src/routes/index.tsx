@@ -143,10 +143,10 @@ function Landing() {
               playsInline
               aria-label="Looping sample of an analysed match clip"
             />
-            <span className="absolute left-3.5 top-3.5 rounded-[8px] bg-black/60 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur">
+            <span className="absolute left-3.5 top-3.5 rounded-[8px] bg-bg/70 px-2.5 py-1 text-[11px] font-semibold text-text backdrop-blur">
               Köln · controlled
             </span>
-            <span className="num absolute right-3.5 top-3.5 rounded-[8px] bg-black/60 px-2.5 py-1 text-[14px] text-cream backdrop-blur">
+            <span className="num absolute right-3.5 top-3.5 rounded-[8px] bg-bg/70 px-2.5 py-1 text-[14px] text-cream backdrop-blur">
               0:14
             </span>
             <span className="absolute left-[34%] top-[46%] h-3 w-3 rounded-full bg-team-a" />
