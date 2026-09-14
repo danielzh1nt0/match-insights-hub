@@ -5,7 +5,7 @@ import { Layers, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
-import { Card, Chip, Pill, Segmented } from "@/components/ip/primitives";
+import { Card, Chip, Segmented } from "@/components/ip/primitives";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
 import { EVENT_GROUPS, feedLabel, groupTypes, videoSrc, type Frame, type FeedEvent } from "@/lib/match-source";
@@ -131,13 +131,16 @@ function MatchScreen() {
     else video.pause();
   }, []);
 
-  // Fullscreen the whole stage (video + overlay canvas + playback bar) so the
-  // chosen layers stay visible.
   const toggleFullscreen = useCallback(() => {
     const node = stageRef.current;
     if (!node) return;
-    if (document.fullscreenElement) void document.exitFullscreen();
-    else void node.requestFullscreen?.().catch(() => undefined);
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+      return;
+    }
+    void node.requestFullscreen?.().then(() => {
+      void window.screen.orientation?.lock?.("landscape").catch(() => undefined);
+    }).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -198,14 +201,16 @@ function MatchScreen() {
             <div
               ref={stageRef}
               className={cn(
-                "flex flex-col",
-                fullscreen && "h-screen w-screen justify-center bg-bg p-3",
+                "flex flex-col bg-surface",
+                fullscreen && "h-dvh w-dvw overflow-hidden bg-bg",
               )}
             >
             <div
               className={cn(
-                "relative mx-auto w-full overflow-hidden rounded-[12px] bg-surface-2",
-                fullscreen ? "min-h-0 flex-1" : "aspect-[16/10] max-w-[880px]",
+                "relative mx-auto w-full overflow-hidden bg-surface-2",
+                fullscreen
+                  ? "min-h-0 flex-1 rounded-none"
+                  : "aspect-[16/10] max-w-[880px] rounded-[12px]",
               )}
             >
               <video
@@ -247,10 +252,6 @@ function MatchScreen() {
                   onFrame={setFrame}
                 />
               )}
-
-              <span className="pointer-events-none absolute left-3 top-3">
-                <Pill tone="cream">{possessionLine}</Pill>
-              </span>
 
               <div className="absolute right-3 top-3 flex items-center gap-2">
                 <button
@@ -294,7 +295,26 @@ function MatchScreen() {
               )}
             </div>
 
-            <div className="mt-3">
+            <div
+              className={cn(
+                "flex min-h-11 w-full items-center border-l-4 border-wire bg-cream px-4 py-2 text-[#111315]",
+                fullscreen && "shrink-0",
+              )}
+              style={{
+                borderLeftColor:
+                  possessionTeam === "A"
+                    ? colours.A
+                    : possessionTeam === "B"
+                      ? colours.B
+                      : "var(--wire)",
+              }}
+              role="status"
+              aria-live="polite"
+            >
+              <span className="display text-[16px] font-bold uppercase">{possessionLine}</span>
+            </div>
+
+            <div className={cn("mt-3", fullscreen && "shrink-0 px-3")}>
               <Segmented
                 ariaLabel="View mode"
                 value={mode}
@@ -307,7 +327,7 @@ function MatchScreen() {
               />
             </div>
 
-            <div className="mt-3 flex items-center gap-3">
+            <div className={cn("mt-3 flex items-center gap-3", fullscreen && "shrink-0 px-3 pb-3")}>
               <button
                 type="button"
                 onClick={togglePlay}
