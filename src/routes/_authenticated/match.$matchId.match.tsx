@@ -67,7 +67,7 @@ function MatchScreen() {
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
   const [layerSheet, setLayerSheet] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const stageRef = useRef<HTMLDivElement | null>(null);
+  const mediaRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const seededRef = useRef(false);
 
@@ -132,7 +132,7 @@ function MatchScreen() {
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    const node = stageRef.current;
+    const node = mediaRef.current;
     if (!node) return;
     if (document.fullscreenElement) {
       void document.exitFullscreen();
@@ -144,7 +144,7 @@ function MatchScreen() {
   }, []);
 
   useEffect(() => {
-    const onChange = () => setFullscreen(document.fullscreenElement === stageRef.current);
+    const onChange = () => setFullscreen(document.fullscreenElement === mediaRef.current);
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
@@ -198,18 +198,13 @@ function MatchScreen() {
       {match && (
         <>
           <Card className="p-3">
+            <div className="flex flex-col bg-surface">
             <div
-              ref={stageRef}
-              className={cn(
-                "flex flex-col bg-surface",
-                fullscreen && "h-dvh w-dvw overflow-hidden bg-bg",
-              )}
-            >
-            <div
+              ref={mediaRef}
               className={cn(
                 "relative mx-auto w-full overflow-hidden bg-surface-2",
                 fullscreen
-                  ? "min-h-0 flex-1 rounded-none"
+                  ? "h-dvh w-dvw max-w-none rounded-none bg-bg"
                   : "aspect-[16/10] max-w-[880px] rounded-[12px]",
               )}
             >
@@ -258,7 +253,10 @@ function MatchScreen() {
                   type="button"
                   onClick={() => setLayerSheet(true)}
                   aria-label="Choose layers"
-                  className="tap grid h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md"
+                  className={cn(
+                    "tap h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md",
+                    fullscreen ? "hidden" : "grid",
+                  )}
                 >
                   <Layers size={15} aria-hidden="true" />
                 </button>
@@ -296,10 +294,7 @@ function MatchScreen() {
             </div>
 
             <div
-              className={cn(
-                "flex min-h-11 w-full items-center border-l-4 border-wire bg-cream px-4 py-2 text-[#111315]",
-                fullscreen && "shrink-0",
-              )}
+              className="flex min-h-11 w-full items-center border-l-4 border-wire bg-cream px-4 py-2 text-[#111315]"
               style={{
                 borderLeftColor:
                   possessionTeam === "A"
@@ -314,7 +309,7 @@ function MatchScreen() {
               <span className="display text-[16px] font-bold uppercase">{possessionLine}</span>
             </div>
 
-            <div className={cn("mt-3", fullscreen && "shrink-0 px-3")}>
+            <div className="mt-3">
               <Segmented
                 ariaLabel="View mode"
                 value={mode}
@@ -327,7 +322,7 @@ function MatchScreen() {
               />
             </div>
 
-            <div className={cn("mt-3 flex items-center gap-3", fullscreen && "shrink-0 px-3 pb-3")}>
+            <div className="mt-3 flex items-center gap-3">
               <button
                 type="button"
                 onClick={togglePlay}
