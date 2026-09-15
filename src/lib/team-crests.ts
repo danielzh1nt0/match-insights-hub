@@ -1,5 +1,7 @@
 import bayernCrest from "@/assets/bayern-crest.png.asset.json";
+import brommapojkarnaCrest from "@/assets/brommapojkarna-crest.png.asset.json";
 import bvbCrest from "@/assets/bvb-crest.png.asset.json";
+import sollentunaCrest from "@/assets/sollentuna-crest.png.asset.json";
 import kolnCrest from "@/assets/fc-koln-crest.png.asset.json";
 import wolfsburgCrest from "@/assets/wolfsburg-crest.png.asset.json";
 
@@ -13,6 +15,9 @@ function normaliseTeamName(name: string) {
 export function crestForTeam(name: string) {
   const normalised = normaliseTeamName(name);
 
+  if (normalised.includes("sollentuna")) return sollentunaCrest.url;
+  if (normalised.includes("brommapojkarna") || normalised.includes("bpsod") || normalised.includes("bromma"))
+    return brommapojkarnaCrest.url;
   if (normalised.includes("koln") || normalised.includes("cologne")) return kolnCrest.url;
   if (normalised.includes("wolfsburg")) return wolfsburgCrest.url;
   if (
