@@ -4,7 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, Check, Play, RotateCcw, Share2, Target, X } from "lucide-react";
 import { toast } from "sonner";
-import type { StoryShape } from "@/lib/match-analysis";
+import type { TeamKey } from "@/lib/match-analysis";
 import type { RecapAnalysis } from "@/lib/recap-analysis";
 import { crestForTeam } from "@/lib/team-crests";
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils";
 type Chapter = "score" | "strength" | "player" | "improve" | "verdict";
 type Action = { label: string; kind: "primary" | "secondary"; run: () => void; icon?: "play" | "share" | "session" };
 type StorySlide = { id: Chapter; durationMs: number; moment?: number };
+export type StoryShape = {
+  dots: { x: number; y: number; team: TeamKey }[];
+  carrier?: { x: number; y: number };
+  target?: { x: number; y: number };
+};
 
 const SLIDES: StorySlide[] = [
   { id: "score", durationMs: 7000 },
@@ -112,7 +117,7 @@ export function MatchStory({
     ];
     if (slide.id === "improve") return [
       { label: `See ${recap.improvement?.events ?? 0} moments`, kind: "secondary", icon: "play", run: () => watch(recap.firstMoment ?? 0) },
-      { label: "Build the fix", kind: "primary", icon: "session", run: () => void navigate({ to: "/match/$matchId/session", params: { matchId }, search: { finding: recap.improvement?.id } }) },
+      { label: "Build the fix", kind: "primary", icon: "session", run: () => void navigate({ to: "/match/$matchId/session", params: { matchId }, search: recap.improvement ? { finding: recap.improvement.id } : {} }) },
     ];
     return [
       { label: "Share recap", kind: "secondary", icon: "share", run: () => {
@@ -201,12 +206,12 @@ function ScoreChapter({ match, recap }: { match: LibraryMatch; recap: RecapAnaly
       <Kicker>{match.date} · final</Kicker>
       <h1 className="display-i mt-3 text-[44px] leading-[0.84] sm:text-[64px]">The game<br />in one frame</h1>
       <div className="relative mt-7 flex w-full max-w-[520px] items-center justify-between px-2 sm:px-8">
-        <Crest name={match.teamA} src={crestA} colour="var(--story-own)" />
+        <Crest name={match.teamA} {...(crestA ? { src: crestA } : {})} colour="var(--story-own)" />
         <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
           <div className="display-i whitespace-nowrap text-[74px] leading-none drop-shadow-story sm:text-[108px]">{match.scoreA}:{match.scoreB}</div>
           <span className="mt-1 inline-block bg-story-paper px-3 py-1 text-[9px] font-black uppercase text-story-ink">Full time</span>
         </div>
-        <Crest name={match.teamB} src={crestB} colour="var(--story-other)" />
+        <Crest name={match.teamB} {...(crestB ? { src: crestB } : {})} colour="var(--story-other)" />
       </div>
       <div className="mt-8 grid w-full max-w-[520px] grid-cols-3 border-y border-story-paper/25 bg-story-ink/55 py-3 backdrop-blur-md">
         <MiniStat value={`${match.summary.possession[0]}–${match.summary.possession[1]}`} label="possession" />
@@ -308,7 +313,7 @@ function Crest({ name, src, colour }: { name: string; src?: string; colour: stri
     <span className="grid h-[76px] w-[76px] place-items-center rounded-full border-[5px] bg-story-paper shadow-story sm:h-[106px] sm:w-[106px]" style={{ borderColor: colour }}>
       {src ? <img src={src} alt={`${name} crest`} className="h-[86%] w-[86%] object-contain" /> : <span className="display-i text-[24px] text-story-ink">{name.slice(0, 3)}</span>}
     </span>
-    <span className="mt-2 max-w-full truncate bg-story-ink px-2 py-1 text-[9px] font-black uppercase" style={{ color }}>{name}</span>
+    <span className="mt-2 max-w-full truncate bg-story-ink px-2 py-1 text-[9px] font-black uppercase" style={{ color: colour }}>{name}</span>
   </div>;
 }
 
