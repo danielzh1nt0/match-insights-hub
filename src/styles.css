@@ -45,6 +45,10 @@
   --color-pitch-control: var(--pitch-control);
   --color-ball-detail: var(--ball-detail);
   --color-team-gk: var(--team-gk);
+  --color-story-ink: var(--story-ink);
+  --color-story-paper: var(--story-paper);
+  --color-story-own: var(--story-own);
+  --color-story-other: var(--story-other);
 
   --color-card: var(--surface);
   --color-card-foreground: var(--text);
@@ -89,6 +93,8 @@
   --pitch-control: rgba(0, 0, 0, 0.5);
   --ball-detail: #111315;
   --team-gk: #eab308;
+  --story-ink: #08090b;
+  --story-paper: #f4f0e6;
   --radius: 16px;
   color-scheme: dark;
 }
@@ -147,6 +153,18 @@
 @utility pitch-turf {
   background:
     linear-gradient(180deg, #16281a 0%, #0f1f13 100%);
+}
+
+@utility bg-story-scrim {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--story-ink) 38%, transparent), color-mix(in srgb, var(--story-ink) 8%, transparent) 42%, color-mix(in srgb, var(--story-ink) 84%, transparent));
+}
+
+@utility shadow-story {
+  box-shadow: 8px 8px 0 color-mix(in srgb, var(--story-ink) 72%, transparent);
+}
+
+@utility drop-shadow-story {
+  filter: drop-shadow(7px 7px 0 color-mix(in srgb, var(--story-ink) 82%, transparent));
 }
 
 @keyframes loadbar {
