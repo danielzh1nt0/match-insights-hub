@@ -37,6 +37,13 @@ function number(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function clubColour(name: string, saved: string) {
+  const key = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (key.includes("dortmund") || key.includes("bvb")) return "var(--club-bvb)";
+  if (key.includes("bayern") || key.includes("fcb") || key.includes("munchen")) return "var(--club-bayern)";
+  return saved;
+}
+
 function strongestMetric(stats: StatsFile | undefined, team: TeamKey): RecapStrength {
   const other: TeamKey = team === "A" ? "B" : "A";
   const own = teamRow(stats, team);
@@ -143,8 +150,8 @@ export function buildRecapAnalysis({
   return {
     ownName,
     otherName,
-    ownColour: colours[team],
-    otherColour: colours[team === "A" ? "B" : "A"],
+    ownColour: clubColour(ownName, colours[team]),
+    otherColour: clubColour(otherName, colours[team === "A" ? "B" : "A"]),
     strength: strongestMetric(stats, team),
     standout: standoutPlayer(players),
     improvement,
