@@ -9,6 +9,7 @@
 - Player page and clip reel wired to the derived analysis data (events, findings, per-player heat)
 
 ## Open
+- [ ] Stop video overlay flicker with interpolation, smoothing, persistence, stable shapes, and stable-carrier lanes
 - [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
 - [x] `<MatchStory>` full-screen match-specific 5-slide recap + route `/match/:id/story` + `<StoryLauncher>` pill on library cards and insights
 - [ ] QA pass against the uploaded wireframe HTML: colours, fonts, spacing, functionality; fix inconsistencies
