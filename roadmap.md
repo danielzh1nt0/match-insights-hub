@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Done
+- Stop video overlay flicker: interpolated and smoothed players/ball, dropout persistence, stable shapes and lanes
 - Session screen rebuild: animated tactical drill pitches, setup/instructions/cues/progressions, regeneration, and responsive QA
 - Phase 1: brand, auth, onboarding, library, upload, processing
 - Real accounts (email + Google), club/teams/targets saved to the account
