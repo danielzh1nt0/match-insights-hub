@@ -109,7 +109,7 @@ function interpolatePlayers(
       hasPair && beforePlayer.px && afterPlayer.px
         ? lerpPoint(beforePlayer.px, afterPlayer.px, bracket.mix)
         : beforePlayer.px;
-    const seenAt = hasPair ? t : beforePlayer.t ?? bracket.before.t;
+    const seenAt = hasPair ? t : bracket.before.t;
     const smoothedM = smoothPoint(existing?.m ?? null, targetM);
     if (!smoothedM) continue;
 
