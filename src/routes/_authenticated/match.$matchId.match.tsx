@@ -371,33 +371,100 @@ function MatchScreen() {
 
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
             {EVENT_GROUPS.map((f) => (
-              <Chip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)}>
+              <Chip
+                key={f.key}
+                active={filter === f.key && !typesOverride}
+                onClick={() => {
+                  setTypesOverride(null);
+                  setFilter(f.key);
+                }}
+              >
                 {f.label}
               </Chip>
             ))}
+            {typesOverride && (
+              <Chip active onClick={() => setTypesOverride(null)}>
+                Clear selection
+              </Chip>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11.5px] text-text-faint">
+              {confirmedCount > 0
+                ? `${confirmedCount} confirmed · ${events.length} detected`
+                : `${events.length} detected — confirm moments to lock the numbers`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  review.confirmMany.mutate(
+                    shown.filter((e) => e.status !== "confirmed").map((e) => e.id),
+                  )
+                }
+                disabled={shown.every((e) => e.status === "confirmed")}
+                className="tap rounded-[10px] border border-cream/60 px-3 text-[11.5px] font-semibold text-cream hover:bg-cream/10 disabled:opacity-40"
+              >
+                Confirm all visible
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadReviews(matchId, review.rows)}
+                disabled={review.rows.length === 0}
+                className="tap rounded-[10px] border border-wire px-3 text-[11.5px] text-text-dim hover:border-cream/50 hover:text-cream disabled:opacity-40"
+              >
+                Export reviews
+              </button>
+            </div>
           </div>
 
           <Card className="p-0">
             <ul>
-              {shown.map((e) => (
-                <li key={e.id} className="feed-in">
+              {shown.map((e, i) => (
+                <li
+                  key={e.id}
+                  className={cn(
+                    "feed-in flex items-center gap-2 border-b border-wire-2 pr-3 last:border-0",
+                    i === focusIndex && "bg-surface-2",
+                  )}
+                >
                   <button
                     type="button"
                     onClick={() => {
+                      setFocusIndex(i);
                       if (videoRef.current) videoRef.current.currentTime = e.t;
                       setClock(e.t);
                     }}
-                    className="tap flex w-full items-center gap-3 border-b border-wire-2 px-3.5 py-3 text-left last:border-0 hover:bg-surface-2"
+                    className="tap flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-2"
                   >
                     <span className="num w-11 shrink-0 text-[13px] text-cream">{formatClock(e.t)}</span>
                     <span
-                      className="h-6 w-1 shrink-0 rounded-full"
-                      style={{ background: e.team === "B" ? colours.B : colours.A }}
+                      className={cn(
+                        "h-6 w-1 shrink-0 rounded-full",
+                        e.status === "detected" && "opacity-40",
+                      )}
+                      style={{
+                        background:
+                          e.status === "confirmed"
+                            ? e.team === "B"
+                              ? colours.B
+                              : colours.A
+                            : "transparent",
+                        boxShadow:
+                          e.status === "confirmed"
+                            ? undefined
+                            : `inset 0 0 0 1px ${e.team === "B" ? colours.B : colours.A}`,
+                      }}
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] text-text">{feedLabel(e.type)}</span>
+                      <span className="block truncate text-[13.5px] text-text">
+                        {feedLabel(e.type)}
+                        {e.corrected && <span className="ml-1.5 text-[11px] text-cream-dim">fixed</span>}
+                      </span>
                       <span className="block truncate text-[11.5px] text-text-faint">
+                        {e.status === "confirmed" ? "confirmed" : "detected"} ·{" "}
                         {e.subtitle || e.title}
                       </span>
                     </span>
@@ -413,6 +480,11 @@ function MatchScreen() {
                       <Play size={13} aria-hidden="true" />
                     </span>
                   </button>
+                  <EventReviewControls
+                    event={e}
+                    onReview={(input) => review.setVerdict.mutate(input)}
+                    onFix={() => setFixing(e)}
+                  />
                 </li>
               ))}
               {shown.length === 0 && (
@@ -423,7 +495,53 @@ function MatchScreen() {
                 </li>
               )}
             </ul>
+
+            {hiddenEvents.length > 0 && (
+              <div className="border-t border-wire px-3.5 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowHidden((v) => !v)}
+                  aria-expanded={showHidden}
+                  className="tap text-[11.5px] uppercase tracking-[0.08em] text-text-faint hover:text-cream"
+                >
+                  Hidden ({hiddenEvents.length})
+                </button>
+                {showHidden && (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {hiddenEvents.map((e) => (
+                      <li key={e.id} className="flex items-center gap-2 text-[12px]">
+                        <span className="num w-11 shrink-0 text-text-faint line-through">
+                          {formatClock(e.t)}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-text-faint line-through">
+                          {feedLabel(e.type)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => review.clear.mutate([e.id])}
+                          className="tap shrink-0 rounded-[8px] border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
+                        >
+                          Put back
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </Card>
+
+          {fixing && (
+            <EventFixSheet
+              event={fixing}
+              names={{
+                A: match.teamA.split(" ").at(-1) ?? "Team A",
+                B: match.teamB.split(" ").at(-1) ?? "Team B",
+              }}
+              onReview={(input) => review.setVerdict.mutate(input)}
+              onClose={() => setFixing(null)}
+            />
+          )}
 
           {layerSheet && (
             <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(0,0,0,0.6)] p-0 md:items-center md:p-6">
