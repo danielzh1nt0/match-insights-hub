@@ -439,7 +439,6 @@ function MatchScreen() {
               setFilter(next);
             }}
             events={events}
-            frames={file?.frames ?? []}
             teamNames={{ A: match.teamA, B: match.teamB }}
           />
 
