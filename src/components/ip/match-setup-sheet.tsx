@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import { GhostButton, Input, PrimaryButton, Segmented } from "@/components/ip/primitives";
-import { saveMatchLabel, type MatchListItem } from "@/lib/match-source";
+import { saveMatchLabel, signedUrl, type MatchListItem } from "@/lib/match-source";
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -23,10 +23,22 @@ export function MatchSetupSheet({
   onClose: () => void;
 }) {
   const label = item.label;
-  const [nameA, setNameA] = useState(label?.name_a ?? "");
-  const [nameB, setNameB] = useState(label?.name_b ?? "");
-  const [colourA, setColourA] = useState(label?.colour_a ?? "#ef4444");
-  const [colourB, setColourB] = useState(label?.colour_b ?? "#22c55e");
+  /** Sollentuna v Brommapojkarna arrives unlabelled — start from the real kits. */
+  const isSfkBp = item.row.id.toUpperCase().includes("SFKBP");
+  const [nameA, setNameA] = useState(label?.name_a ?? (isSfkBp ? "SFK" : ""));
+  const [nameB, setNameB] = useState(label?.name_b ?? (isSfkBp ? "BP" : ""));
+  const [colourA, setColourA] = useState(label?.colour_a ?? (isSfkBp ? "#111315" : "#ef4444"));
+  const [colourB, setColourB] = useState(label?.colour_b ?? (isSfkBp ? "#e7eaee" : "#22c55e"));
+  const [attackRight, setAttackRight] = useState<"left" | "right">(
+    label?.attack_right_override?.["A"] === true ? "right" : "left",
+  );
+  const thumbPath = item.row.files.thumb;
+  const { data: thumbUrl } = useQuery({
+    queryKey: ["match-thumb", item.row.id],
+    queryFn: () => signedUrl(thumbPath!),
+    enabled: Boolean(thumbPath),
+    staleTime: 30 * 60_000,
+  });
   const [clubTeam, setClubTeam] = useState<"A" | "B">(label?.club_team ?? "A");
   const [scoreA, setScoreA] = useState(String(label?.score_a ?? 0));
   const [scoreB, setScoreB] = useState(String(label?.score_b ?? 0));
@@ -57,6 +69,7 @@ export function MatchSetupSheet({
           .split(",")
           .map((t) => t.trim().replace(/^#/, ""))
           .filter(Boolean),
+        attack_right_override: { A: attackRight === "right", B: attackRight !== "right" },
         thresholds: {
           press_within_2s: Number(press) || 0,
           regain_within_5s: Number(regain) || 0,
@@ -183,6 +196,33 @@ export function MatchSetupSheet({
               placeholder="P2009, home"
               aria-label="Tags"
             />
+          </div>
+        </div>
+
+        <h3 className="display mt-5 text-[14px] uppercase text-text-dim">
+          Which side do we attack in the 1st half?
+        </h3>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+          {thumbUrl && (
+            <img
+              src={thumbUrl}
+              alt="First frame of the match video"
+              className="h-20 w-full rounded-[10px] border border-wire object-cover sm:w-40"
+            />
+          )}
+          <div className="flex-1">
+            <Segmented
+              ariaLabel="Attacking direction in the first half"
+              value={attackRight}
+              onChange={(v) => setAttackRight(v as "left" | "right")}
+              options={[
+                { value: "left", label: "Left" },
+                { value: "right", label: "Right" },
+              ]}
+            />
+            <p className="mt-1 text-[11px] text-text-faint">
+              This is used instead of the direction the pipeline guessed.
+            </p>
           </div>
         </div>
 
