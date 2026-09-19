@@ -6,9 +6,12 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
 import { Card, Chip, Segmented } from "@/components/ip/primitives";
+import { EventFixSheet, EventReviewControls } from "@/components/ip/event-review";
+import { HeadToHead } from "@/components/ip/head-to-head";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
-import { EVENT_GROUPS, feedLabel, groupTypes, videoSrc, type Frame, type FeedEvent } from "@/lib/match-source";
+import { downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
+import { EVENT_GROUPS, feedLabel, groupTypes, videoSrc, type Frame } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
@@ -108,7 +111,6 @@ function MatchScreen() {
     staleTime: 30 * 60_000,
   });
 
-  const events: FeedEvent[] = file?.events ?? [];
   const total = row?.duration_s ?? match?.durationS ?? 1;
 
 
