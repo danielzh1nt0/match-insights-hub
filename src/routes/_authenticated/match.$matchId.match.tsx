@@ -7,7 +7,7 @@ import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
 import { Card, Chip, Segmented } from "@/components/ip/primitives";
 import { EventFixSheet, EventReviewControls } from "@/components/ip/event-review";
-import { HeadToHead } from "@/components/ip/head-to-head";
+import { MatchNumbers } from "@/components/ip/match-numbers";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
 import { downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
@@ -416,16 +416,13 @@ function MatchScreen() {
             </div>
           </Card>
 
-          <HeadToHead
-            match={match}
-            events={events}
-            stats={stats}
-            colours={colours}
-            ballReliable={row?.summary?.["ball_reliable"] !== false}
-            ours={Boolean(label?.club_team)}
-            onFilterTypes={(types) => setTypesOverride(types)}
-          />
+          <MatchNumbers matchId={matchId} onFilterTypes={(nextTypes) => setTypesOverride(nextTypes)} />
 
+          <div className="flex items-center gap-3 py-1" role="separator" aria-label="Every event">
+            <span className="h-px flex-1 bg-wire" />
+            <h2 className="display text-[14px] uppercase text-text-dim">Every event</h2>
+            <span className="h-px flex-1 bg-wire" />
+          </div>
 
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
             {EVENT_GROUPS.map((f) => (
