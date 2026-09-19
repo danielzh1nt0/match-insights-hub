@@ -177,7 +177,7 @@ export function EventFilter({ value, onChange, events, teamNames }: {
             onClick={() => onChange({ ...value, type: option.key })}
           />
         ))}
-        <FilterChip label="More ▾" active={extraCount > 0} expanded={open} badge={extraCount || undefined} onClick={openSheet} />
+        <FilterChip label="More ▾" active={false} expanded={open} badge={extraCount || undefined} onClick={openSheet} />
       </div>
 
       <Dialog.Root open={open} onOpenChange={setOpen}>

@@ -5,7 +5,7 @@ import { Layers, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
-import { Card, Chip, Segmented } from "@/components/ip/primitives";
+import { Card, Segmented } from "@/components/ip/primitives";
 import { EventFixSheet, EventReviewControls } from "@/components/ip/event-review";
 import {
   DEFAULT_EVENT_FILTER,
@@ -79,7 +79,6 @@ function MatchScreen() {
     loading,
     events,
     hiddenEvents,
-    confirmedCount,
     review,
   } = useAnalysis(matchId, scope);
   const [typesOverride, setTypesOverride] = useState<string[] | null>(null);
