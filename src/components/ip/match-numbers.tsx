@@ -116,7 +116,11 @@ export function MatchNumbers({
                 </div>
               ) : (
                 <>
-                  <StatIcon name={metric.icon} className={inactive ? "text-text-faint opacity-40" : "text-cream"} />
+                  <StatIcon
+                    name={metric.icon}
+                    className={inactive ? "text-text-faint opacity-40" : undefined}
+                    {...(!inactive ? { style: { color: metric.b > metric.a ? colours.B : colours.A } } : {})}
+                  />
                   <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">{metric.label}</p>
                   <p className="display-i mt-0.5 text-[22px] text-cream">
                     {inactive ? "—" : (

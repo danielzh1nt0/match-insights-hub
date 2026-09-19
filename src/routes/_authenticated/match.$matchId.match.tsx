@@ -523,15 +523,7 @@ function MatchScreen() {
                         {e.subtitle || e.title}
                       </span>
                     </span>
-                    <span
-                      className={cn(
-                        "shrink-0",
-                        e.type === "turnover_lost" && "text-quality-bad",
-                        e.type === "better_option" && "text-quality-risky",
-                        e.type === "turnover_won" && "text-quality-good",
-                        e.type === "shot" && "text-cream",
-                      )}
-                    >
+                    <span className="shrink-0 text-cream">
                       <Play size={13} aria-hidden="true" />
                     </span>
                   </button>

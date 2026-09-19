@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 export type StatIconName =
@@ -50,11 +51,13 @@ export function StatIcon({
   size = 32,
   className,
   label,
+  style,
 }: {
   name: StatIconName;
   size?: number;
   className?: string;
   label?: string;
+  style?: CSSProperties;
 }) {
   const common = {
     fill: "none",
@@ -72,6 +75,7 @@ export function StatIcon({
       role="img"
       aria-label={label ?? LABELS[name]}
       className={cn("h-7 w-7 shrink-0 md:h-8 md:w-8", className)}
+      style={style}
       {...common}
     >
       {name === "goals" && (
