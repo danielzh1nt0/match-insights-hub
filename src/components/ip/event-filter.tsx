@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import { EVENT_TONE, type EventKind } from "@/lib/match-data";
-import { EVENT_GROUPS, groupTypes } from "@/lib/match-source";
+import { EVENT_GROUPS, groupTypes, type Frame } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
 
 export type EventFilterValue = {
@@ -116,8 +116,9 @@ function FilterChip({ label, active, onClick, expanded, badge }: {
   );
 }
 
-function PlayerSection({ events, value, onChange, teamNames }: {
+function PlayerSection({ events, frames, value, onChange, teamNames }: {
   events: ReviewedEvent[];
+  frames: Frame[];
   value: string | null;
   onChange: (value: string | null) => void;
   teamNames: { A: string; B: string };
@@ -129,10 +130,16 @@ function PlayerSection({ events, value, onChange, teamNames }: {
       const player = eventPlayer(event);
       if (player && !result[event.team].includes(player)) result[event.team].push(player);
     }
+    for (const frame of frames) {
+      for (const player of frame.players) {
+        const shirt = String(player.id);
+        if (!result[player.team].includes(shirt)) result[player.team].push(shirt);
+      }
+    }
     result.A.sort((a, b) => Number(a) - Number(b));
     result.B.sort((a, b) => Number(a) - Number(b));
     return result;
-  }, [events]);
+  }, [events, frames]);
 
   return (
     <div className="space-y-3">
@@ -151,10 +158,11 @@ function PlayerSection({ events, value, onChange, teamNames }: {
   );
 }
 
-export function EventFilter({ value, onChange, events, teamNames }: {
+export function EventFilter({ value, onChange, events, frames, teamNames }: {
   value: EventFilterValue;
   onChange: (value: EventFilterValue) => void;
   events: ReviewedEvent[];
+  frames: Frame[];
   teamNames: { A: string; B: string };
 }) {
   const [open, setOpen] = useState(false);
@@ -214,7 +222,7 @@ export function EventFilter({ value, onChange, events, teamNames }: {
 
               <section>
                 <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">Player</h3>
-                <PlayerSection events={events} value={draft.player} onChange={(player) => setDraft({ ...draft, player })} teamNames={teamNames} />
+                <PlayerSection events={events} frames={frames} value={draft.player} onChange={(player) => setDraft({ ...draft, player })} teamNames={teamNames} />
               </section>
 
               <section>
