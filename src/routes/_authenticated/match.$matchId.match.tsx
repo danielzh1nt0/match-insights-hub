@@ -149,13 +149,41 @@ function MatchScreen() {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
-  const types = groupTypes(filter);
+  const types = typesOverride ?? groupTypes(filter);
   const shown = useMemo(() => {
     const visible = events.slice(0, visibleCount);
     const byTeam = team ? visible.filter((e) => e.team === team) : visible;
     const filtered = types ? byTeam.filter((e) => types.includes(e.type)) : byTeam;
     return filtered.slice().reverse();
   }, [events, visibleCount, types, team]);
+
+  // Desktop keyboard: C confirms, X deletes, arrows move through the feed.
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      const target = ev.target as HTMLElement | null;
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      const key = ev.key.toLowerCase();
+      if (key === "arrowdown" || key === "arrowup") {
+        ev.preventDefault();
+        setFocusIndex((i) => {
+          const next = key === "arrowdown" ? i + 1 : i - 1;
+          return Math.max(0, Math.min(shown.length - 1, next));
+        });
+        return;
+      }
+      const event = shown[focusIndex];
+      if (!event) return;
+      if (key === "c") {
+        ev.preventDefault();
+        review.setVerdict.mutate({ eventId: event.id, verdict: "confirmed" });
+      } else if (key === "x") {
+        ev.preventDefault();
+        review.setVerdict.mutate({ eventId: event.id, verdict: "deleted" });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shown, focusIndex, review.setVerdict]);
 
   const ticks = useMemo(() => (team ? events.filter((e) => e.team === team) : events), [events, team]);
 
