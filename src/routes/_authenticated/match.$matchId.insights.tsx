@@ -31,7 +31,7 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, findings, summary, loading, events, review } = useAnalysis(matchId, scope);
+  const { match, colours, findings, summary, loading, events, review } = useAnalysis(matchId, scope);
 
   return (
     <MatchShell matchId={matchId} match={match} scope={scope} setScope={setScope} period={period} setPeriod={setPeriod}>
@@ -73,6 +73,7 @@ function Insights() {
                     matchId={matchId}
                     moments={events.filter((event) => finding.eventIds.includes(event.id)).slice(0, 6)}
                     defaultOpen={index === 0}
+                    iconColour={scope === "b" ? colours.B : colours.A}
                     onReview={(input) => review.setVerdict.mutate(input)}
                   />
                 ))}
@@ -107,11 +108,12 @@ function findingState(finding: Finding): FindingState {
   return "warning";
 }
 
-function FindingRow({ finding, matchId, moments, defaultOpen, onReview }: {
+function FindingRow({ finding, matchId, moments, defaultOpen, iconColour, onReview }: {
   finding: Finding;
   matchId: string;
   moments: ReviewedEvent[];
   defaultOpen: boolean;
+  iconColour: string;
   onReview: (input: { eventId: string; verdict: "confirmed" | "deleted" | "retimed"; tCorrected?: number | null; teamCorrected?: string | null }) => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -123,8 +125,8 @@ function FindingRow({ finding, matchId, moments, defaultOpen, onReview }: {
   return (
     <article className="border-b border-wire-2 last:border-0">
       <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="tap grid w-full grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3.5 text-left hover:bg-surface-2">
-        <span className="grid h-11 w-11 place-items-center rounded-full border border-wire bg-surface-2 text-cream">
-          <StatIcon name={icon} />
+        <span className="grid h-11 w-11 place-items-center rounded-full border border-wire bg-surface-2">
+          <StatIcon name={icon} style={{ color: iconColour }} />
         </span>
         <span className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-text">{finding.headline}</span>
         <span className="flex items-center gap-2">

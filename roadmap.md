@@ -9,9 +9,9 @@
 - Share pages `/s/player/:token` and `/s/reel/:token`, public glossary `/glossary`
 - Player page and clip reel wired to the derived analysis data (events, findings, per-player heat)
 - Coach confirmation of events: event_reviews table, confirm/not-an-event/fix-time controls, bulk confirm, keyboard shortcuts, reviews export, head-to-head card, confirmed-vs-detected numbers, attacking-side override in setup
+- Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
-- [x] Rebuild Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 - [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
 - [x] `<MatchStory>` full-screen match-specific 5-slide recap + route `/match/:id/story` + `<StoryLauncher>` pill on library cards and insights
 - [ ] QA pass against the uploaded wireframe HTML: colours, fonts, spacing, functionality; fix inconsistencies

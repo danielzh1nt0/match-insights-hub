@@ -118,7 +118,7 @@ export function MatchNumbers({
                 <>
                   <StatIcon
                     name={metric.icon}
-                    className={inactive ? "text-text-faint opacity-40" : undefined}
+                    {...(inactive ? { className: "text-text-faint opacity-40" } : {})}
                     {...(!inactive ? { style: { color: metric.b > metric.a ? colours.B : colours.A } } : {})}
                   />
                   <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">{metric.label}</p>
