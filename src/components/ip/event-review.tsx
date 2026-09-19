@@ -21,8 +21,8 @@ export function EventReviewControls({
 }: {
   event: ReviewedEvent;
   onReview: ReviewAction;
-  onFix?: () => void;
-  names?: { A: string; B: string };
+  onFix?: (() => void) | undefined;
+  names?: { A: string; B: string } | undefined;
 }) {
   const confirmed = event.status === "confirmed";
   return (

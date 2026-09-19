@@ -49,7 +49,7 @@ export function HeadToHead({
   colours: { A: string; B: string };
   ballReliable: boolean;
   ours: boolean;
-  onFilterTypes?: (types: string[]) => void;
+  onFilterTypes?: ((types: string[]) => void) | undefined;
 }) {
   const [more, setMore] = useState(false);
 
@@ -167,8 +167,8 @@ function Side({
 }: {
   name: string;
   colour: string;
-  crest?: string;
-  align?: "left" | "right";
+  crest?: string | undefined;
+  align?: "left" | "right" | undefined;
 }) {
   return (
     <div
@@ -198,7 +198,7 @@ function Bar({
 }: {
   row: Row;
   colours: { A: string; B: string };
-  onFilterTypes?: (types: string[]) => void;
+  onFilterTypes?: ((types: string[]) => void) | undefined;
 }) {
   const total = Math.max(row.a + row.b, 1);
   const aShare = (row.a / total) * 100;
