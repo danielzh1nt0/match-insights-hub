@@ -6,7 +6,17 @@ import { MatchShell } from "@/components/ip/match-shell";
 import { Card, Chip } from "@/components/ip/primitives";
 import { Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
+import { countEvents, countLine } from "@/lib/event-reviews";
+import { feedLabel } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
+
+/** Which detected moments each stats card is built from. */
+const SECTION_EVENTS: Record<string, string[]> = {
+  ball: ["turnover_lost", "turnover_won", "sequence_end"],
+  pressing: ["turnover_lost", "turnover_won", "high_turnover"],
+  shooting: ["shot", "goal", "set_piece"],
+  passes: ["better_option", "pass_bad", "pass_risky"],
+};
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/stats")({
   head: () => ({
@@ -24,7 +34,10 @@ function Stats() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, sections, players, loading } = useAnalysis(matchId, scope);
+  const { match, team, colours, sections, players, loading, events, confirmedCount } = useAnalysis(
+    matchId,
+    scope,
+  );
   const [tab, setTab] = useState("ball");
 
   const active = sections.find((t) => t.key === tab);
@@ -137,6 +150,33 @@ function Stats() {
               </div>
             )}
           </Visual>
+
+          {SECTION_EVENTS[active.key] && (
+            <Card>
+              <h3 className="display text-[14px] uppercase text-cream">From the moments we found</h3>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {SECTION_EVENTS[active.key]!.map((type) => {
+                  const c = countEvents(events, (e) => e.type === type && (!team || e.team === team));
+                  return (
+                    <li key={type} className="flex items-baseline justify-between gap-3 text-[13px]">
+                      <span className="text-text-dim">{feedLabel(type)}</span>
+                      <span className="num">
+                        <span className={confirmedCount > 0 ? "text-cream" : "text-text"}>
+                          {confirmedCount > 0 ? c.confirmed : c.detected}
+                        </span>
+                        <span className="ml-1.5 text-[11.5px] text-text-faint">{countLine(c)}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              {confirmedCount === 0 && (
+                <p className="mt-2 text-[11.5px] text-text-faint">
+                  Confirm events in the feed to lock these numbers.
+                </p>
+              )}
+            </Card>
+          )}
 
           <Card>
             <p className="text-[12.5px] leading-relaxed text-text-dim">
