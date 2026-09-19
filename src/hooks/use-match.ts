@@ -21,6 +21,8 @@ import {
   toLibraryMatch,
   type MatchDataFile,
 } from "@/lib/match-source";
+import { applyReviews, confirmedOnly, fileWithReviews } from "@/lib/event-reviews";
+import { useReviews } from "@/hooks/use-reviews";
 
 export function useMatchRecord(matchId: string) {
   return useQuery({
@@ -47,9 +49,15 @@ export function useMatch(matchId: string) {
   };
 }
 
+/** Findings switch to confirmed events once this many are confirmed. */
+const CONFIRMED_BASIS_MIN = 5;
+
 /**
  * The open match's own files, plus everything derived from them for the
  * selected team. Team is always the literal "A" or "B" from the data.
+ *
+ * The coach's confirmations are applied first: deleted moments are removed
+ * everywhere and corrected times/teams replace the pipeline's values.
  */
 export function useAnalysis(matchId: string, scope: TeamScope) {
   const { data: item, isPending: recordPending } = useMatchRecord(matchId);
@@ -69,18 +77,35 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     staleTime: Infinity,
   });
 
-  const file: MatchDataFile | undefined = dataQuery.data;
+  const review = useReviews(matchId);
+  const raw: MatchDataFile | undefined = dataQuery.data;
   const stats = statsQuery.data;
   const team = teamKey(scope);
   const thresholds = useMemo(() => thresholdsFrom(label), [label]);
   const colours = useMemo(() => teamColours(label), [label]);
 
+  const { events, hidden } = useMemo(
+    () => applyReviews(raw?.events, review.reviews),
+    [raw?.events, review.reviews],
+  );
+  const confirmed = useMemo(() => confirmedOnly(events), [events]);
+  const basis: "confirmed" | "detected" =
+    confirmed.length >= CONFIRMED_BASIS_MIN ? "confirmed" : "detected";
+
+  /** Deleted moments are gone from every derived view. */
+  const file = useMemo(() => fileWithReviews(raw, events), [raw, events]);
+  const findingFile = useMemo(
+    () => (basis === "confirmed" ? fileWithReviews(raw, confirmed) : file),
+    [basis, raw, confirmed, file],
+  );
+
   const match = useMemo(() => (item ? toLibraryMatch(item) : undefined), [item]);
 
   const territory = useMemo(() => buildTerritory(file, stats, team), [file, stats, team]);
   const findings = useMemo(
-    () => buildFindings(file, stats, team ?? "A", thresholds),
-    [file, stats, team, thresholds],
+    () =>
+      buildFindings(findingFile, stats, team ?? "A", thresholds).map((f) => ({ ...f, basis })),
+    [findingFile, stats, team, thresholds, basis],
   );
   const summary = useMemo(
     () =>
@@ -108,6 +133,12 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     summary,
     sections,
     players,
+    /** Reviewed, non-deleted events sorted by time. */
+    events,
+    hiddenEvents: hidden,
+    confirmedCount: confirmed.length,
+    basis,
+    review,
     loading: recordPending || dataQuery.isPending || statsQuery.isPending,
     error: dataQuery.error ?? statsQuery.error,
     needsSetup: Boolean(item && !isLabelled(item.label)),

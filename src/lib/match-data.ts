@@ -45,6 +45,8 @@ export type Finding = {
   eventIds: string[];
   interpretation: string;
   timestamps: number[];
+  /** Whether the numbers come from confirmed moments or raw detections. */
+  basis?: "confirmed" | "detected";
 };
 
 export type PlayerRow = {

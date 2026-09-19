@@ -5,8 +5,11 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { StoryLauncher } from "@/components/ip/story-launcher";
 import { Card, Pill } from "@/components/ip/primitives";
+import { EventReviewControls } from "@/components/ip/event-review";
+import { HeadToHead } from "@/components/ip/head-to-head";
 import { CoachMark, HeatBlobs, Pitch, Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
+import type { ReviewedEvent } from "@/lib/event-reviews";
 import { formatClock } from "@/lib/sample-data";
 import { teamRow } from "@/lib/match-analysis";
 import type { Finding } from "@/lib/match-data";
@@ -28,7 +31,8 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, stats, findings, summary, territory, loading } = useAnalysis(matchId, scope);
+  const { match, row, label, team, colours, stats, findings, summary, territory, loading, events, review } =
+    useAnalysis(matchId, scope);
 
   const rowA = teamRow(stats, "A");
   const rowB = teamRow(stats, "B");
@@ -51,6 +55,15 @@ function Insights() {
 
       {match && territory && (
         <>
+          <HeadToHead
+            match={match}
+            events={events}
+            stats={stats}
+            colours={colours}
+            ballReliable={row?.summary?.["ball_reliable"] !== false}
+            ours={Boolean(label?.club_team)}
+          />
+
           <StoryLauncher matchId={matchId} />
 
           <CoachMark id="insights">
@@ -81,20 +94,6 @@ function Insights() {
           </Visual>
 
           <Card>
-            <h2 className="display text-[17px] uppercase text-cream">Who had the ball?</h2>
-            <div className="mt-3 flex h-3 w-full overflow-hidden rounded-full bg-surface-3">
-              <span
-                className="h-full"
-                style={{ width: `${rowA?.possession_pct ?? 50}%`, background: colours.A }}
-              />
-              <span className="h-full flex-1" style={{ background: colours.B }} />
-            </div>
-            <p className="num mt-2 text-[12px] text-text-dim">
-              {match.teamA} {rowA?.possession_pct ?? 0}% · {match.teamB} {rowB?.possession_pct ?? 0}%
-            </p>
-          </Card>
-
-          <Card>
             <h2 className="display text-[17px] uppercase text-cream">The match in three sentences</h2>
             <ol className="mt-2 flex flex-col gap-2">
               {summary.map((line, i) => (
@@ -116,7 +115,13 @@ function Insights() {
             </Card>
           )}
           {findings.map((f) => (
-            <FindingCard key={f.id} finding={f} matchId={matchId} />
+            <FindingCard
+              key={f.id}
+              finding={f}
+              matchId={matchId}
+              moments={events.filter((e) => f.eventIds.includes(e.id)).slice(0, 6)}
+              onReview={(input) => review.setVerdict.mutate(input)}
+            />
           ))}
         </>
       )}
@@ -124,14 +129,32 @@ function Insights() {
   );
 }
 
-function FindingCard({ finding, matchId }: { finding: Finding; matchId: string }) {
+function FindingCard({
+  finding,
+  matchId,
+  moments,
+  onReview,
+}: {
+  finding: Finding;
+  matchId: string;
+  moments: ReviewedEvent[];
+  onReview: (input: {
+    eventId: string;
+    verdict: "confirmed" | "deleted" | "retimed";
+    tCorrected?: number | null;
+    teamCorrected?: string | null;
+  }) => void;
+}) {
   const ratio = Math.min(1, finding.value / Math.max(finding.target, finding.value, 1));
   const missed = finding.higherIsWorse ? finding.value > finding.target : finding.value < finding.target;
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-[14.5px] font-semibold leading-snug text-text">{finding.headline}</h3>
-        <Pill tone={missed ? "bad" : "good"}>{missed ? "Off target" : "On target"}</Pill>
+        <span className="flex shrink-0 items-center gap-2">
+          {finding.basis === "detected" && <Pill tone="risky">detected</Pill>}
+          <Pill tone={missed ? "bad" : "good"}>{missed ? "Off target" : "On target"}</Pill>
+        </span>
       </div>
 
       <div className="flex items-end gap-4">
@@ -154,20 +177,38 @@ function FindingCard({ finding, matchId }: { finding: Finding; matchId: string }
 
       <p className="text-[13px] leading-relaxed text-text-dim">{finding.interpretation}</p>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-1.5">
         <span className="text-[11.5px] text-text-faint">{finding.events} moments</span>
-        {finding.timestamps.map((t) => (
-          <Link
-            key={t}
-            to="/match/$matchId/match"
-            params={{ matchId }}
-            search={{ t }}
-            className="tap inline-flex items-center gap-1.5 rounded-[8px] border border-wire px-2.5 text-[11.5px] text-cream hover:border-cream/50"
-          >
-            <Play size={12} aria-hidden="true" />
-            <span className="num">{formatClock(t)}</span> Watch
-          </Link>
+        {moments.map((e) => (
+          <div key={e.id} className="flex items-center gap-2">
+            <Link
+              to="/match/$matchId/match"
+              params={{ matchId }}
+              search={{ t: Math.round(e.t * 10) / 10 }}
+              className="tap inline-flex flex-1 items-center gap-1.5 rounded-[8px] border border-wire px-2.5 text-[11.5px] text-cream hover:border-cream/50"
+            >
+              <Play size={12} aria-hidden="true" />
+              <span className="num">{formatClock(e.t)}</span>
+              <span className="truncate text-text-faint">
+                {e.status === "confirmed" ? "confirmed" : "detected"}
+              </span>
+            </Link>
+            <EventReviewControls event={e} onReview={onReview} />
+          </div>
         ))}
+        {moments.length === 0 &&
+          finding.timestamps.map((t) => (
+            <Link
+              key={t}
+              to="/match/$matchId/match"
+              params={{ matchId }}
+              search={{ t }}
+              className="tap inline-flex items-center gap-1.5 rounded-[8px] border border-wire px-2.5 text-[11.5px] text-cream hover:border-cream/50"
+            >
+              <Play size={12} aria-hidden="true" />
+              <span className="num">{formatClock(t)}</span> Watch
+            </Link>
+          ))}
       </div>
 
       <div className="flex gap-2">

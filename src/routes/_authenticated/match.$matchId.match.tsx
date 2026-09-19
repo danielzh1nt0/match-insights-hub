@@ -6,9 +6,12 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
 import { Card, Chip, Segmented } from "@/components/ip/primitives";
+import { EventFixSheet, EventReviewControls } from "@/components/ip/event-review";
+import { HeadToHead } from "@/components/ip/head-to-head";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
-import { EVENT_GROUPS, feedLabel, groupTypes, videoSrc, type Frame, type FeedEvent } from "@/lib/match-source";
+import { downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
+import { EVENT_GROUPS, feedLabel, groupTypes, videoSrc, type Frame } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
@@ -57,7 +60,24 @@ function MatchScreen() {
   const { t: startT } = Route.useSearch();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, row, label, file, team, colours, loading } = useAnalysis(matchId, scope);
+  const {
+    match,
+    row,
+    label,
+    file,
+    stats,
+    team,
+    colours,
+    loading,
+    events,
+    hiddenEvents,
+    confirmedCount,
+    review,
+  } = useAnalysis(matchId, scope);
+  const [typesOverride, setTypesOverride] = useState<string[] | null>(null);
+  const [focusIndex, setFocusIndex] = useState(0);
+  const [showHidden, setShowHidden] = useState(false);
+  const [fixing, setFixing] = useState<ReviewedEvent | null>(null);
   const [mode, setMode] = useState<Mode>("video");
   const [filter, setFilter] = useState<string>("all");
   const [clock, setClock] = useState<number>(startT ?? 0);
@@ -91,7 +111,6 @@ function MatchScreen() {
     staleTime: 30 * 60_000,
   });
 
-  const events: FeedEvent[] = file?.events ?? [];
   const total = row?.duration_s ?? match?.durationS ?? 1;
 
 
@@ -149,13 +168,41 @@ function MatchScreen() {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
-  const types = groupTypes(filter);
+  const types = typesOverride ?? groupTypes(filter);
   const shown = useMemo(() => {
     const visible = events.slice(0, visibleCount);
     const byTeam = team ? visible.filter((e) => e.team === team) : visible;
     const filtered = types ? byTeam.filter((e) => types.includes(e.type)) : byTeam;
     return filtered.slice().reverse();
   }, [events, visibleCount, types, team]);
+
+  // Desktop keyboard: C confirms, X deletes, arrows move through the feed.
+  useEffect(() => {
+    const onKey = (ev: KeyboardEvent) => {
+      const target = ev.target as HTMLElement | null;
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
+      const key = ev.key.toLowerCase();
+      if (key === "arrowdown" || key === "arrowup") {
+        ev.preventDefault();
+        setFocusIndex((i) => {
+          const next = key === "arrowdown" ? i + 1 : i - 1;
+          return Math.max(0, Math.min(shown.length - 1, next));
+        });
+        return;
+      }
+      const event = shown[focusIndex];
+      if (!event) return;
+      if (key === "c") {
+        ev.preventDefault();
+        review.setVerdict.mutate({ eventId: event.id, verdict: "confirmed" });
+      } else if (key === "x") {
+        ev.preventDefault();
+        review.setVerdict.mutate({ eventId: event.id, verdict: "deleted" });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shown, focusIndex, review.setVerdict]);
 
   const ticks = useMemo(() => (team ? events.filter((e) => e.team === team) : events), [events, team]);
 
@@ -369,35 +416,113 @@ function MatchScreen() {
             </div>
           </Card>
 
+          <HeadToHead
+            match={match}
+            events={events}
+            stats={stats}
+            colours={colours}
+            ballReliable={row?.summary?.["ball_reliable"] !== false}
+            ours={Boolean(label?.club_team)}
+            onFilterTypes={(types) => setTypesOverride(types)}
+          />
+
+
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
             {EVENT_GROUPS.map((f) => (
-              <Chip key={f.key} active={filter === f.key} onClick={() => setFilter(f.key)}>
+              <Chip
+                key={f.key}
+                active={filter === f.key && !typesOverride}
+                onClick={() => {
+                  setTypesOverride(null);
+                  setFilter(f.key);
+                }}
+              >
                 {f.label}
               </Chip>
             ))}
+            {typesOverride && (
+              <Chip active onClick={() => setTypesOverride(null)}>
+                Clear selection
+              </Chip>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11.5px] text-text-faint">
+              {confirmedCount > 0
+                ? `${confirmedCount} confirmed · ${events.length} detected`
+                : `${events.length} detected — confirm moments to lock the numbers`}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  review.confirmMany.mutate(
+                    shown.filter((e) => e.status !== "confirmed").map((e) => e.id),
+                  )
+                }
+                disabled={shown.every((e) => e.status === "confirmed")}
+                className="tap rounded-[10px] border border-cream/60 px-3 text-[11.5px] font-semibold text-cream hover:bg-cream/10 disabled:opacity-40"
+              >
+                Confirm all visible
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadReviews(matchId, review.rows)}
+                disabled={review.rows.length === 0}
+                className="tap rounded-[10px] border border-wire px-3 text-[11.5px] text-text-dim hover:border-cream/50 hover:text-cream disabled:opacity-40"
+              >
+                Export reviews
+              </button>
+            </div>
           </div>
 
           <Card className="p-0">
             <ul>
-              {shown.map((e) => (
-                <li key={e.id} className="feed-in">
+              {shown.map((e, i) => (
+                <li
+                  key={e.id}
+                  className={cn(
+                    "feed-in flex items-center gap-2 border-b border-wire-2 pr-3 last:border-0",
+                    i === focusIndex && "bg-surface-2",
+                  )}
+                >
                   <button
                     type="button"
                     onClick={() => {
+                      setFocusIndex(i);
                       if (videoRef.current) videoRef.current.currentTime = e.t;
                       setClock(e.t);
                     }}
-                    className="tap flex w-full items-center gap-3 border-b border-wire-2 px-3.5 py-3 text-left last:border-0 hover:bg-surface-2"
+                    className="tap flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-2"
                   >
                     <span className="num w-11 shrink-0 text-[13px] text-cream">{formatClock(e.t)}</span>
                     <span
-                      className="h-6 w-1 shrink-0 rounded-full"
-                      style={{ background: e.team === "B" ? colours.B : colours.A }}
+                      className={cn(
+                        "h-6 w-1 shrink-0 rounded-full",
+                        e.status === "detected" && "opacity-40",
+                      )}
+                      style={{
+                        background:
+                          e.status === "confirmed"
+                            ? e.team === "B"
+                              ? colours.B
+                              : colours.A
+                            : "transparent",
+                        boxShadow:
+                          e.status === "confirmed"
+                            ? undefined
+                            : `inset 0 0 0 1px ${e.team === "B" ? colours.B : colours.A}`,
+                      }}
                       aria-hidden="true"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] text-text">{feedLabel(e.type)}</span>
+                      <span className="block truncate text-[13.5px] text-text">
+                        {feedLabel(e.type)}
+                        {e.corrected && <span className="ml-1.5 text-[11px] text-cream-dim">fixed</span>}
+                      </span>
                       <span className="block truncate text-[11.5px] text-text-faint">
+                        {e.status === "confirmed" ? "confirmed" : "detected"} ·{" "}
                         {e.subtitle || e.title}
                       </span>
                     </span>
@@ -413,6 +538,11 @@ function MatchScreen() {
                       <Play size={13} aria-hidden="true" />
                     </span>
                   </button>
+                  <EventReviewControls
+                    event={e}
+                    onReview={(input) => review.setVerdict.mutate(input)}
+                    onFix={() => setFixing(e)}
+                  />
                 </li>
               ))}
               {shown.length === 0 && (
@@ -423,7 +553,53 @@ function MatchScreen() {
                 </li>
               )}
             </ul>
+
+            {hiddenEvents.length > 0 && (
+              <div className="border-t border-wire px-3.5 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowHidden((v) => !v)}
+                  aria-expanded={showHidden}
+                  className="tap text-[11.5px] uppercase tracking-[0.08em] text-text-faint hover:text-cream"
+                >
+                  Hidden ({hiddenEvents.length})
+                </button>
+                {showHidden && (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {hiddenEvents.map((e) => (
+                      <li key={e.id} className="flex items-center gap-2 text-[12px]">
+                        <span className="num w-11 shrink-0 text-text-faint line-through">
+                          {formatClock(e.t)}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-text-faint line-through">
+                          {feedLabel(e.type)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => review.clear.mutate([e.id])}
+                          className="tap shrink-0 rounded-[8px] border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
+                        >
+                          Put back
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </Card>
+
+          {fixing && (
+            <EventFixSheet
+              event={fixing}
+              names={{
+                A: match.teamA.split(" ").at(-1) ?? "Team A",
+                B: match.teamB.split(" ").at(-1) ?? "Team B",
+              }}
+              onReview={(input) => review.setVerdict.mutate(input)}
+              onClose={() => setFixing(null)}
+            />
+          )}
 
           {layerSheet && (
             <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(0,0,0,0.6)] p-0 md:items-center md:p-6">

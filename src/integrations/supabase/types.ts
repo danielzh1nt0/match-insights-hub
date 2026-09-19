@@ -50,6 +50,45 @@ export type Database = {
         }
         Relationships: []
       }
+      event_reviews: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          match_id: string
+          note: string | null
+          reviewed_by: string
+          t_corrected: number | null
+          team_corrected: string | null
+          updated_at: string
+          verdict: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          match_id: string
+          note?: string | null
+          reviewed_by: string
+          t_corrected?: number | null
+          team_corrected?: string | null
+          updated_at?: string
+          verdict: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          match_id?: string
+          note?: string | null
+          reviewed_by?: string
+          t_corrected?: number | null
+          team_corrected?: string | null
+          updated_at?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           club_name: string
