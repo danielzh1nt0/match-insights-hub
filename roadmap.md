@@ -8,6 +8,7 @@
 - Phase 2: insights, match, territory, stats, player, clip reel, session
 - Share pages `/s/player/:token` and `/s/reel/:token`, public glossary `/glossary`
 - Player page and clip reel wired to the derived analysis data (events, findings, per-player heat)
+- Coach confirmation of events: event_reviews table, confirm/not-an-event/fix-time controls, bulk confirm, keyboard shortcuts, reviews export, head-to-head card, confirmed-vs-detected numbers, attacking-side override in setup
 
 ## Open
 - [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
