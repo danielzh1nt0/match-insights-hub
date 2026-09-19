@@ -184,6 +184,48 @@
   animation: feedIn 650ms ease-out;
 }
 
+.fchip {
+  display: inline-flex;
+  min-height: 32px;
+  min-width: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+  border: 1px solid var(--wire);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 6px 11px;
+  color: var(--text-faint);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.fchip:hover {
+  border-color: color-mix(in srgb, var(--cream) 40%, var(--wire));
+  color: var(--text);
+}
+
+.fchip-active {
+  border-color: var(--cream);
+  background: var(--cream);
+  color: var(--ball-detail);
+  font-weight: 700;
+}
+
+.fchip-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--surface-3);
+  padding: 2px 5px;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  line-height: 1;
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -5,13 +5,19 @@ import { Layers, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
-import { Card, Chip, Segmented } from "@/components/ip/primitives";
+import { Card, Segmented } from "@/components/ip/primitives";
 import { EventFixSheet, EventReviewControls } from "@/components/ip/event-review";
+import {
+  DEFAULT_EVENT_FILTER,
+  EventFilter,
+  eventMatchesFilter,
+  type EventFilterValue,
+} from "@/components/ip/event-filter";
 import { MatchNumbers } from "@/components/ip/match-numbers";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
 import { downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
-import { EVENT_GROUPS, feedLabel, groupTypes, videoSrc, type Frame } from "@/lib/match-source";
+import { feedLabel, videoSrc, type Frame } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
@@ -73,7 +79,6 @@ function MatchScreen() {
     loading,
     events,
     hiddenEvents,
-    confirmedCount,
     review,
   } = useAnalysis(matchId, scope);
   const [typesOverride, setTypesOverride] = useState<string[] | null>(null);
@@ -81,7 +86,7 @@ function MatchScreen() {
   const [showHidden, setShowHidden] = useState(false);
   const [fixing, setFixing] = useState<ReviewedEvent | null>(null);
   const [mode, setMode] = useState<Mode>("video");
-  const [filter, setFilter] = useState<string>("all");
+  const [filter, setFilter] = useState<EventFilterValue>(DEFAULT_EVENT_FILTER);
   const [clock, setClock] = useState<number>(startT ?? 0);
   const [playing, setPlaying] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
@@ -170,13 +175,14 @@ function MatchScreen() {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
-  const types = typesOverride ?? groupTypes(filter);
   const shown = useMemo(() => {
     const visible = events.slice(0, visibleCount);
     const byTeam = team ? visible.filter((e) => e.team === team) : visible;
-    const filtered = types ? byTeam.filter((e) => types.includes(e.type)) : byTeam;
+    const filtered = typesOverride
+      ? byTeam.filter((e) => typesOverride.includes(e.type))
+      : byTeam.filter((e) => eventMatchesFilter(e, filter));
     return filtered.slice().reverse();
-  }, [events, visibleCount, types, team]);
+  }, [events, visibleCount, typesOverride, filter, team]);
 
   // Desktop keyboard: C confirms, X deletes, arrows move through the feed.
   useEffect(() => {
@@ -426,31 +432,21 @@ function MatchScreen() {
             <span className="h-px flex-1 bg-wire" />
           </div>
 
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
-            {EVENT_GROUPS.map((f) => (
-              <Chip
-                key={f.key}
-                active={filter === f.key && !typesOverride}
-                onClick={() => {
-                  setTypesOverride(null);
-                  setFilter(f.key);
-                }}
-              >
-                {f.label}
-              </Chip>
-            ))}
-            {typesOverride && (
-              <Chip active onClick={() => setTypesOverride(null)}>
-                Clear selection
-              </Chip>
-            )}
-          </div>
+          <EventFilter
+            value={filter}
+            onChange={(next) => {
+              setTypesOverride(null);
+              setFilter(next);
+            }}
+            events={events}
+            teamNames={{ A: match.teamA, B: match.teamB }}
+          />
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11.5px] text-text-faint">
-              {confirmedCount > 0
-                ? `${confirmedCount} confirmed · ${events.length} detected`
-                : `${events.length} detected — confirm moments to lock the numbers`}
+            <p className="text-[11.5px] font-medium text-text-faint">
+              <strong className="font-semibold text-text">{events.length} events</strong>
+              <span className="mx-1.5">·</span>
+              Tap a moment to confirm
             </p>
             <div className="flex gap-2">
               <button
