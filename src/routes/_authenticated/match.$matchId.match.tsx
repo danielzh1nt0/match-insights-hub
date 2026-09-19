@@ -57,7 +57,24 @@ function MatchScreen() {
   const { t: startT } = Route.useSearch();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, row, label, file, team, colours, loading } = useAnalysis(matchId, scope);
+  const {
+    match,
+    row,
+    label,
+    file,
+    stats,
+    team,
+    colours,
+    loading,
+    events,
+    hiddenEvents,
+    confirmedCount,
+    review,
+  } = useAnalysis(matchId, scope);
+  const [typesOverride, setTypesOverride] = useState<string[] | null>(null);
+  const [focusIndex, setFocusIndex] = useState(0);
+  const [showHidden, setShowHidden] = useState(false);
+  const [fixing, setFixing] = useState<ReviewedEvent | null>(null);
   const [mode, setMode] = useState<Mode>("video");
   const [filter, setFilter] = useState<string>("all");
   const [clock, setClock] = useState<number>(startT ?? 0);
