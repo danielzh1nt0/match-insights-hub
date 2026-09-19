@@ -369,6 +369,17 @@ function MatchScreen() {
             </div>
           </Card>
 
+          <HeadToHead
+            match={match}
+            events={events}
+            stats={stats}
+            colours={colours}
+            ballReliable={row?.summary?.["ball_reliable"] !== false}
+            ours={Boolean(label?.club_team)}
+            onFilterTypes={(types) => setTypesOverride(types)}
+          />
+
+
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0">
             {EVENT_GROUPS.map((f) => (
               <Chip
