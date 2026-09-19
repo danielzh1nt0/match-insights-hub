@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Info, Play, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StatIcon, type StatIconName } from "@/components/ip/stat-icon";
 import { Card } from "@/components/ip/primitives";
 import { useAnalysis } from "@/hooks/use-match";
@@ -163,6 +163,14 @@ function MetricSheet({ metric, events, colours, teamNames, onClose, onSeeEvents 
   onSeeEvents?: (() => void) | undefined;
 }) {
   const withheld = metric.unreliable;
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-stretch md:justify-end">
       <button type="button" aria-label="Close details" onClick={onClose} className="absolute inset-0 bg-bg/80 backdrop-blur-sm" />

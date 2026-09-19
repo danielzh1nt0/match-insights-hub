@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
       { name: "description", content: "Video, 2D view and every moment we found, in order." },
       { property: "og:title", content: "Watch the match — Ipanema" },
       { property: "og:description", content: "Jump straight to the moment behind a finding." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: MatchScreen,
