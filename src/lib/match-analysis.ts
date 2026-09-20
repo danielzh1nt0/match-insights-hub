@@ -121,6 +121,21 @@ export type Territory = {
   lineHeightM: number;
 };
 
+export type LineState = "high" | "mid" | "low";
+
+export type LineDefending = {
+  lineBreakCount: number | null;
+  lineBreakLast5Avg: number | null;
+  lineBreaks: { id: string; t: number; x: number; y: number }[];
+  timeline: { t: number; height: number }[];
+  shots: { id: string; t: number; height: number; goal: boolean }[];
+  shotsUnder30: number;
+  medianM: number | null;
+  usualM: number | null;
+  belowUsualPct: number | null;
+  states: { key: LineState; height: number; shots: number; goals: number }[];
+};
+
 const HEAT_COLS = 12;
 const HEAT_ROWS = 8;
 
@@ -229,6 +244,119 @@ export function buildTerritory(
     blockLengthM: Math.round(num(row?.block_length_median_m, 0)),
     compactBandM: Math.round(num(row?.block_width_median_m, 0)),
     lineHeightM: Math.round(num(row?.def_line_height_median_m, 0)),
+  };
+}
+
+function optionalNum(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function metricForTeam(value: unknown, team: TeamKey): number | null {
+  if (typeof value === "number") return optionalNum(value);
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  return optionalNum(record[team] ?? record[team.toLowerCase()]);
+}
+
+function eventBelongsToOpponent(event: FeedEvent, ownTeam: TeamKey, opponent: TeamKey) {
+  const wonBy = event.payload?.["won_by"];
+  if (wonBy === opponent || wonBy === opponent.toLowerCase()) return true;
+  if (wonBy === ownTeam || wonBy === ownTeam.toLowerCase()) return false;
+  return event.team === opponent;
+}
+
+function lineState(height: number): LineState {
+  if (height < 30) return "low";
+  if (height <= 38) return "mid";
+  return "high";
+}
+
+/** Coach-first answers about the selected team's defensive line. */
+export function buildLineDefending(
+  data: MatchDataFile | undefined,
+  stats: StatsFile | undefined,
+  ownTeam: TeamKey,
+): LineDefending | null {
+  if (!data) return null;
+  const opponent: TeamKey = ownTeam === "A" ? "B" : "A";
+  const metrics = stats?.metrics ?? {};
+  const row = teamRow(stats, ownTeam);
+  const { length, width } = pitchSize(data, stats);
+
+  const rawTimeline = (metrics["shape_timeline"] as Record<string, unknown[]> | undefined)?.[ownTeam];
+  const timeline = Array.isArray(rawTimeline)
+    ? rawTimeline
+        .map((sample) => {
+          const value = sample as Record<string, unknown>;
+          return { t: optionalNum(value["t"]), height: optionalNum(value["line_height"]) };
+        })
+        .filter((sample): sample is { t: number; height: number } => sample.t !== null && sample.height !== null)
+        .sort((a, b) => a.t - b.t)
+    : (data.frames ?? [])
+        .map((frame) => ({ t: frame.t, height: optionalNum(frame.shape?.[ownTeam]?.length) }))
+        .filter((sample): sample is { t: number; height: number } => sample.height !== null);
+
+  const nearestHeight = (time: number) => {
+    if (timeline.length === 0) return null;
+    let nearest = timeline[0] ?? null;
+    for (const sample of timeline) {
+      if (!nearest || Math.abs(sample.t - time) < Math.abs(nearest.t - time)) nearest = sample;
+    }
+    return nearest?.height ?? null;
+  };
+
+  const lineBreakEvents = (data.events ?? []).filter((event) => {
+    if (event.type !== "line_break_against") return false;
+    const against = event.payload?.["team"] ?? event.payload?.["against"];
+    if (against === ownTeam || against === ownTeam.toLowerCase()) return true;
+    if (against === opponent || against === opponent.toLowerCase()) return false;
+    return event.team === opponent || event.team === ownTeam;
+  });
+  const lineBreaks = lineBreakEvents.map((event) => {
+    const px = optionalNum(event.payload?.["px"]);
+    const py = optionalNum(event.payload?.["py"]);
+    const mx = optionalNum(event.payload?.["x"]);
+    const my = optionalNum(event.payload?.["y"]);
+    return {
+      id: event.id,
+      t: event.t,
+      x: px !== null ? Math.max(0, Math.min(100, (px / Math.max(data.width ?? 100, 1)) * 100)) : Math.max(0, Math.min(100, ((mx ?? length / 2) / length) * 100)),
+      y: py !== null ? Math.max(0, Math.min(100, (py / Math.max(data.height ?? 100, 1)) * 100)) : Math.max(0, Math.min(100, ((my ?? width / 2) / width) * 100)),
+    };
+  });
+
+  const conceded = (data.events ?? [])
+    .filter((event) => (event.type === "shot" || event.type === "goal") && eventBelongsToOpponent(event, ownTeam, opponent))
+    .map((event) => ({ event, height: nearestHeight(event.t) }))
+    .filter((item): item is { event: FeedEvent; height: number } => item.height !== null);
+  const shots = conceded.map(({ event, height }) => ({ id: event.id, t: event.t, height, goal: event.type === "goal" }));
+
+  const medianM = optionalNum(row?.def_line_height_median_m);
+  const usualM = optionalNum(row?.def_line_height_usual_m);
+  const belowUsualPct = usualM !== null && timeline.length > 0
+    ? Math.round((timeline.filter((sample) => sample.height < usualM).length / timeline.length) * 100)
+    : null;
+  const typicalHeight: Record<LineState, number> = { high: 42, mid: 34, low: 26 };
+  const states = (["high", "mid", "low"] as const).map((key) => {
+    const inState = timeline.filter((sample) => lineState(sample.height) === key);
+    const average = inState.length
+      ? Math.round(inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length)
+      : typicalHeight[key];
+    const moments = conceded.filter((item) => lineState(item.height) === key);
+    return { key, height: average, shots: moments.length, goals: moments.filter((item) => item.event.type === "goal").length };
+  });
+
+  return {
+    lineBreakCount: metricForTeam(metrics["line_breaks_against"], ownTeam) ?? (lineBreakEvents.length ? lineBreakEvents.length : null),
+    lineBreakLast5Avg: optionalNum(row?.line_breaks_against_last5_avg),
+    lineBreaks,
+    timeline,
+    shots,
+    shotsUnder30: shots.filter((shot) => shot.height < 30).length,
+    medianM,
+    usualM,
+    belowUsualPct,
+    states,
   };
 }
 
