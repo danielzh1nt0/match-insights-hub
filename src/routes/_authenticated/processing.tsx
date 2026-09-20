@@ -19,6 +19,8 @@ export const Route = createFileRoute("/_authenticated/processing")({
       },
       { property: "og:title", content: "Analysing your match — Ipanema" },
       { property: "og:description", content: "About 30 minutes for a 45-minute half." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Processing,
@@ -51,9 +53,10 @@ function Processing() {
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader backTo="/library" />
-      <Screen className="pt-5 pb-16">
+      <Screen className="tactical-grid min-h-[calc(100vh-64px)] pt-7 pb-16">
         <div className="mx-auto max-w-[560px]">
-          <h1 className="display text-[26px] text-text">{failed ? "Analysis failed" : "Analysing"}</h1>
+          <p className="section-kicker">Analysis pipeline</p>
+          <h1 className="display mt-2 text-[30px] uppercase text-text">{failed ? "Analysis failed" : "Analysing"}</h1>
           {match && (
             <p className="mt-1 text-[13px] text-text-dim">
               {matchTitle(match)} · <span className="num">{formatClock(match.durationS)}</span> clip

@@ -29,6 +29,8 @@ export const Route = createFileRoute("/_authenticated/onboarding")({
       },
       { property: "og:title", content: "Set up your club — Ipanema" },
       { property: "og:description", content: "Your club, your teams, your targets." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Onboarding,
@@ -76,7 +78,7 @@ function Onboarding() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-10 md:px-7">
+    <div className="tactical-grid flex min-h-screen items-center justify-center bg-bg px-4 py-10 md:px-7">
       <div className="w-full max-w-[460px]">
         <div className="mb-6 flex items-center justify-between">
           <Wordmark size="sm" />
@@ -102,7 +104,7 @@ function Onboarding() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
-          className="rounded-[16px] border border-wire bg-surface p-6"
+          className="workspace-panel p-5 md:p-6"
         >
           {step === 0 && (
             <div className="flex flex-col gap-4">
@@ -122,9 +124,9 @@ function Onboarding() {
               <Field label="Crest">
                 <button
                   type="button"
-                  className="tap flex w-full items-center gap-3 rounded-[12px] border border-dashed border-wire bg-surface-2 px-3 py-3 text-left"
+                  className="tap flex w-full items-center gap-3 rounded-[4px] border border-dashed border-wire bg-surface-2 px-3 py-3 text-left"
                 >
-                  <span className="display flex h-11 w-11 items-center justify-center rounded-[10px] border border-wire bg-surface-3 text-[18px] text-cream">
+                  <span className="display flex h-11 w-11 items-center justify-center rounded-[3px] border border-wire bg-surface-3 text-[18px] text-cream">
                     {club.crestInitial || "K"}
                   </span>
                   <span className="text-[12.5px] text-text-dim">Tap to upload</span>
