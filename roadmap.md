@@ -13,7 +13,7 @@
 - Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
-- [ ] Pack 2 and 3: exact Match and Territory component integration with real-data and interaction QA
+- [x] Pack 2 and 3: Match and Territory component integration with reviewed real data, preserved video/review behavior, mobile/desktop screenshots, interaction checks, no-overflow checks, and prohibited-pattern audit
 - [x] Prompt B: Veo-style number-led visual refactor across Insights, Stats, and Territory
 - [x] Match event filter: wrapped chip row, responsive More sheet, grouped filtering, and mobile/desktop QA
 - [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
