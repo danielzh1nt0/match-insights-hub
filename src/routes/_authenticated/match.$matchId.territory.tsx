@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
-import { LineBreakCards } from "@/components/ip/line-break-cards";
 import { Chip } from "@/components/ip/primitives";
 import { ShapeRibbon } from "@/components/ip/stats-visuals";
 import { Pitch, PitchDots, PitchShirts, PortraitPitch, Visual } from "@/components/ip/visual";
@@ -27,9 +26,8 @@ function Territory() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, territory, lineDefending, loading, events, stats } = useAnalysis(matchId, scope);
+  const { match, team, colours, territory, loading, events, stats } = useAnalysis(matchId, scope);
   const [snapIndex, setSnapIndex] = useState(0);
-  const [turnoverMode, setTurnoverMode] = useState<"lost" | "won">("lost");
 
   const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
   const teamColour = team === "B" ? colours.B : colours.A;
@@ -96,23 +94,20 @@ function Territory() {
             <ShapeRibbon stats={stats} team={team ?? "A"} />
           </Visual>
 
-          {lineDefending && <LineBreakCards data={lineDefending} matchId={matchId} />}
-
           <Visual
-            question="Where did we lose or win it?"
-            caption={turnoverMode === "lost" ? "Each dot is one time we gave it away." : "Each dot is one time we won it back."}
-            takeaway={{ value: turnoverMode === "lost" ? territory.losses.length : territory.recoveries.length, unit: turnoverMode === "lost" ? "lost" : "won" }}
-            comparison={{ label: "vs the other outcome", value: `${(turnoverMode === "lost" ? territory.losses.length - territory.recoveries.length : territory.recoveries.length - territory.losses.length) > 0 ? "+" : ""}${turnoverMode === "lost" ? territory.losses.length - territory.recoveries.length : territory.recoveries.length - territory.losses.length}`, tone: turnoverMode === "lost" ? (territory.losses.length > territory.recoveries.length ? "bad" : "good") : (territory.recoveries.length >= territory.losses.length ? "good" : "bad") }}
-            honesty={evidenceFor(turnoverMode === "lost" ? "turnover_lost" : "turnover_won")}
+            question="Where did we lose it — and where did we win it?"
+            caption="Every loss and recovery, shown separately so the pattern is clear."
+            takeaway={{ value: territory.losses.length, unit: "lost", label: `${territory.recoveries.length} won back` }}
+            comparison={{ label: "won minus lost", value: `${territory.recoveries.length - territory.losses.length > 0 ? "+" : ""}${territory.recoveries.length - territory.losses.length}`, tone: territory.recoveries.length >= territory.losses.length ? "good" : "bad" }}
+            honesty={`${evidenceFor("turnover_lost")} · ${evidenceFor("turnover_won")}`}
             footerNote={`${territory.losses.length} lost · ${territory.recoveries.length} won`}
             info={{ title: "Turnover locations", glossaryId: "turnover", rows: [{ label: "Lost", value: `${territory.losses.length}` }, { label: "Won", value: `${territory.recoveries.length}`, cream: true }, { label: "Team", value: teamName ?? "Both teams" }] }}
           >
-            <div className="mb-3 flex gap-1.5"><Chip active={turnoverMode === "lost"} onClick={() => setTurnoverMode("lost")}>Lost</Chip><Chip active={turnoverMode === "won"} onClick={() => setTurnoverMode("won")}>Won</Chip></div>
-            <Pitch><PitchDots points={turnoverMode === "lost" ? territory.losses : territory.recoveries} color={turnoverMode === "lost" ? "var(--quality-bad)" : "var(--quality-good)"} /></Pitch>
+            <div className="grid grid-cols-2 gap-2"><div><p className="display mb-1.5 text-center text-[12px] uppercase text-text-faint">Lost</p><Pitch><PitchDots points={territory.losses} color="var(--quality-bad)" /></Pitch></div><div><p className="display mb-1.5 text-center text-[12px] uppercase text-text-faint">Won</p><Pitch><PitchDots points={territory.recoveries} color="var(--quality-good)" /></Pitch></div></div>
           </Visual>
 
           <Visual
-            question="In which shape did we suffer?"
+            question="How did our shape change?"
             caption="One team shape every thirty seconds. Tap a time to move through the match."
             takeaway={{ value: snapshot?.lengthM ?? "—", unit: "m", label: "long from back to front" }}
             comparison={{ label: "vs our target", value: "—", tone: "neutral" }}

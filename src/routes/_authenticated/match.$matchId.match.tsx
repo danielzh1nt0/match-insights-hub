@@ -14,6 +14,7 @@ import {
   type EventFilterValue,
 } from "@/components/ip/event-filter";
 import { MatchNumbers } from "@/components/ip/match-numbers";
+import { MomentumStrip } from "@/components/ip/momentum-strip";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
 import { downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
@@ -424,6 +425,7 @@ function MatchScreen() {
             </div>
           </Card>
 
+          <MomentumStrip events={events} duration={total} colours={colours} />
           <MatchNumbers matchId={matchId} onFilterTypes={(nextTypes) => setTypesOverride(nextTypes)} />
 
           <div className="flex items-center gap-3 py-1" role="separator" aria-label="Every event">
