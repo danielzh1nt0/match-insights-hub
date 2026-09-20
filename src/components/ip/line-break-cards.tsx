@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { Visual } from "./visual";
-import type { LineDefending, LineState } from "@/lib/match-analysis";
+import type { LineDefending } from "@/lib/match-analysis";
 import { cn } from "@/lib/utils";
 
 function Honesty({ confirmed, detected }: { confirmed: number; detected: number }) {
+  if (detected === 0) return null;
   return <p className="-mx-4 -mb-3 mt-3 border-t border-wire-2 px-4 py-2 text-[10.5px] font-medium text-text-faint before:mr-1.5 before:inline-block before:h-[5px] before:w-[5px] before:rounded-full before:bg-text-faint">{confirmed} confirmed · {detected} detected</p>;
 }
 
@@ -35,7 +36,7 @@ export function LineBreakHero({ data, matchId }: { data: LineDefending; matchId:
         <div className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Line-break moments">
           {data.lineBreaks.map((incident, index) => <Link key={incident.id} to="/match/$matchId/match" params={{ matchId }} search={{ t: Math.max(0, incident.t - 2) }} className="tap grid place-items-center rounded-[6px]" aria-label={`Watch line break ${index + 1}`}><MiniPitch x={incident.x} y={incident.y} /></Link>)}
         </div>
-      ) : <p className="mt-4 text-center text-[11.5px] text-text-faint">Incident locations were not supplied.</p>}
+      ) : null}
       <div className="mt-4 flex items-center justify-between border-t border-wire-2 pt-2 text-[11.5px] font-semibold"><span className="text-text-faint">vs last 5 matches</span><span className={cn(delta !== null && delta > 0 ? "text-cream" : "text-text-faint")}>{delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta}`}</span></div>
       <Honesty confirmed={data.lineBreakConfirmed} detected={data.lineBreaks.length} />
     </Visual>
@@ -67,35 +68,9 @@ export function DeepAnswer({ data }: { data: LineDefending }) {
   return (
     <Visual framing="custom" question="Did we defend too deep?" caption="A direct answer based on this match versus our usual line." info={{ title: "Defensive depth", rows: [{ label: "Our median", value: data.medianM === null ? "—" : `${data.medianM} m`, cream: true }, { label: "Usual", value: data.usualM === null ? "—" : `${data.usualM} m` }] }}>
       <span className={cn("display-i inline-flex min-h-11 items-center rounded-full border px-6 text-[24px]", tone)}>{answer}</span>
-      <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-text-dim">{data.belowUsualPct === null || data.usualM === null ? "A usual line-height baseline was not supplied for this match." : `We defended lower than our usual ${data.usualM} m average for ${data.belowUsualPct}% of their possession.`}</p>
+      <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-text-dim">{`We defended lower than our usual ${data.usualM} m average for ${data.belowUsualPct}% of their possession.`}</p>
       <p className="mt-2 text-[11px] text-text-faint">Our median: {data.medianM === null ? "—" : `${data.medianM} m`} · Usual: {data.usualM === null ? "—" : `${data.usualM} m`}</p>
       <Honesty confirmed={data.shotConfirmed} detected={data.shots.length} />
     </Visual>
   );
-}
-
-const STATE_LABEL: Record<LineState, string> = { high: "High", mid: "Mid", low: "Low" };
-
-function StatePitch({ state }: { state: LineDefending["states"][number] }) {
-  const x = Math.max(18, Math.min(82, (state.height / 52) * 100));
-  return <svg viewBox="0 0 90 60" className="aspect-[3/2] w-full" role="img" aria-label={`${STATE_LABEL[state.key]} defensive line at ${state.height} metres`}><rect x=".5" y=".5" width="89" height="59" rx="4" fill="var(--surface-2)" stroke="var(--wire)" /><g fill="none" stroke="var(--cream)" strokeOpacity=".22"><rect x="5" y="5" width="80" height="50" /><line x1="45" y1="5" x2="45" y2="55" /><circle cx="45" cy="30" r="8" /></g><path d={`M8 14 L${x} 9 L${x} 51 L8 46 Z`} fill="var(--cream)" fillOpacity=".15" /><line x1={x} y1="8" x2={x} y2="52" stroke="var(--cream)" strokeWidth="1.4" strokeDasharray="3 3" /></svg>;
-}
-
-export function LineStates({ data, matchId }: { data: LineDefending; matchId: string }) {
-  const worst = Math.max(...data.states.map((state) => state.goals));
-  const high = data.states.find((state) => state.key === "high");
-  const low = data.states.find((state) => state.key === "low");
-  return (
-    <Visual framing="custom" question="What happened when we pushed up?" caption="Same match, three line heights. What we conceded in each." info={{ title: "Line-height outcomes", rows: data.states.map((state) => ({ label: STATE_LABEL[state.key], value: `${state.goals} conceded · ${state.shots} shots`, cream: state.key === "high" })) }}>
-      <div className="grid grid-cols-3 gap-2.5">
-        {data.states.map((state) => <Link key={state.key} to="/match/$matchId/reel" params={{ matchId }} search={{ line: state.key }} className={cn("tap min-w-0 rounded-[10px] border border-wire border-b-2 bg-surface-2 p-2", worst > 0 && state.goals === worst ? "border-b-quality-bad" : "border-b-wire")} aria-label={`Open ${state.key} line moments`}><span className="block truncate text-[10px] font-bold uppercase text-text-faint">{STATE_LABEL[state.key]} {state.height} m</span><div className="mt-2"><StatePitch state={state} /></div><strong className="display-i mt-2 block text-[24px] leading-none text-cream">{state.goals}</strong><span className="mt-1 block text-[10.5px] font-semibold text-text-faint">{state.shots} shot{state.shots === 1 ? "" : "s"}</span></Link>)}
-      </div>
-      <p className="mt-3 text-[12.5px] text-text-dim">Pushing high: <span className="text-cream">{high?.goals ?? 0} conceded.</span> Sitting deep: <span className="text-cream">{low?.goals ?? 0} conceded.</span></p>
-      <Honesty confirmed={data.shotConfirmed} detected={data.shots.length} />
-    </Visual>
-  );
-}
-
-export function LineBreakCards({ data, matchId }: { data: LineDefending; matchId: string }) {
-  return <section className="flex flex-col gap-3" aria-label="Defensive line review"><LineBreakHero data={data} matchId={matchId} /><LineTimeline data={data} matchId={matchId} /><DeepAnswer data={data} /><LineStates data={data} matchId={matchId} /></section>;
 }

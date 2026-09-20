@@ -87,6 +87,9 @@
   --quality-good: #34d399;
   --quality-risky: #f59e0b;
   --quality-bad: #ef4444;
+  --reaction-good: #1d9e75;
+  --reaction-warn: #ba7517;
+  --reaction-bad: #e24b4a;
   --pitch-top: #2d5c30;
   --pitch-bottom: #244a26;
   --pitch-line: rgba(255, 255, 255, 0.25);

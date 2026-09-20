@@ -181,9 +181,9 @@ export function Visual({
           </span>
         </div>
       )}
-      {(honesty || framing === "number-led") && (
+      {honesty && (
         <div className="flex min-h-9 items-center justify-between gap-3 border-t border-wire-2 px-4 py-2 text-[10.5px] font-medium text-text-faint">
-          <span className="inline-flex items-center gap-1.5 before:h-[5px] before:w-[5px] before:shrink-0 before:rounded-full before:bg-text-faint">{honesty ?? "0 confirmed · 0 detected"}</span>
+          <span className="inline-flex items-center gap-1.5 before:h-[5px] before:w-[5px] before:shrink-0 before:rounded-full before:bg-text-faint">{honesty}</span>
           {footerNote && <span className="text-right">{footerNote}</span>}
         </div>
       )}
