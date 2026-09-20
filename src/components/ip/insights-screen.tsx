@@ -66,7 +66,7 @@ export function InsightsScreen({ matchId, match, findings, events, iconColour, o
 
   const shots = preferredCount(events, (event) => event.type === "shot");
   const corners = preferredCount(events, (event) => event.type === "set_piece" && kindIs(event, "corner"));
-  const freeKicks = matchId === "SFKBP1109_s1200" ? 8 : preferredCount(events, (event) => event.type === "set_piece" && kindIs(event, "free"));
+  const freeKicks = preferredCount(events, (event) => event.type === "set_piece" && kindIs(event, "free"));
   const firstResult = resultFor(first);
 
   function toggleCheck(id: string) {
