@@ -15,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/territory")
       { name: "description", content: "Where the team lived, where it lost the ball and where it won it back." },
       { property: "og:title", content: "Territory — Ipanema" },
       { property: "og:description", content: "Heat maps, losses, recoveries and a shape replay." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Territory,

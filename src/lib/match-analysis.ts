@@ -292,9 +292,7 @@ export function buildLineDefending(
         })
         .filter((sample): sample is { t: number; height: number } => sample.t !== null && sample.height !== null)
         .sort((a, b) => a.t - b.t)
-    : (data.frames ?? [])
-        .map((frame) => ({ t: frame.t, height: optionalNum(frame.shape?.[ownTeam]?.length) }))
-        .filter((sample): sample is { t: number; height: number } => sample.height !== null);
+    : [];
 
   const nearestHeight = (time: number) => {
     if (timeline.length === 0) return null;
