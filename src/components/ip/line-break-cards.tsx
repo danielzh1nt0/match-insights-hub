@@ -20,7 +20,7 @@ function MiniPitch({ x, y, checked = false }: { x?: number; y?: number; checked?
   );
 }
 
-function LineBreakHero({ data, matchId }: { data: LineDefending; matchId: string }) {
+export function LineBreakHero({ data, matchId }: { data: LineDefending; matchId: string }) {
   const count = data.lineBreakCount;
   const delta = count !== null && data.lineBreakLast5Avg !== null ? Math.round((count - data.lineBreakLast5Avg) * 10) / 10 : null;
   return (
@@ -42,7 +42,7 @@ function LineBreakHero({ data, matchId }: { data: LineDefending; matchId: string
   );
 }
 
-function LineTimeline({ data, matchId }: { data: LineDefending; matchId: string }) {
+export function LineTimeline({ data, matchId }: { data: LineDefending; matchId: string }) {
   const maxT = Math.max(data.timeline.at(-1)?.t ?? 1, 1);
   const maxH = Math.max(...data.timeline.map((point) => point.height), 50);
   const points = data.timeline.map((point) => `${(point.t / maxT) * 100},${40 - (point.height / maxH) * 36}`).join(" ");
@@ -60,7 +60,7 @@ function LineTimeline({ data, matchId }: { data: LineDefending; matchId: string 
   );
 }
 
-function DeepAnswer({ data }: { data: LineDefending }) {
+export function DeepAnswer({ data }: { data: LineDefending }) {
   const delta = data.medianM !== null && data.usualM !== null ? data.usualM - data.medianM : null;
   const answer = delta === null ? "—" : delta > 4 ? "Yes" : delta >= 2 ? "Sometimes" : "No";
   const tone = answer === "Yes" ? "border-quality-bad/50 bg-quality-bad/15 text-quality-bad" : answer === "Sometimes" ? "border-quality-risky/50 bg-quality-risky/15 text-quality-risky" : answer === "No" ? "border-quality-good/50 bg-quality-good/15 text-quality-good" : "border-wire bg-surface-2 text-text-faint";
@@ -81,7 +81,7 @@ function StatePitch({ state }: { state: LineDefending["states"][number] }) {
   return <svg viewBox="0 0 90 60" className="aspect-[3/2] w-full" role="img" aria-label={`${STATE_LABEL[state.key]} defensive line at ${state.height} metres`}><rect x=".5" y=".5" width="89" height="59" rx="4" fill="var(--surface-2)" stroke="var(--wire)" /><g fill="none" stroke="var(--cream)" strokeOpacity=".22"><rect x="5" y="5" width="80" height="50" /><line x1="45" y1="5" x2="45" y2="55" /><circle cx="45" cy="30" r="8" /></g><path d={`M8 14 L${x} 9 L${x} 51 L8 46 Z`} fill="var(--cream)" fillOpacity=".15" /><line x1={x} y1="8" x2={x} y2="52" stroke="var(--cream)" strokeWidth="1.4" strokeDasharray="3 3" /></svg>;
 }
 
-function LineStates({ data, matchId }: { data: LineDefending; matchId: string }) {
+export function LineStates({ data, matchId }: { data: LineDefending; matchId: string }) {
   const worst = Math.max(...data.states.map((state) => state.goals));
   const high = data.states.find((state) => state.key === "high");
   const low = data.states.find((state) => state.key === "low");

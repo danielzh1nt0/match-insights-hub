@@ -19,5 +19,6 @@
 - [x] `<MatchStory>` full-screen match-specific 5-slide recap + route `/match/:id/story` + `<StoryLauncher>` pill on library cards and insights
 - [x] Correct Territory and Stats against Visualisation Library v16: exact card anatomy and six distinct visual families
 - [ ] Phase 3 remainder: settings screens, coach marks per screen, skeleton/empty/error/offline states
+- [ ] Establish the approved screen sitemap and rebuild Insights with gated coaching findings
 
 - [x] Name the Bundesliga sample match BVB vs FC Bayern and add both crests (BVB = uploaded yellow crest)

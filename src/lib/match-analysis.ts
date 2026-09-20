@@ -421,7 +421,7 @@ export function buildFindings(
     out.push(
       finding(
         "slow_press",
-        `First pressure after losing the ball: ${pressed}% within 2 s (target ${thresholds.pressWithin2s}%)`,
+        "Press faster when we lose the ball.",
         pressed,
         thresholds.pressWithin2s,
         "%",
@@ -437,7 +437,7 @@ export function buildFindings(
     out.push(
       finding(
         "no_regain",
-        "The ball rarely came back inside five seconds",
+        "Win it back before they settle.",
         regained,
         thresholds.regainWithin5s,
         "%",
@@ -453,7 +453,7 @@ export function buildFindings(
     out.push(
       finding(
         "press_alone",
-        "The first presser was on their own",
+        "Support the first presser.",
         alone,
         2,
         "players",
@@ -469,7 +469,7 @@ export function buildFindings(
     out.push(
       finding(
         "slow_forward",
-        "Winning the ball rarely led forward",
+        "Play forward after we win it.",
         forward,
         50,
         "%",
@@ -485,7 +485,7 @@ export function buildFindings(
     out.push(
       finding(
         "won_and_lost",
-        "Won the ball, then gave it straight back",
+        "Secure the first pass after regaining.",
         lostBack,
         40,
         "%",
@@ -500,7 +500,7 @@ export function buildFindings(
     out.push(
       finding(
         "better_option",
-        "A clearly better pass was available and wasn't played",
+        "Look for the forward option.",
         better.length,
         1,
         "times",
@@ -520,7 +520,7 @@ export function buildFindings(
     out.push(
       finding(
         "risky_passing",
-        "Too many passes were risky or lost",
+        "Choose safer passes under pressure.",
         roughShare,
         30,
         "%",
@@ -536,7 +536,7 @@ export function buildFindings(
     out.push(
       finding(
         "long_block",
-        "The team was stretched from back to front",
+        "Stay connected from back to front.",
         block,
         thresholds.blockCeilingM,
         "m",
@@ -552,7 +552,7 @@ export function buildFindings(
     out.push(
       finding(
         "low_tilt",
-        "Little time spent in the opponent's third",
+        "Move the game into their third.",
         tilt,
         30,
         "%",
@@ -568,7 +568,7 @@ export function buildFindings(
     out.push(
       finding(
         "no_high_turnovers",
-        "No ball was won high up the pitch",
+        "Win the ball higher up.",
         0,
         1,
         "times",

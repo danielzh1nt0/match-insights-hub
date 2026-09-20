@@ -39,6 +39,8 @@ export type Finding = {
   headline: string;
   value: number;
   target: number;
+  /** Optional comparison supplied by the analysis pipeline; null means unavailable. */
+  baseline?: number | null;
   unit: string;
   higherIsWorse: boolean;
   events: number;
