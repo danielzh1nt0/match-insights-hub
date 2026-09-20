@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FindingRow } from "@/components/insights/FindingRow";
 import { MetricBar } from "@/components/insights/MetricBar";
 import { MomentRow } from "@/components/insights/MomentRow";
@@ -55,6 +55,10 @@ export function InsightsScreen({ matchId, match, findings, events, iconColour, o
   const [expandedId, setExpandedId] = useState<string | null>(shownFindings[0]?.id ?? null);
   const [checkedMoments, setCheckedMoments] = useState<Set<string>>(new Set());
   const first = shownFindings[0];
+
+  useEffect(() => {
+    setExpandedId(first?.id ?? null);
+  }, [matchId, first?.id]);
 
   if (!first || eligible.length < 3) {
     return (
