@@ -13,6 +13,7 @@
 - Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
+- [ ] Complete Stats rebuild: all 24 approved Ball, Pressing, Shape, Shooting, Players, and Passes slots, using Visualisation Library v16 patterns and full QA
 - [x] Pack 2 and 3: Match and Territory component integration with reviewed real data, preserved video/review behavior, mobile/desktop screenshots, interaction checks, no-overflow checks, and prohibited-pattern audit
 - [x] Prompt B: Veo-style number-led visual refactor across Insights, Stats, and Territory
 - [x] Match event filter: wrapped chip row, responsive More sheet, grouped filtering, and mobile/desktop QA
