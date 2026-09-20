@@ -15,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/reel")({
       { name: "description", content: "The handful of moments worth showing the team." },
       { property: "og:title", content: "Clip reel — Ipanema" },
       { property: "og:description", content: "Every clip comes from a finding, with the reason for each." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Reel,

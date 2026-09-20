@@ -54,14 +54,12 @@ export function MatchStory({
   }, [navigate, matchId]);
   const next = useCallback(() => {
     setProgress(0);
-    setIndex((current) => {
-      if (current >= slides.length - 1) {
-        close();
-        return current;
-      }
-      return current + 1;
-    });
-  }, [slides.length, close]);
+    if (index >= slides.length - 1) {
+      close();
+      return;
+    }
+    setIndex(index + 1);
+  }, [index, slides.length, close]);
   const prev = useCallback(() => {
     setProgress(0);
     setIndex((current) => Math.max(0, current - 1));

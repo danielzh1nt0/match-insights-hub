@@ -13,6 +13,8 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/story")({
       { name: "description", content: "A five-slide recap of the match: the score, the strength, the fix and the moment." },
       { property: "og:title", content: "Match recap — Ipanema" },
       { property: "og:description", content: "Watch the 30-second recap of your match analysis." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: StoryPage,
