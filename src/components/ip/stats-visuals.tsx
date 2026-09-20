@@ -169,7 +169,7 @@ function ShapeOutcome({ lineDefending, colour }: { lineDefending: LineDefending;
 function ShotMap({ stats, colours, matchId, events, file }: Props) {
   const metricShots = Array.isArray(stats?.metrics?.["shots"]) ? stats.metrics["shots"] as Record<string,unknown>[] : [];
   const eventShots=events.filter(event=>event.type==="shot"||event.type==="goal").map(event=>{const point=eventPoint(event,file);return {id:event.id,t:event.t,team:event.team,x:point?.x,y:point?.y,goal:event.type==="goal",on_target:event.payload?.["on_target"]===true}});
-  const shots = metricShots.length?metricShots:eventShots; if (!shots.length) return null;
+  const shots: Record<string, unknown>[] = metricShots.length ? metricShots : eventShots; if (!shots.length) return null;
   return <Card question="Where did shots come from?" caption="Filled means on target. A cream ring marks a goal." honesty={`${shots.length} shots`}>
     <Pitch>{shots.map((shot,index)=>{const shotTeam:TeamKey=shot["team"]==="B"?"B":"A";const x=finite(shot["x"]??shot["px"])??(shotTeam==="A"?25:75);const y=finite(shot["y"]??shot["py"])??50;const t=finite(shot["t"])??0;const goal=shot["goal"]===true;const on=goal||shot["on_target"]===true;return <Link key={String(shot["id"]??index)} to="/match/$matchId/match" params={{matchId}} search={{t}} aria-label={`Watch ${shotTeam} shot`}><circle cx={clamp(x)} cy={clamp(y)/100*64} r={goal?2.8:2.2} fill={on?colours[shotTeam]:"var(--surface-2)"} stroke={goal?"var(--cream)":colours[shotTeam]} strokeWidth={goal?1.2:.8}/></Link>})}</Pitch>
   </Card>;
