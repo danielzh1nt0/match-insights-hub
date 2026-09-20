@@ -110,12 +110,12 @@ export type Territory = {
   playerCount: number;
   snapshots: {
     t: number;
-    players: { x: number; y: number; shirt: number; predicted: boolean }[];
+    players: { id: string; x: number; y: number; shirt: number; predicted: boolean; isGK: boolean }[];
     lengthM: number;
     widthM: number;
   }[];
-  losses: { x: number; y: number }[];
-  recoveries: { x: number; y: number }[];
+  losses: { x: number; y: number; t: number; high?: boolean }[];
+  recoveries: { x: number; y: number; t: number; high?: boolean }[];
   blockLengthM: number;
   compactBandM: number;
   lineHeightM: number;
@@ -194,9 +194,11 @@ export function buildTerritory(
     const players = frame.players
       .filter((p) => p.team === shapeTeam && p.state !== "stale")
       .map((p) => ({
+        id: `${p.team}-${p.id}`,
         ...toPercent(p.m, length, width),
         shirt: p.id,
         predicted: p.state === "predicted",
+        isGK: p.gk,
       }));
     if (players.length === 0) continue;
     const shape = frame.shape?.[shapeTeam];
@@ -232,8 +234,13 @@ export function buildTerritory(
   const pick = (type: string) =>
     (data.events ?? [])
       .filter((e) => e.type === type && (!team || e.team === team))
-      .map((e) => positionAt(e.t))
-      .filter((p): p is { x: number; y: number } => p !== null);
+      .map((e) => {
+        const position = positionAt(e.t);
+        if (!position) return null;
+        const attackingX = e.team === "B" ? 100 - position.x : position.x;
+        return { ...position, t: e.t, ...(attackingX >= 66.67 ? { high: true } : {}) };
+      })
+      .filter((p): p is { x: number; y: number; t: number; high?: boolean } => p !== null);
 
   const row = teamRow(stats, shapeTeam);
   return {

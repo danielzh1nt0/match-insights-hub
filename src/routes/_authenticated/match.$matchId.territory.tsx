@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
-import { Chip } from "@/components/ip/primitives";
-import { ShapeRibbon } from "@/components/ip/stats-visuals";
-import { Pitch, PitchDots, PitchShirts, PortraitPitch, Visual } from "@/components/ip/visual";
+import { FormationReplay } from "@/components/territory/FormationReplay";
+import { LossWinPitches } from "@/components/territory/LossWinPitches";
+import { ShapeRibbon } from "@/components/territory/ShapeRibbon";
+import { TeamHeatMap } from "@/components/territory/TeamHeatMap";
 import { useAnalysis } from "@/hooks/use-match";
-import { formatClock } from "@/lib/sample-data";
+import { attacksRight, teamRow } from "@/lib/match-analysis";
+import type { Frame, FramePlayer } from "@/lib/match-source";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/territory")({
   head: () => ({
@@ -19,127 +21,110 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/territory")
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Territory,
+  component: TerritoryScreen,
 });
 
-function Territory() {
+type TeamKey = "A" | "B";
+
+function percentPlayer(player: FramePlayer, length: number, width: number) {
+  return {
+    id: `${player.team}-${player.id}`,
+    num: String(player.id),
+    x: Math.max(0, Math.min(1, player.m[0] / length)),
+    y: Math.max(0, Math.min(1, player.m[1] / width)),
+    ...(player.gk ? { isGK: true } : {}),
+  };
+}
+
+function centroid(players: { x: number; y: number }[]) {
+  if (players.length === 0) return { x: 0.5, y: 0.5 };
+  return { x: players.reduce((sum, player) => sum + player.x, 0) / players.length, y: players.reduce((sum, player) => sum + player.y, 0) / players.length };
+}
+
+function hullPath(players: { x: number; y: number }[]) {
+  if (players.length < 4) return "";
+  const centre = centroid(players);
+  return [...players]
+    .sort((a, b) => Math.atan2(a.y - centre.y, a.x - centre.x) - Math.atan2(b.y - centre.y, b.x - centre.x))
+    .map((player, index) => `${index === 0 ? "M" : "L"}${player.x * 100},${player.y * 100}`)
+    .join(" ") + " Z";
+}
+
+function frameNear(frames: Frame[], time: number, team: TeamKey, phase: "with" | "without") {
+  const eligible = frames.filter((frame) => phase === "with" ? frame.possession === team : frame.possession !== team);
+  return eligible.reduce<Frame | null>((nearest, frame) => !nearest || Math.abs(frame.t - time) < Math.abs(nearest.t - time) ? frame : nearest, null);
+}
+
+function TerritoryScreen() {
   const { matchId } = Route.useParams();
+  const navigate = Route.useNavigate();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, territory, loading, events, stats } = useAnalysis(matchId, scope);
-  const [snapIndex, setSnapIndex] = useState(0);
-
-  const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
-  const teamColour = team === "B" ? colours.B : colours.A;
-  const snapshot = territory?.snapshots[Math.min(snapIndex, territory.snapshots.length - 1)];
-  const selectedEvents = events.filter((event) => !team || event.team === team);
-  const evidenceFor = (type: string) => {
-    const found = selectedEvents.filter((event) => event.type === type);
-    return `${found.filter((event) => event.status === "confirmed").length} confirmed · ${found.length} detected`;
+  const [heatTime, setHeatTime] = useState(1);
+  const [activePlayer, setActivePlayer] = useState<string | null>(null);
+  const [shapeTime, setShapeTime] = useState(0);
+  const [phase, setPhase] = useState<"with" | "without">("with");
+  const { match, row, label, file, team, colours, territory, loading, stats } = useAnalysis(matchId, scope);
+  const chosenTeam: TeamKey = team ?? "A";
+  const duration = row?.duration_s ?? match?.durationS ?? 1;
+  const periodStart = period === "2nd" ? duration / 2 : 0;
+  const periodEnd = period === "1st" ? duration / 2 : duration;
+  const frames = useMemo(() => (file?.frames ?? []).filter((frame) => frame.t >= periodStart && frame.t <= periodEnd), [file?.frames, periodStart, periodEnd]);
+  const visibleFrames = useMemo(() => frames.filter((frame) => frame.t <= periodStart + (periodEnd - periodStart) * heatTime), [frames, heatTime, periodStart, periodEnd]);
+  const length = Math.max(file?.pitch?.length ?? 105, 1);
+  const width = Math.max(file?.pitch?.width ?? 68, 1);
+  const playerIds = useMemo(() => {
+    const appearances = new Map<string, number>();
+    for (const frame of frames) for (const player of frame.players) {
+      if (player.team !== chosenTeam || player.state === "stale") continue;
+      const id = String(player.id);
+      appearances.set(id, (appearances.get(id) ?? 0) + 1);
+    }
+    return [...appearances].sort((a, b) => b[1] - a[1]).slice(0, 11).map(([id]) => id).sort((a, b) => Number(a) - Number(b));
+  }, [frames, chosenTeam]);
+  const blobsFor = (playerId: string | null) => {
+    const counts = new Map<string, { x: number; y: number; n: number }>();
+    for (const frame of visibleFrames) for (const player of frame.players) {
+      if (player.team !== chosenTeam || player.state === "stale" || (playerId && String(player.id) !== playerId)) continue;
+      const x = Math.max(0, Math.min(1, player.m[0] / length));
+      const y = Math.max(0, Math.min(1, player.m[1] / width));
+      const key = `${Math.floor(x * 7)}:${Math.floor(y * 10)}`;
+      const cell = counts.get(key) ?? { x, y, n: 0 };
+      cell.n += 1;
+      counts.set(key, cell);
+    }
+    const max = Math.max(1, ...[...counts.values()].map((cell) => cell.n));
+    return [...counts.values()].map((cell) => ({ x: cell.x, y: cell.y, r: 0.16, intensity: cell.n / max }));
   };
+  const teamBlobs = useMemo(() => blobsFor(null), [visibleFrames, chosenTeam, length, width]);
+  const playerBlobs = useMemo(() => activePlayer ? blobsFor(activePlayer) : [], [activePlayer, visibleFrames, chosenTeam, length, width]);
+  const trackedPerFrame = visibleFrames.map((frame) => frame.players.filter((player) => player.team === chosenTeam && player.state !== "stale").length).sort((a, b) => a - b);
+  const typicalInView = trackedPerFrame.length ? trackedPerFrame[Math.floor(trackedPerFrame.length / 2)] ?? 0 : 0;
+  const rawTimeline = ((stats?.metrics?.["shape_timeline"] as Record<string, unknown[]> | undefined)?.[chosenTeam] ?? []) as Record<string, unknown>[];
+  const timeline = rawTimeline.flatMap((sample) => typeof sample["t"] === "number" && typeof sample["length"] === "number" && typeof sample["width"] === "number" ? [{ t: sample["t"], length: sample["length"], width: sample["width"] }] : []);
+  const teamStats = teamRow(stats, chosenTeam);
+  const selectedMoment = periodStart + (periodEnd - periodStart) * shapeTime;
+  const formationFrame = frameNear(frames, selectedMoment, chosenTeam, phase);
+  const formationPlayers = (formationFrame?.players ?? []).filter((player) => player.team === chosenTeam && player.state !== "stale").map((player) => percentPlayer(player, length, width));
+  const formationCentre = centroid(formationPlayers);
+  const snapshots = (territory?.snapshots ?? []).filter((snapshot) => snapshot.t >= periodStart && snapshot.t <= periodEnd).map((snapshot) => ({ t: snapshot.t, players: snapshot.players.map((player) => ({ id: player.id, num: String(player.shirt), x: player.x / 100, y: player.y / 100, ...(player.isGK ? { isGK: true } : {}) })) }));
+  const attackRight = attacksRight(row?.attack_right, label?.attack_right_override, chosenTeam) === (period !== "2nd");
+  const teamName = chosenTeam === "B" ? match?.teamB : match?.teamA;
+  const teamColour = chosenTeam === "B" ? colours.B : colours.A;
+  const screenVars = { "--team-a": colours.A, "--team-b": colours.B } as CSSProperties;
+  const seekToMatch = (t: number) => void navigate({ to: "/match/$matchId/match", params: { matchId }, search: { t } });
 
   return (
-    <MatchShell
-      matchId={matchId}
-      match={match}
-      scope={scope}
-      setScope={setScope}
-      period={period}
-      setPeriod={setPeriod}
-    >
-      {loading && (
-        <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading">
-          <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
-        </div>
-      )}
-
-      {territory && match && (
-        <>
-          <Visual
-            question="Where did we play?"
-            caption="Brighter areas show where we spent more time."
-            takeaway={{ value: territory.playerCount, unit: "players", label: "typically visible in each frame" }}
-            comparison={{ label: "vs season average", value: "—", tone: "neutral" }}
-            honesty={`${territory.playerCount} players · ${territory.frameCount.toLocaleString()} frames`}
-            footerNote="Whole match"
-            info={{
-              title: "Where did we play?",
-              glossaryId: "heat-map",
-              rows: [
-                { label: "What it counts", value: "Player time per area" },
-                { label: "Team", value: teamName ?? "Both teams", cream: true },
-                { label: "Players tracked", value: `${territory.playerCount}` },
-                { label: "Frames used", value: territory.frameCount.toLocaleString() },
-                { label: "Height of the last line", value: `${territory.lineHeightM} m`, cream: true },
-              ],
-            }}
-          >
-            <PortraitPitch arrowLabel={`${teamName} attack`}>
-              {territory.heat.map((point, index) => <circle key={index} cx={(point.y / 100) * 64} cy={100 - point.x} r={3 + point.w * 8} fill={teamColour} opacity={.06 + point.w * .18} />)}
-            </PortraitPitch>
-            <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-text-faint"><span>0:00</span><span>1st half</span><span>2nd half</span><span>Full</span></div>
-            <p className="num mt-2 text-[11.5px] text-text-faint">
-              n = {territory.playerCount} players · {territory.frameCount.toLocaleString()} frames
-            </p>
-          </Visual>
-
-          <Visual
-            question="How compact were we?"
-            caption="Thicker ribbon means we were stretched further front-to-back. The thin line is width."
-            takeaway={{ value: territory.blockLengthM, unit: "m", label: "our typical length" }}
-            comparison={{ label: "vs our target", value: "—", tone: "neutral" }}
-            honesty={`${territory.frameCount.toLocaleString()} detected frames`}
-            info={{ title: "Team compactness", glossaryId: "compactness", rows: [{ label: "Typical width", value: `${territory.compactBandM} m`, cream: true }, { label: "Length back to front", value: `${territory.blockLengthM} m` }, { label: "Frames used", value: territory.frameCount.toLocaleString() }] }}
-          >
-            <ShapeRibbon stats={stats} team={team ?? "A"} />
-          </Visual>
-
-          <Visual
-            question="Where did we lose it — and where did we win it?"
-            caption="Every loss and recovery, shown separately so the pattern is clear."
-            takeaway={{ value: territory.losses.length, unit: "lost", label: `${territory.recoveries.length} won back` }}
-            comparison={{ label: "won minus lost", value: `${territory.recoveries.length - territory.losses.length > 0 ? "+" : ""}${territory.recoveries.length - territory.losses.length}`, tone: territory.recoveries.length >= territory.losses.length ? "good" : "bad" }}
-            honesty={`${evidenceFor("turnover_lost")} · ${evidenceFor("turnover_won")}`}
-            footerNote={`${territory.losses.length} lost · ${territory.recoveries.length} won`}
-            info={{ title: "Turnover locations", glossaryId: "turnover", rows: [{ label: "Lost", value: `${territory.losses.length}` }, { label: "Won", value: `${territory.recoveries.length}`, cream: true }, { label: "Team", value: teamName ?? "Both teams" }] }}
-          >
-            <div className="grid grid-cols-2 gap-2"><div><p className="display mb-1.5 text-center text-[12px] uppercase text-text-faint">Lost</p><Pitch><PitchDots points={territory.losses} color="var(--quality-bad)" /></Pitch></div><div><p className="display mb-1.5 text-center text-[12px] uppercase text-text-faint">Won</p><Pitch><PitchDots points={territory.recoveries} color="var(--quality-good)" /></Pitch></div></div>
-          </Visual>
-
-          <Visual
-            question="How did our shape change?"
-            caption="One team shape every thirty seconds. Tap a time to move through the match."
-            takeaway={{ value: snapshot?.lengthM ?? "—", unit: "m", label: "long from back to front" }}
-            comparison={{ label: "vs our target", value: "—", tone: "neutral" }}
-            honesty={`${snapshot?.players.length ?? 0} players · ${territory.snapshots.length} snapshots`}
-            info={{
-              title: "How did the shape move?",
-              glossaryId: "shape-snapshot",
-              rows: [
-                { label: "What it shows", value: "Player positions" },
-                { label: "Team", value: teamName ?? "Both teams", cream: true },
-                { label: "Snapshots", value: `${territory.snapshots.length}` },
-                { label: "Length back to front", value: `${snapshot?.lengthM ?? 0} m`, cream: true },
-                { label: "Width side to side", value: `${snapshot?.widthM ?? 0} m` },
-              ],
-            }}
-          >
-            <Pitch arrowLabel={`${match.teamA} attack →`}>
-              {snapshot && <PitchShirts players={snapshot.players} color={teamColour} />}
-            </Pitch>
-            <p className="num mt-2 text-[11.5px] text-text-faint">
-              {snapshot?.players.length ?? 0} players on the pitch · {snapshot?.lengthM ?? 0} m long
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {territory.snapshots.map((s, i) => (
-                <Chip key={s.t} active={i === snapIndex} onClick={() => setSnapIndex(i)}>
-                  {formatClock(s.t)}
-                </Chip>
-              ))}
-            </div>
-          </Visual>
-        </>
-      )}
+    <MatchShell matchId={matchId} match={match} scope={scope} setScope={(next) => { setScope(next === "both" ? "a" : next); setActivePlayer(null); }} period={period} setPeriod={setPeriod}>
+      <div style={{ ...screenVars, display: "flex", flexDirection: "column", paddingBottom: "120px" }}>
+        {loading && <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading territory"><div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" /></div>}
+        {territory && match && <>
+          <TeamHeatMap teamColour={teamColour} attackLabel={`${teamName ?? "Team"} attack ${attackRight ? "right" : "left"}`} teamBlobs={teamBlobs} playerBlobs={playerBlobs} activePlayer={activePlayer} players={playerIds.map((id) => ({ id, num: id }))} onPlayerTap={(id) => setActivePlayer(id === "all" ? null : id)} sliderValue={heatTime} onSliderChange={setHeatTime} reliabilityLabel={`${typicalInView} of ${playerIds.length} in view`} frameCount={visibleFrames.length} />
+          {timeline.length > 1 && <ShapeRibbon teamColour={teamColour} timeline={timeline} durationSeconds={duration} currentTime={selectedMoment} onSeek={(t) => { setShapeTime(t / duration); seekToMatch(t); }} medianLength={Math.round(teamStats?.block_length_median_m ?? territory.blockLengthM)} />}
+          {(territory.losses.length > 0 || territory.recoveries.length > 0) && <LossWinPitches teamColour={teamColour} losses={territory.losses.map((point) => ({ ...point, x: point.x / 100, y: point.y / 100 }))} wins={territory.recoveries.map((point) => ({ ...point, x: point.x / 100, y: point.y / 100 }))} onDotTap={(point) => seekToMatch(point.t)} />}
+          {formationPlayers.length > 0 && <FormationReplay teamColour={teamColour} attackLabel={`${teamName ?? "Team"} attack ${attackRight ? "right" : "left"}`} players={formationPlayers} centroid={formationCentre} hullPoints={hullPath(formationPlayers)} phase={phase} onPhaseChange={setPhase} sliderValue={shapeTime} onSliderChange={setShapeTime} snapshots={snapshots} onSnapshotTap={(t) => setShapeTime(Math.max(0, Math.min(1, (t - periodStart) / Math.max(periodEnd - periodStart, 1))))} currentTime={selectedMoment} />}
+        </>}
+      </div>
     </MatchShell>
   );
 }
