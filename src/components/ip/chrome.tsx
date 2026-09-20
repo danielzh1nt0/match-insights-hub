@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ArrowLeft, ChartNoAxesColumn, Film, Map, Settings, Sparkles } from "lucide-react";
+import { ArrowLeft, ChartNoAxesColumn, Film, Library, Map, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Wordmark, Segmented } from "./primitives";
 import { AccountMenu } from "./account-menu";
@@ -9,7 +9,8 @@ import { AccountMenu } from "./account-menu";
 
 export function AppHeader({ backTo, onBack }: { backTo?: string; onBack?: () => void }) {
   return (
-    <header className="sticky top-0 z-40 grid grid-cols-[44px_1fr_44px] items-center border-b border-wire-2 bg-bg/95 px-4 py-2 backdrop-blur md:px-7">
+    <header className="sticky top-0 z-40 border-b border-wire-2 bg-bg/95 backdrop-blur">
+      <div className="mx-auto grid min-h-16 max-w-[1440px] grid-cols-[44px_1fr_44px] items-center px-4 md:px-7">
       <div className="flex items-center">
         {backTo ? (
           <Link
@@ -30,13 +31,19 @@ export function AppHeader({ backTo, onBack }: { backTo?: string; onBack?: () => 
           </button>
         ) : null}
       </div>
-      <div className="flex justify-center">
-        <Link to="/library" aria-label="Ipanema home">
-          <Wordmark />
+      <div className="flex items-center justify-center md:justify-start">
+        <Link to="/library" aria-label="Ipanema home" className="flex items-center gap-3">
+          <span className="display-i grid h-9 w-9 place-items-center rounded-[6px] border border-cream text-[21px] text-cream">I</span>
+          <Wordmark size="sm" className="hidden sm:inline" />
+        </Link>
+        <span className="ml-5 hidden h-6 w-px bg-wire-2 md:block" aria-hidden="true" />
+        <Link to="/library" className="tap ml-3 hidden items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint hover:text-text md:flex">
+          <Library size={15} /> Match library
         </Link>
       </div>
       <div className="flex justify-end">
         <AccountMenu />
+      </div>
       </div>
     </header>
   );
@@ -55,7 +62,7 @@ export function Screen({
 }) {
   return (
     <div
-      className={cn("mx-auto w-full max-w-[1400px] px-4 md:px-7", withNav && "pb-[100px]", className)}
+      className={cn("mx-auto w-full max-w-[1440px] px-4 md:px-7", withNav && "pb-[100px] md:pb-8", className)}
     >
       {children}
     </div>
@@ -190,9 +197,9 @@ export function FloatingNav({ matchId }: { matchId: string }) {
   return (
     <nav
       aria-label="Match sections"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-wire bg-bg/95 px-4 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-wire bg-bg/95 px-4 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:sticky md:top-16 md:bottom-auto md:border-b md:border-t-0 md:py-0"
     >
-      <div className="mx-auto grid max-w-[520px] grid-cols-4 gap-1">
+      <div className="mx-auto grid max-w-[620px] grid-cols-4 gap-1 md:h-12">
         {navItems.map((item) => {
           const active = pathname === item.to.replace("$matchId", matchId);
           const Icon = item.icon;
@@ -204,8 +211,8 @@ export function FloatingNav({ matchId }: { matchId: string }) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "tap flex flex-col items-center justify-center gap-1 rounded-[10px] text-[10px] font-semibold uppercase tracking-[0.06em]",
-                active ? "text-cream" : "text-text-faint hover:text-text-dim",
+                "tap relative flex flex-col items-center justify-center gap-1 rounded-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] md:flex-row md:gap-2",
+                active ? "text-cream after:absolute after:inset-x-2 after:-bottom-2 after:h-0.5 after:bg-cream md:after:bottom-0" : "text-text-faint hover:text-text-dim",
               )}
             >
               <Icon size={17} />

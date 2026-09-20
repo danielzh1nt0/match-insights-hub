@@ -55,6 +55,7 @@ export function MatchShell({
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader backTo="/library" />
+      <FloatingNav matchId={matchId} />
       <Screen withNav className="pt-4">
         {match ? (
           <>
@@ -105,7 +106,7 @@ export function MatchShell({
               />
             )}
 
-            <div className="mt-4 flex flex-col gap-3">{children}</div>
+            <div className="mt-4 flex flex-col gap-3 md:mt-5">{children}</div>
           </>
         ) : (
           <Card className="mt-2">
@@ -120,7 +121,6 @@ export function MatchShell({
           </Card>
         )}
       </Screen>
-      <FloatingNav matchId={matchId} />
     </div>
   );
 }

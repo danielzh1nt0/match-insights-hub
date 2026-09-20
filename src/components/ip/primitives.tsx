@@ -24,7 +24,7 @@ export function Wordmark({
       className={cn(
         "display-i select-none",
         wordmarkSizes[size],
-        onCream ? "text-[#111315]" : "text-cream",
+        onCream ? "text-ink" : "text-cream",
         className,
       )}
     >
@@ -45,7 +45,7 @@ export function Card({
     <div
       className={cn(
         "border border-wire bg-surface",
-        small ? "rounded-[12px] p-3" : "rounded-[16px] p-4",
+        small ? "rounded-[6px] p-3" : "rounded-[8px] p-4",
         className,
       )}
       {...rest}
@@ -60,7 +60,7 @@ export function Card({
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { block?: boolean };
 
 const btnBase =
-  "tap inline-flex items-center justify-center gap-2 rounded-[12px] px-5 text-sm font-semibold transition-colors duration-150 ease-out disabled:opacity-50 disabled:pointer-events-none";
+  "tap inline-flex items-center justify-center gap-2 rounded-[6px] px-5 text-sm font-semibold transition-colors duration-150 ease-out disabled:pointer-events-none disabled:opacity-50";
 
 export const PrimaryButton = forwardRef<HTMLButtonElement, BtnProps>(function PrimaryButton(
   { className, block, ...rest },
@@ -69,7 +69,7 @@ export const PrimaryButton = forwardRef<HTMLButtonElement, BtnProps>(function Pr
   return (
     <button
       ref={ref}
-      className={cn(btnBase, "bg-cream text-[#111315] hover:bg-cream-dim", block && "w-full", className)}
+      className={cn(btnBase, "bg-cream text-ink hover:bg-cream-dim", block && "w-full", className)}
       {...rest}
     />
   );
@@ -134,9 +134,9 @@ export function Chip({
       type="button"
       aria-pressed={active}
       className={cn(
-        "inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] border px-3 text-xs font-semibold transition-colors duration-150 ease-out",
+        "inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[6px] border px-3 text-xs font-semibold transition-colors duration-150 ease-out",
         active
-          ? "border-cream bg-cream text-[#111315]"
+          ? "border-cream bg-cream text-ink"
           : "border-wire text-text-dim hover:border-cream/40 hover:text-text",
         className,
       )}
@@ -147,7 +147,7 @@ export function Chip({
         <span
           className={cn(
             "num rounded-full px-1.5 text-[11px]",
-            active ? "bg-[#111315]/10 text-[#111315]" : "bg-surface-3 text-text-dim",
+            active ? "bg-ink/10 text-ink" : "bg-surface-3 text-text-dim",
           )}
         >
           {count}
@@ -171,7 +171,7 @@ export function Pill({
     good: "border-quality-good/40 bg-quality-good/10 text-quality-good",
     risky: "border-quality-risky/40 bg-quality-risky/10 text-quality-risky",
     bad: "border-quality-bad/40 bg-quality-bad/10 text-quality-bad",
-    cream: "border-cream bg-cream text-[#111315]",
+    cream: "border-cream bg-cream text-ink",
   } as const;
   return (
     <span
@@ -194,7 +194,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       <input
         ref={ref}
         className={cn(
-          "tap w-full rounded-[12px] border border-wire bg-surface-2 px-3.5 text-[15px] text-text placeholder:text-text-faint transition-colors duration-150 ease-out focus:border-cream/60",
+          "tap w-full rounded-[6px] border border-wire bg-surface-2 px-3.5 text-[15px] text-text placeholder:text-text-faint transition-colors duration-150 ease-out focus:border-cream/60",
           className,
         )}
         {...rest}
@@ -250,7 +250,7 @@ export function Checkbox({
       <span
         className={cn(
           "flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border",
-          checked ? "border-cream bg-cream text-[#111315]" : "border-wire bg-surface-2",
+          checked ? "border-cream bg-cream text-ink" : "border-wire bg-surface-2",
         )}
       >
         {checked && (
@@ -281,7 +281,7 @@ export function Segmented<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className="grid w-full gap-1 rounded-[12px] border border-wire bg-surface p-1"
+      className="grid w-full gap-1 rounded-[8px] border border-wire bg-surface p-1"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((o) => {
@@ -293,8 +293,8 @@ export function Segmented<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "tap flex items-center justify-center gap-1.5 rounded-[9px] px-2 text-xs font-semibold transition-colors duration-150 ease-out",
-              active ? "bg-cream text-[#111315]" : "text-text-dim hover:text-text",
+              "tap flex items-center justify-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold transition-colors duration-150 ease-out",
+              active ? "bg-cream text-ink" : "text-text-dim hover:bg-surface-2 hover:text-text",
             )}
           >
             {o.color && (

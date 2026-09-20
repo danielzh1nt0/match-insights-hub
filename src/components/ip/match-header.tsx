@@ -117,18 +117,8 @@ export function MatchHeader({
   return (
     <section
       aria-label={`${teamA} against ${teamB}`}
-      className={cn("relative overflow-hidden rounded-[16px] border border-wire", className)}
-      style={{ background: "linear-gradient(180deg, #1a1e24 0%, #14171c 100%)" }}
+      className={cn("tactical-grid relative overflow-hidden rounded-[8px] border border-wire bg-workspace", className)}
     >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.015]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(45deg, #ffffff 0 1px, transparent 1px 10px), repeating-linear-gradient(-45deg, #ffffff 0 1px, transparent 1px 10px)",
-        }}
-      />
-
       {/* Row 1 — score */}
       <div className="relative flex min-h-14 items-center justify-between px-5 py-4 md:px-7 md:py-5">
         <TeamTile

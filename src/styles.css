@@ -49,13 +49,15 @@
   --color-story-paper: var(--story-paper);
   --color-story-own: var(--story-own);
   --color-story-other: var(--story-other);
+  --color-ink: var(--ink);
+  --color-workspace: var(--workspace);
 
   --color-card: var(--surface);
   --color-card-foreground: var(--text);
   --color-popover: var(--surface-2);
   --color-popover-foreground: var(--text);
   --color-primary: var(--cream);
-  --color-primary-foreground: #111315;
+  --color-primary-foreground: var(--ink);
   --color-secondary: var(--surface-2);
   --color-secondary-foreground: var(--text);
   --color-muted: var(--surface-2);
@@ -63,7 +65,7 @@
   --color-accent: var(--surface-3);
   --color-accent-foreground: var(--cream);
   --color-destructive: var(--quality-bad);
-  --color-destructive-foreground: #ffffff;
+  --color-destructive-foreground: var(--text);
   --color-border: var(--wire);
   --color-input: var(--wire);
   --color-ring: var(--cream);
@@ -100,6 +102,8 @@
   --club-bayern: #dc052d;
   --story-ink: #08090b;
   --story-paper: #f4f0e6;
+  --ink: #111315;
+  --workspace: #101318;
   --radius: 16px;
   color-scheme: dark;
 }
@@ -118,12 +122,35 @@
     color: var(--text);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+    min-width: 320px;
   }
 
   :focus-visible {
     outline: 2px solid var(--cream);
     outline-offset: 2px;
   }
+}
+
+@utility tactical-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--wire-2) 36%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--wire-2) 36%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@utility section-kicker {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@utility workspace-panel {
+  border: 1px solid var(--wire);
+  border-radius: 8px;
+  background: var(--surface);
 }
 
 /* Display type helpers */

@@ -13,12 +13,12 @@ export function AuthShell({
   foot?: ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-10 md:px-7">
+    <div className="tactical-grid flex min-h-screen items-center justify-center bg-bg px-4 py-10 md:px-7">
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
-        className="w-full max-w-[420px] rounded-[16px] border border-wire bg-surface p-6"
+        className="w-full max-w-[420px] rounded-[8px] border border-wire bg-surface p-6"
       >
         <div className="text-center">
           <Link to="/" aria-label="Ipanema home">
