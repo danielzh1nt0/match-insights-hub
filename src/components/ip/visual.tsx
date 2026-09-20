@@ -17,6 +17,18 @@ export type StatInfo = {
   onSeeMoments?: () => void;
 };
 
+export type VisualTakeaway = {
+  value: string | number;
+  unit?: string;
+  label?: string;
+};
+
+export type VisualComparison = {
+  label: string;
+  value: string;
+  tone?: "good" | "bad" | "neutral";
+};
+
 
 function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
   useEffect(() => {
@@ -102,6 +114,10 @@ export function Visual({
   children,
   className,
   action,
+  takeaway,
+  comparison,
+  honesty,
+  framing = "number-led",
 }: {
   question: string;
   caption: string;
@@ -109,8 +125,14 @@ export function Visual({
   children: ReactNode;
   className?: string;
   action?: ReactNode;
+  takeaway?: VisualTakeaway;
+  comparison?: VisualComparison;
+  honesty?: string;
+  framing?: "number-led" | "custom";
 }) {
   const [open, setOpen] = useState(false);
+  const inferred = info.rows.find((row) => row.cream)?.value ?? "—";
+  const shownTakeaway = takeaway ?? { value: inferred };
   return (
     <section className={cn("rounded-[14px] border border-wire bg-surface p-3.5", className)}>
       <div className="flex items-start justify-between gap-3">
@@ -124,8 +146,40 @@ export function Visual({
           <Info size={17} />
         </button>
       </div>
-      <p className="mt-1 truncate text-[11.5px] text-text-faint">{caption}</p>
+      <p className="mt-1 text-[11.5px] leading-snug text-text-faint">{caption}</p>
+      {framing === "number-led" && (
+        <div className="mt-4">
+          <div className="flex min-h-[58px] items-end gap-2">
+            <strong className="display-i text-[48px] leading-[.85] text-cream md:text-[56px]">
+              {shownTakeaway.value}
+            </strong>
+            {shownTakeaway.unit && (
+              <span className="pb-1 text-[12px] font-semibold text-cream-dim">{shownTakeaway.unit}</span>
+            )}
+          </div>
+          {shownTakeaway.label && (
+            <p className="mt-1 text-[11px] font-semibold text-text-faint">{shownTakeaway.label}</p>
+          )}
+        </div>
+      )}
       <div className="mt-3">{children}</div>
+      {framing === "number-led" && (
+        <div className="mt-4 flex items-center justify-between gap-4 border-t border-wire-2 pt-2 text-[11.5px] font-semibold">
+          <span className="text-text-faint">{comparison?.label ?? "vs last 5 matches"}</span>
+          <span
+            className={cn(
+              comparison?.tone === "bad" && "text-cream",
+              comparison?.tone === "good" && "text-quality-good",
+              (!comparison || comparison.tone === "neutral") && "text-text-faint",
+            )}
+          >
+            {comparison?.value ?? "—"}
+          </span>
+        </div>
+      )}
+      {framing === "number-led" && (
+        <p className="mt-2 text-[10.5px] font-semibold text-text-faint">{honesty ?? "0 confirmed · 0 detected"}</p>
+      )}
       {action && <div className="mt-3">{action}</div>}
       {open && <InfoSheet info={info} onClose={() => setOpen(false)} />}
     </section>

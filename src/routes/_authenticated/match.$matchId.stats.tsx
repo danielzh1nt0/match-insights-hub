@@ -18,6 +18,21 @@ const SECTION_EVENTS: Record<string, string[]> = {
   passes: ["better_option", "pass_bad", "pass_risky"],
 };
 
+const SECTION_QUESTIONS: Record<string, string> = {
+  ball: "Who had the ball?",
+  pressing: "How fast did we react?",
+  shape: "How compact were we?",
+  shooting: "Where did shots come from?",
+  players: "Who covered the ground?",
+  passes: "Who progressed the ball?",
+};
+
+function numeric(value: string | undefined) {
+  if (!value || value === "—") return null;
+  const parsed = Number.parseFloat(value.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export const Route = createFileRoute("/_authenticated/match/$matchId/stats")({
   head: () => ({
     meta: [
@@ -25,6 +40,8 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/stats")({
       { name: "description", content: "Ball, pressing, shape, shooting, players and passes in plain numbers." },
       { property: "og:title", content: "Match stats — Ipanema" },
       { property: "og:description", content: "Every number next to the target you set." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Stats,
@@ -41,6 +58,29 @@ function Stats() {
   const [tab, setTab] = useState("ball");
 
   const active = sections.find((t) => t.key === tab);
+  const ownKey = team === "B" ? "b" : "a";
+  const otherKey = ownKey === "a" ? "b" : "a";
+  const primaryRow = active?.rows[0];
+  const ownValue = active?.key === "players"
+    ? players.reduce((sum, player) => sum + player.distanceM, 0)
+    : numeric(primaryRow?.[ownKey]);
+  const otherValue = active?.key === "players" ? null : numeric(primaryRow?.[otherKey]);
+  const targetValue = numeric(primaryRow?.target);
+  const comparisonValue = targetValue !== null && ownValue !== null
+    ? ownValue - targetValue
+    : otherValue !== null && ownValue !== null
+      ? ownValue - otherValue
+      : null;
+  const takeawayUnit = active?.key === "players"
+    ? "m"
+    : primaryRow?.a.replace(/[0-9.,-]/g, "").trim() || null;
+  const takeawayLabel = active?.key === "players"
+    ? "covered by the selected team"
+    : primaryRow?.label.toLowerCase() ?? null;
+  const higherIsGood = active?.key !== "shape";
+  const sectionTypes = active ? SECTION_EVENTS[active.key] ?? [] : [];
+  const sectionDetected = events.filter((event) => sectionTypes.includes(event.type) && (!team || event.team === team)).length;
+  const sectionConfirmed = events.filter((event) => sectionTypes.includes(event.type) && (!team || event.team === team) && event.status === "confirmed").length;
 
   return (
     <MatchShell
@@ -68,8 +108,19 @@ function Stats() {
           </div>
 
           <Visual
-            question={`What do the ${active.label.toLowerCase()} numbers say?`}
+            question={SECTION_QUESTIONS[active.key] ?? `What do the ${active.label.toLowerCase()} numbers say?`}
             caption={active.caption}
+            takeaway={{
+              value: ownValue ?? "—",
+              ...(takeawayUnit ? { unit: takeawayUnit } : {}),
+              ...(takeawayLabel ? { label: takeawayLabel } : {}),
+            }}
+            comparison={{
+              label: targetValue !== null ? "vs our target" : otherValue !== null ? "vs the opponent" : "vs season average",
+              value: comparisonValue === null ? "—" : `${comparisonValue > 0 ? "+" : ""}${Math.round(comparisonValue * 10) / 10}`,
+              tone: comparisonValue === null ? "neutral" : (comparisonValue >= 0) === higherIsGood ? "good" : "bad",
+            }}
+            honesty={`${sectionConfirmed} confirmed · ${sectionDetected} detected`}
             info={{
               title: active.label,
               rows: [

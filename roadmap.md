@@ -13,7 +13,7 @@
 - Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
-- [ ] Prompt B: Veo-style visual refactor after Prompt A approval
+- [x] Prompt B: Veo-style number-led visual refactor across Insights, Stats, and Territory
 - [x] Match event filter: wrapped chip row, responsive More sheet, grouped filtering, and mobile/desktop QA
 - [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
 - [x] `<MatchStory>` full-screen match-specific 5-slide recap + route `/match/:id/story` + `<StoryLauncher>` pill on library cards and insights

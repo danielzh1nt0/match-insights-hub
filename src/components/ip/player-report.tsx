@@ -57,6 +57,7 @@ export function PlayerReport({
       </div>
 
       <Visual
+        framing="custom"
         question="Where did this player play?"
         caption="Brighter areas are where they spent more time."
         info={{
@@ -77,6 +78,7 @@ export function PlayerReport({
       </Visual>
 
       <Visual
+        framing="custom"
         question="What did this player do, and when?"
         caption="Only this player's own moments, in match order."
         info={{
