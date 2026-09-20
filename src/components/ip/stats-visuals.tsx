@@ -49,7 +49,7 @@ function ReactionStrip({ events, team, matchId }: Pick<Props, "events" | "team" 
   </div>;
 }
 
-function ShapeRibbon({ stats, team }: Pick<Props,"stats"|"team">) {
+export function ShapeRibbon({ stats, team }: Pick<Props,"stats"|"team">) {
   const raw=(stats?.metrics?.["shape_timeline"] as Record<string, unknown[]>|undefined)?.[team] ?? [];
   const samples=raw.map(v=>v as Record<string,unknown>).map(v=>({t:n(v["t"]),length:n(v["length"]),width:n(v["width"])})).filter(v=>v.t!==null&&v.length!==null);
   const maxT=Math.max(...samples.map(v=>v.t ?? 0),1), maxL=Math.max(...samples.map(v=>v.length ?? 0),1);

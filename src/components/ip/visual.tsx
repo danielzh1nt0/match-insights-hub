@@ -230,6 +230,33 @@ export function Pitch({
   );
 }
 
+export function PortraitPitch({
+  children,
+  arrowLabel,
+}: {
+  children?: ReactNode;
+  arrowLabel?: string;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[300px]">
+      <svg viewBox="0 0 64 100" className="block h-auto w-full rounded-[12px] bg-surface-2" role="img" aria-label="Pitch">
+        <rect x="0" y="0" width="64" height="100" fill="var(--surface-2)" />
+        <g stroke="var(--cream)" strokeOpacity=".28" strokeWidth=".45" fill="none">
+          <rect x="2" y="2" width="60" height="96" />
+          <line x1="2" y1="50" x2="62" y2="50" />
+          <circle cx="32" cy="50" r="9" />
+          <rect x="14" y="2" width="36" height="12" />
+          <rect x="14" y="86" width="36" height="12" />
+          <line x1="2" y1="33.3" x2="62" y2="33.3" strokeDasharray="2 2" strokeOpacity=".35" />
+          <line x1="2" y1="66.6" x2="62" y2="66.6" strokeDasharray="2 2" strokeOpacity=".35" />
+        </g>
+        {children}
+      </svg>
+      {arrowLabel && <span className="mt-1.5 block text-center text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">↑ {arrowLabel}</span>}
+    </div>
+  );
+}
+
 export function ZoneGrid({ values, color = "var(--cream)" }: { values: number[]; color?: string }) {
   const max = Math.max(...values, 0.01);
   return (
