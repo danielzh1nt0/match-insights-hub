@@ -26,7 +26,7 @@ function Territory() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, territory, loading, events, stats, players } = useAnalysis(matchId, scope);
+  const { match, team, colours, territory, loading, events, stats } = useAnalysis(matchId, scope);
   const [snapIndex, setSnapIndex] = useState(0);
 
   const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
@@ -81,7 +81,6 @@ function Territory() {
             <p className="num mt-2 text-[11.5px] text-text-faint">
               n = {territory.playerCount} players · {territory.frameCount.toLocaleString()} frames
             </p>
-            {players.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Tracked players">{players.slice(0, 12).map((player) => <Chip key={player.id} className="min-h-11 min-w-11 justify-center px-2">#{player.id}</Chip>)}</div>}
           </Visual>
 
           <Visual
