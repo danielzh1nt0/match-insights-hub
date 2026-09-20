@@ -4,6 +4,7 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Card, Chip } from "@/components/ip/primitives";
 import { StatsVisual } from "@/components/ip/stats-visuals";
+import { DeepAnswer, LineBreakHero, LineStates, LineTimeline } from "@/components/ip/line-break-cards";
 import { Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
 import { countEvents, countLine } from "@/lib/event-reviews";
@@ -50,7 +51,7 @@ function Stats() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, sections, players, loading, events, confirmedCount, stats, file } = useAnalysis(
+  const { match, team, colours, sections, players, loading, events, confirmedCount, stats, file, lineDefending } = useAnalysis(
     matchId,
     scope,
   );
@@ -134,6 +135,9 @@ function Stats() {
           >
             <StatsVisual section={active} players={players} stats={stats} file={file} events={events} team={team ?? "A"} colours={colours} matchId={matchId} />
           </Visual>
+
+          {active.key === "pressing" && lineDefending && <LineBreakHero data={lineDefending} matchId={matchId} />}
+          {active.key === "shape" && lineDefending && <><DeepAnswer data={lineDefending} /><LineStates data={lineDefending} matchId={matchId} /><LineTimeline data={lineDefending} matchId={matchId} /></>}
 
           {SECTION_EVENTS[active.key] && (
             <Card>

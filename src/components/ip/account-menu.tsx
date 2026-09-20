@@ -66,11 +66,22 @@ export function AccountMenu() {
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              navigate({ to: "/onboarding" });
+              navigate({ to: "/settings/club" });
             }}
             className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
           >
             Club setup
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              navigate({ to: "/settings/account" });
+            }}
+            className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
+          >
+            Account
           </button>
           <button
             type="button"
