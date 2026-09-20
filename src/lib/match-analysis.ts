@@ -127,8 +127,10 @@ export type LineDefending = {
   lineBreakCount: number | null;
   lineBreakLast5Avg: number | null;
   lineBreaks: { id: string; t: number; x: number; y: number }[];
+  lineBreakConfirmed: number;
   timeline: { t: number; height: number }[];
   shots: { id: string; t: number; height: number; goal: boolean }[];
+  shotConfirmed: number;
   shotsUnder30: number;
   medianM: number | null;
   usualM: number | null;
@@ -348,8 +350,10 @@ export function buildLineDefending(
     lineBreakCount: metricForTeam(metrics["line_breaks_against"], ownTeam) ?? (lineBreakEvents.length ? lineBreakEvents.length : null),
     lineBreakLast5Avg: optionalNum(row?.line_breaks_against_last5_avg),
     lineBreaks,
+    lineBreakConfirmed: lineBreakEvents.filter((event) => (event as FeedEvent & { status?: string }).status === "confirmed").length,
     timeline,
     shots,
+    shotConfirmed: conceded.filter(({ event }) => (event as FeedEvent & { status?: string }).status === "confirmed").length,
     shotsUnder30: shots.filter((shot) => shot.height < 30).length,
     medianM,
     usualM,

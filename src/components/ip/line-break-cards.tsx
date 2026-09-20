@@ -4,8 +4,8 @@ import { Visual } from "./visual";
 import type { LineDefending, LineState } from "@/lib/match-analysis";
 import { cn } from "@/lib/utils";
 
-function Honesty({ detected }: { detected: number }) {
-  return <p className="mt-3 border-t border-wire-2 pt-2 text-[10.5px] font-semibold text-text-faint">{detected} detected</p>;
+function Honesty({ confirmed, detected }: { confirmed: number; detected: number }) {
+  return <p className="mt-3 border-t border-wire-2 pt-2 text-[10.5px] font-semibold text-text-faint">{confirmed} confirmed · {detected} detected</p>;
 }
 
 function MiniPitch({ x, y, checked = false }: { x?: number; y?: number; checked?: boolean }) {
@@ -37,7 +37,7 @@ function LineBreakHero({ data, matchId }: { data: LineDefending; matchId: string
         </div>
       ) : <p className="mt-4 text-center text-[11.5px] text-text-faint">Incident locations were not supplied.</p>}
       <div className="mt-4 flex items-center justify-between border-t border-wire-2 pt-2 text-[11.5px] font-semibold"><span className="text-text-faint">vs last 5 matches</span><span className={cn(delta !== null && delta > 0 ? "text-cream" : "text-text-faint")}>{delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta}`}</span></div>
-      <Honesty detected={data.lineBreaks.length} />
+      <Honesty confirmed={data.lineBreakConfirmed} detected={data.lineBreaks.length} />
     </Visual>
   );
 }
@@ -53,7 +53,7 @@ function LineTimeline({ data, matchId }: { data: LineDefending; matchId: string 
         {data.shots.map((shot, index) => <Link key={shot.id} to="/match/$matchId/match" params={{ matchId }} search={{ t: Math.max(0, shot.t - 2) }} aria-label={`Watch conceded ${shot.goal ? "goal" : "shot"} ${index + 1}`} className="tap absolute top-1/2 z-10 grid -translate-x-1/2 -translate-y-1/2 place-items-center" style={{ left: `${(shot.t / maxT) * 100}%` }}><span className="block h-3.5 w-3.5 rotate-45 bg-quality-bad" /></Link>)}
       </div>
       <p className={cn("mt-3 text-[12.5px]", data.shots.length > 0 && data.shotsUnder30 / data.shots.length >= .5 ? "text-cream" : "text-text-dim")}>{data.shots.length ? `${data.shotsUnder30} of ${data.shots.length} shots happened when our line was under 30 m.` : "No conceded shots could be matched to the line."}</p>
-      <Honesty detected={data.shots.length} />
+      <Honesty confirmed={data.shotConfirmed} detected={data.shots.length} />
     </Visual>
   );
 }
@@ -67,7 +67,7 @@ function DeepAnswer({ data }: { data: LineDefending }) {
       <span className={cn("display-i inline-flex min-h-11 items-center rounded-full border px-6 text-[24px]", tone)}>{answer}</span>
       <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-text-dim">{data.belowUsualPct === null || data.usualM === null ? "A usual line-height baseline was not supplied for this match." : `We defended lower than our usual ${data.usualM} m average for ${data.belowUsualPct}% of their possession.`}</p>
       <p className="mt-2 text-[11px] text-text-faint">Our median: {data.medianM === null ? "—" : `${data.medianM} m`} · Usual: {data.usualM === null ? "—" : `${data.usualM} m`}</p>
-      <Honesty detected={data.timeline.length} />
+      <Honesty confirmed={data.shotConfirmed} detected={data.shots.length} />
     </Visual>
   );
 }
@@ -89,7 +89,7 @@ function LineStates({ data, matchId }: { data: LineDefending; matchId: string })
         {data.states.map((state) => <Link key={state.key} to="/match/$matchId/reel" params={{ matchId }} search={{ line: state.key }} className={cn("tap min-w-0 border-b-2 bg-surface-2 p-2", worst > 0 && state.goals === worst ? "border-quality-bad" : "border-transparent")} aria-label={`Open ${state.key} line moments`}><span className="block truncate text-[10px] font-bold uppercase text-text-faint">{STATE_LABEL[state.key]} {state.height} m</span><div className="mt-2"><StatePitch state={state} /></div><strong className="display-i mt-2 block text-[24px] leading-none text-cream">{state.goals}</strong><span className="mt-1 block text-[10.5px] font-semibold text-text-faint">{state.shots} shot{state.shots === 1 ? "" : "s"}</span></Link>)}
       </div>
       <p className="mt-3 text-[12.5px] text-text-dim">Pushing high: <span className="text-cream">{high?.goals ?? 0} conceded.</span> Sitting deep: <span className="text-cream">{low?.goals ?? 0} conceded.</span></p>
-      <Honesty detected={data.shots.length} />
+      <Honesty confirmed={data.shotConfirmed} detected={data.shots.length} />
     </Visual>
   );
 }
