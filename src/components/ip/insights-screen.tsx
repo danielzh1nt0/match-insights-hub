@@ -51,9 +51,10 @@ export function InsightsScreen({ matchId, match, findings, events, iconColour, o
 }) {
   const navigate = useNavigate();
   const eligible = findings.filter((finding) => !(finding.value === 0 && finding.target == null && finding.baseline == null));
-  const [expandedId, setExpandedId] = useState<string | null>(eligible[0]?.id ?? null);
+  const shownFindings = eligible.slice(0, 3);
+  const [expandedId, setExpandedId] = useState<string | null>(shownFindings[0]?.id ?? null);
   const [checkedMoments, setCheckedMoments] = useState<Set<string>>(new Set());
-  const first = eligible[0];
+  const first = shownFindings[0];
 
   if (!first || eligible.length < 3) {
     return (
@@ -89,12 +90,17 @@ export function InsightsScreen({ matchId, match, findings, events, iconColour, o
         actionLabel="Build the session →"
       />
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "20px 16px 8px" }}>
-        <div style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "14px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-dim)" }}>Findings</div>
-        <div style={{ fontSize: "11.5px", color: "var(--text-faint)", fontWeight: 600 }}>{eligible.length} to review</div>
+      <div style={{ border: "1px solid var(--wire)", borderLeft: "3px solid var(--text-faint)", borderRadius: "12px", background: "var(--surface)", padding: "14px 16px", margin: "14px 16px 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+        <div style={{ fontSize: "12.5px", color: "var(--text-dim)", fontWeight: 500, lineHeight: 1.5 }}>Possession withheld — ball tracking unreliable in this clip.</div>
+        <div style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--cream)", flexShrink: 0, cursor: "pointer" }}>Why?</div>
       </div>
 
-      {eligible.map((finding) => {
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "20px 16px 8px" }}>
+        <div style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "14px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-dim)" }}>Findings</div>
+        <div style={{ fontSize: "11.5px", color: "var(--text-faint)", fontWeight: 600 }}>{shownFindings.length} to review</div>
+      </div>
+
+      {shownFindings.map((finding) => {
         const expanded = expandedId === finding.id;
         const result = resultFor(finding);
         const moments = events.filter((event) => finding.eventIds.includes(event.id)).slice(0, 6);
