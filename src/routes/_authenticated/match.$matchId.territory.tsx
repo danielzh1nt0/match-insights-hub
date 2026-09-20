@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
+import { LineBreakCards } from "@/components/ip/line-break-cards";
 import { Card, Chip } from "@/components/ip/primitives";
 import { HeatBlobs, Pitch, PitchDots, PitchShirts, Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
@@ -14,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/territory")
       { name: "description", content: "Where the team lived, where it lost the ball and where it won it back." },
       { property: "og:title", content: "Territory — Ipanema" },
       { property: "og:description", content: "Heat maps, losses, recoveries and a shape replay." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Territory,
@@ -23,7 +26,7 @@ function Territory() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, territory, loading } = useAnalysis(matchId, scope);
+  const { match, team, colours, territory, lineDefending, loading } = useAnalysis(matchId, scope);
   const [snapIndex, setSnapIndex] = useState(0);
 
   const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
@@ -82,6 +85,8 @@ function Territory() {
               <span className="text-[14px] text-cream-dim"> m</span>
             </span>
           </Card>
+
+          {lineDefending && <LineBreakCards data={lineDefending} matchId={matchId} />}
 
           <div className="grid gap-3 md:grid-cols-2">
             <Visual

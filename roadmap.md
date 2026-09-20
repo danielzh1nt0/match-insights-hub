@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Done
+- Prompt A: Territory line-height presentation replaced by four coach-first `<LineBreakCards>` cards
 - Stop video overlay flicker: interpolated and smoothed players/ball, dropout persistence, stable shapes and lanes
 - Session screen rebuild: animated tactical drill pitches, setup/instructions/cues/progressions, regeneration, and responsive QA
 - Phase 1: brand, auth, onboarding, library, upload, processing
@@ -12,7 +13,6 @@
 - Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
-- [ ] Prompt A: replace Territory line-height presentation with four coach-first `<LineBreakCards>` cards
 - [ ] Prompt B: Veo-style visual refactor after Prompt A approval
 - [x] Match event filter: wrapped chip row, responsive More sheet, grouped filtering, and mobile/desktop QA
 - [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states

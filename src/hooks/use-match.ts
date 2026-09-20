@@ -4,6 +4,7 @@ import type { TeamScope } from "@/components/ip/chrome";
 import { buildMatchData } from "@/lib/match-data";
 import {
   buildFindings,
+  buildLineDefending,
   buildPlayerStats,
   buildStatSections,
   buildSummary,
@@ -102,6 +103,7 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
   const match = useMemo(() => (item ? toLibraryMatch(item) : undefined), [item]);
 
   const territory = useMemo(() => buildTerritory(file, stats, team), [file, stats, team]);
+  const lineDefending = useMemo(() => buildLineDefending(file, stats, team ?? "A"), [file, stats, team]);
   const findings = useMemo(
     () =>
       buildFindings(findingFile, stats, team ?? "A", thresholds).map((f) => ({ ...f, basis })),
@@ -129,6 +131,7 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     colours,
     thresholds,
     territory,
+    lineDefending,
     findings,
     summary,
     sections,
