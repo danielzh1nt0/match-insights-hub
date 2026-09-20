@@ -10,7 +10,7 @@ import type { LibraryMatch } from "@/lib/sample-data";
 import { isLabelled } from "@/lib/match-source";
 import { attacksRight, teamColours } from "@/lib/match-analysis";
 import { useMatchRecord } from "@/hooks/use-match";
-import { crestForTeam } from "@/lib/team-crests";
+import { colourForTeam, crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
 
 export function MatchShell({
@@ -38,6 +38,8 @@ export function MatchShell({
   const [prompted, setPrompted] = useState(false);
   const selectorsVisible = showSelectors && Boolean(scope && setScope && period && setPeriod);
   const colours = teamColours(record?.label ?? null);
+  const colourA = match ? colourForTeam(match.teamA, record?.label?.colour_a ?? team?.colorA ?? colours.A) : colours.A;
+  const colourB = match ? colourForTeam(match.teamB, record?.label?.colour_b ?? team?.colorB ?? colours.B) : colours.B;
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
 
@@ -61,8 +63,8 @@ export function MatchShell({
               teamB={match.teamB}
               scoreA={match.status === "ready" ? match.scoreA : null}
               scoreB={match.status === "ready" ? match.scoreB : null}
-              colourA={record?.label?.colour_a ?? team?.colorA ?? colours.A}
-              colourB={record?.label?.colour_b ?? team?.colorB ?? colours.B}
+               colourA={colourA}
+               colourB={colourB}
                {...(crestA ? { crestA } : {})}
                {...(crestB ? { crestB } : {})}
               {...(match.status === "ready"
@@ -88,8 +90,8 @@ export function MatchShell({
                   onChange={setScope!}
                   teamA={match.teamA}
                   teamB={match.teamB}
-                  colourA={colours.A}
-                  colourB={colours.B}
+                   colourA={colourA}
+                   colourB={colourB}
                 />
                 <PeriodSelector value={period!} onChange={setPeriod!} periods={match.durationS > 1500 ? 2 : 1} />
               </div>

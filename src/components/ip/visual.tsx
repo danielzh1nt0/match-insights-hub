@@ -117,6 +117,7 @@ export function Visual({
   takeaway,
   comparison,
   honesty,
+  footerNote,
   framing = "number-led",
 }: {
   question: string;
@@ -128,14 +129,15 @@ export function Visual({
   takeaway?: VisualTakeaway;
   comparison?: VisualComparison;
   honesty?: string;
+  footerNote?: string;
   framing?: "number-led" | "custom";
 }) {
   const [open, setOpen] = useState(false);
   const inferred = info.rows.find((row) => row.cream)?.value ?? "—";
   const shownTakeaway = takeaway ?? { value: inferred };
   return (
-    <section className={cn("rounded-[14px] border border-wire bg-surface p-3.5", className)}>
-      <div className="flex items-start justify-between gap-3">
+    <section className={cn("overflow-hidden rounded-[14px] border border-wire bg-surface", className)}>
+      <div className="flex items-start justify-between gap-3 px-4 pb-1.5 pt-3.5">
         <h2 className="display text-[17px] uppercase leading-tight text-cream">{question}</h2>
         <button
           type="button"
@@ -143,12 +145,14 @@ export function Visual({
           onClick={() => setOpen(true)}
           className="tap -mr-2 -mt-2 flex shrink-0 items-center justify-center text-text-faint hover:text-cream"
         >
-          <Info size={17} />
+          <span className="grid h-[22px] w-[22px] place-items-center rounded-full border-[1.5px] border-wire">
+            <Info size={12} strokeWidth={2} />
+          </span>
         </button>
       </div>
-      <p className="mt-1 text-[11.5px] leading-snug text-text-faint">{caption}</p>
+      <p className="px-4 pb-3 text-[11.5px] leading-[1.5] text-text-faint">{caption}</p>
       {framing === "number-led" && (
-        <div className="mt-4">
+        <div className="px-4 pb-3">
           <div className="flex min-h-[58px] items-end gap-2">
             <strong className="display-i text-[48px] leading-[.85] text-cream md:text-[56px]">
               {shownTakeaway.value}
@@ -162,9 +166,9 @@ export function Visual({
           )}
         </div>
       )}
-      <div className="mt-3">{children}</div>
+      <div className="px-4 pb-3">{children}</div>
       {framing === "number-led" && (
-        <div className="mt-4 flex items-center justify-between gap-4 border-t border-wire-2 pt-2 text-[11.5px] font-semibold">
+        <div className="flex items-center justify-between gap-4 border-t border-wire-2 px-4 py-2 text-[11.5px] font-semibold">
           <span className="text-text-faint">{comparison?.label ?? "vs last 5 matches"}</span>
           <span
             className={cn(
@@ -177,10 +181,13 @@ export function Visual({
           </span>
         </div>
       )}
-      {framing === "number-led" && (
-        <p className="mt-2 text-[10.5px] font-semibold text-text-faint">{honesty ?? "0 confirmed · 0 detected"}</p>
+      {(honesty || framing === "number-led") && (
+        <div className="flex min-h-9 items-center justify-between gap-3 border-t border-wire-2 px-4 py-2 text-[10.5px] font-medium text-text-faint">
+          <span className="inline-flex items-center gap-1.5 before:h-[5px] before:w-[5px] before:shrink-0 before:rounded-full before:bg-text-faint">{honesty ?? "0 confirmed · 0 detected"}</span>
+          {footerNote && <span className="text-right">{footerNote}</span>}
+        </div>
       )}
-      {action && <div className="mt-3">{action}</div>}
+      {action && <div className="border-t border-wire-2 px-4 py-3">{action}</div>}
       {open && <InfoSheet info={info} onClose={() => setOpen(false)} />}
     </section>
   );
@@ -219,6 +226,33 @@ export function Pitch({
           {arrowLabel}
         </span>
       )}
+    </div>
+  );
+}
+
+export function PortraitPitch({
+  children,
+  arrowLabel,
+}: {
+  children?: ReactNode;
+  arrowLabel?: string;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[300px]">
+      <svg viewBox="0 0 64 100" className="block h-auto w-full rounded-[12px] bg-surface-2" role="img" aria-label="Pitch">
+        <rect x="0" y="0" width="64" height="100" fill="var(--surface-2)" />
+        <g stroke="var(--cream)" strokeOpacity=".28" strokeWidth=".45" fill="none">
+          <rect x="2" y="2" width="60" height="96" />
+          <line x1="2" y1="50" x2="62" y2="50" />
+          <circle cx="32" cy="50" r="9" />
+          <rect x="14" y="2" width="36" height="12" />
+          <rect x="14" y="86" width="36" height="12" />
+          <line x1="2" y1="33.3" x2="62" y2="33.3" strokeDasharray="2 2" strokeOpacity=".35" />
+          <line x1="2" y1="66.6" x2="62" y2="66.6" strokeDasharray="2 2" strokeOpacity=".35" />
+        </g>
+        {children}
+      </svg>
+      {arrowLabel && <span className="mt-1.5 block text-center text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">↑ {arrowLabel}</span>}
     </div>
   );
 }

@@ -17,7 +17,7 @@
 - [x] Match event filter: wrapped chip row, responsive More sheet, grouped filtering, and mobile/desktop QA
 - [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
 - [x] `<MatchStory>` full-screen match-specific 5-slide recap + route `/match/:id/story` + `<StoryLauncher>` pill on library cards and insights
-- [ ] Correct Territory and Stats against Visualisation Library v16: exact card anatomy and six distinct visual families
+- [x] Correct Territory and Stats against Visualisation Library v16: exact card anatomy and six distinct visual families
 - [ ] Phase 3 remainder: settings screens, coach marks per screen, skeleton/empty/error/offline states
 
 - [x] Name the Bundesliga sample match BVB vs FC Bayern and add both crests (BVB = uploaded yellow crest)

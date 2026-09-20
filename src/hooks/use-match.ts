@@ -24,6 +24,7 @@ import {
 } from "@/lib/match-source";
 import { applyReviews, confirmedOnly, fileWithReviews } from "@/lib/event-reviews";
 import { useReviews } from "@/hooks/use-reviews";
+import { colourForTeam } from "@/lib/team-crests";
 
 export function useMatchRecord(matchId: string) {
   return useQuery({
@@ -83,7 +84,14 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
   const stats = statsQuery.data;
   const team = teamKey(scope);
   const thresholds = useMemo(() => thresholdsFrom(label), [label]);
-  const colours = useMemo(() => teamColours(label), [label]);
+  const match = useMemo(() => (item ? toLibraryMatch(item) : undefined), [item]);
+  const colours = useMemo(() => {
+    const saved = teamColours(label);
+    return {
+      A: colourForTeam(match?.teamA ?? "", saved.A),
+      B: colourForTeam(match?.teamB ?? "", saved.B),
+    };
+  }, [label, match?.teamA, match?.teamB]);
 
   const { events, hidden } = useMemo(
     () => applyReviews(raw?.events, review.reviews),
@@ -99,8 +107,6 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     () => (basis === "confirmed" ? fileWithReviews(raw, confirmed) : file),
     [basis, raw, confirmed, file],
   );
-
-  const match = useMemo(() => (item ? toLibraryMatch(item) : undefined), [item]);
 
   const territory = useMemo(() => buildTerritory(file, stats, team), [file, stats, team]);
   const lineDefending = useMemo(() => buildLineDefending(file, stats, team ?? "A"), [file, stats, team]);

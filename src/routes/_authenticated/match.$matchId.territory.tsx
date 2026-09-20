@@ -4,7 +4,8 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { LineBreakCards } from "@/components/ip/line-break-cards";
 import { Chip } from "@/components/ip/primitives";
-import { HeatBlobs, Pitch, PitchDots, PitchShirts, Visual } from "@/components/ip/visual";
+import { ShapeRibbon } from "@/components/ip/stats-visuals";
+import { Pitch, PitchDots, PitchShirts, PortraitPitch, Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
 
@@ -26,8 +27,9 @@ function Territory() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, territory, lineDefending, loading, events } = useAnalysis(matchId, scope);
+  const { match, team, colours, territory, lineDefending, loading, events, stats } = useAnalysis(matchId, scope);
   const [snapIndex, setSnapIndex] = useState(0);
+  const [turnoverMode, setTurnoverMode] = useState<"lost" | "won">("lost");
 
   const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
   const teamColour = team === "B" ? colours.B : colours.A;
@@ -61,6 +63,7 @@ function Territory() {
             takeaway={{ value: territory.playerCount, unit: "players", label: "typically visible in each frame" }}
             comparison={{ label: "vs season average", value: "—", tone: "neutral" }}
             honesty={`${territory.playerCount} players · ${territory.frameCount.toLocaleString()} frames`}
+            footerNote="Whole match"
             info={{
               title: "Where did we play?",
               glossaryId: "heat-map",
@@ -73,9 +76,10 @@ function Territory() {
               ],
             }}
           >
-            <Pitch arrowLabel={`${match.teamA} attack →`}>
-              <HeatBlobs points={territory.heat} color={teamColour} />
-            </Pitch>
+            <PortraitPitch arrowLabel={`${teamName} attack`}>
+              {territory.heat.map((point, index) => <circle key={index} cx={(point.y / 100) * 64} cy={100 - point.x} r={3 + point.w * 8} fill={teamColour} opacity={.06 + point.w * .18} />)}
+            </PortraitPitch>
+            <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-text-faint"><span>0:00</span><span>1st half</span><span>2nd half</span><span>Full</span></div>
             <p className="num mt-2 text-[11.5px] text-text-faint">
               n = {territory.playerCount} players · {territory.frameCount.toLocaleString()} frames
             </p>
@@ -83,71 +87,29 @@ function Territory() {
 
           <Visual
             question="How compact were we?"
-            caption={`Typical width from side to side for ${teamName}.`}
-            takeaway={{ value: territory.compactBandM, unit: "m", label: "wide at our typical shape" }}
+            caption="Thicker ribbon means we were stretched further front-to-back. The thin line is width."
+            takeaway={{ value: territory.blockLengthM, unit: "m", label: "our typical length" }}
             comparison={{ label: "vs our target", value: "—", tone: "neutral" }}
             honesty={`${territory.frameCount.toLocaleString()} detected frames`}
             info={{ title: "Team compactness", glossaryId: "compactness", rows: [{ label: "Typical width", value: `${territory.compactBandM} m`, cream: true }, { label: "Length back to front", value: `${territory.blockLengthM} m` }, { label: "Frames used", value: territory.frameCount.toLocaleString() }] }}
           >
-            <Pitch>
-              <rect x="28" y="14" width="44" height="36" rx="3" fill="var(--cream)" fillOpacity=".08" stroke="var(--cream)" strokeOpacity=".42" strokeDasharray="2 2" />
-              <line x1="28" y1="32" x2="72" y2="32" stroke="var(--cream)" strokeOpacity=".7" strokeWidth=".8" />
-            </Pitch>
+            <ShapeRibbon stats={stats} team={team ?? "A"} />
           </Visual>
 
           {lineDefending && <LineBreakCards data={lineDefending} matchId={matchId} />}
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Visual
-              question="Where did we lose it?"
-              caption="Each dot is one giveaway, at the ball's position."
-              takeaway={{ value: territory.losses.length, unit: territory.losses.length === 1 ? "loss" : "losses" }}
-              comparison={{ label: "vs the opponent", value: `${territory.losses.length - territory.recoveries.length > 0 ? "+" : ""}${territory.losses.length - territory.recoveries.length}`, tone: territory.losses.length > territory.recoveries.length ? "bad" : "good" }}
-              honesty={evidenceFor("turnover_lost")}
-              info={{
-                title: "Where was the ball lost?",
-                glossaryId: "turnover",
-                rows: [
-                  { label: "What it counts", value: "Balls given away" },
-                  { label: "Team", value: teamName ?? "Both teams", cream: true },
-                  { label: "Total", value: `${territory.losses.length}`, cream: true },
-                  { label: "Read it as", value: "Where possession broke down" },
-                ],
-              }}
-            >
-              <Pitch>
-                <PitchDots points={territory.losses} color="var(--quality-bad)" />
-              </Pitch>
-              <p className="num mt-2 text-[11.5px] text-text-faint">
-                {territory.losses.length} losses · {territory.recoveries.length} recoveries
-              </p>
-            </Visual>
-
-            <Visual
-              question="Where did we press?"
-              caption="Each dot is one ball recovered, at the ball's position."
-              takeaway={{ value: territory.recoveries.length, unit: territory.recoveries.length === 1 ? "recovery" : "recoveries" }}
-              comparison={{ label: "vs the opponent", value: `${territory.recoveries.length - territory.losses.length > 0 ? "+" : ""}${territory.recoveries.length - territory.losses.length}`, tone: territory.recoveries.length >= territory.losses.length ? "good" : "bad" }}
-              honesty={evidenceFor("turnover_won")}
-              info={{
-                title: "Where was the ball won back?",
-                glossaryId: "high-turnover",
-                rows: [
-                  { label: "What it counts", value: "Balls recovered" },
-                  { label: "Team", value: teamName ?? "Both teams", cream: true },
-                  { label: "Total", value: `${territory.recoveries.length}`, cream: true },
-                  { label: "Read it as", value: "Where pressure paid off" },
-                ],
-              }}
-            >
-              <Pitch>
-                <PitchDots points={territory.recoveries} color="var(--quality-good)" />
-              </Pitch>
-              <p className="num mt-2 text-[11.5px] text-text-faint">
-                {territory.recoveries.length} recoveries · {territory.losses.length} losses
-              </p>
-            </Visual>
-          </div>
+          <Visual
+            question="Where did we lose or win it?"
+            caption={turnoverMode === "lost" ? "Each dot is one time we gave it away." : "Each dot is one time we won it back."}
+            takeaway={{ value: turnoverMode === "lost" ? territory.losses.length : territory.recoveries.length, unit: turnoverMode === "lost" ? "lost" : "won" }}
+            comparison={{ label: "vs the other outcome", value: `${(turnoverMode === "lost" ? territory.losses.length - territory.recoveries.length : territory.recoveries.length - territory.losses.length) > 0 ? "+" : ""}${turnoverMode === "lost" ? territory.losses.length - territory.recoveries.length : territory.recoveries.length - territory.losses.length}`, tone: turnoverMode === "lost" ? (territory.losses.length > territory.recoveries.length ? "bad" : "good") : (territory.recoveries.length >= territory.losses.length ? "good" : "bad") }}
+            honesty={evidenceFor(turnoverMode === "lost" ? "turnover_lost" : "turnover_won")}
+            footerNote={`${territory.losses.length} lost · ${territory.recoveries.length} won`}
+            info={{ title: "Turnover locations", glossaryId: "turnover", rows: [{ label: "Lost", value: `${territory.losses.length}` }, { label: "Won", value: `${territory.recoveries.length}`, cream: true }, { label: "Team", value: teamName ?? "Both teams" }] }}
+          >
+            <div className="mb-3 flex gap-1.5"><Chip active={turnoverMode === "lost"} onClick={() => setTurnoverMode("lost")}>Lost</Chip><Chip active={turnoverMode === "won"} onClick={() => setTurnoverMode("won")}>Won</Chip></div>
+            <Pitch><PitchDots points={turnoverMode === "lost" ? territory.losses : territory.recoveries} color={turnoverMode === "lost" ? "var(--quality-bad)" : "var(--quality-good)"} /></Pitch>
+          </Visual>
 
           <Visual
             question="In which shape did we suffer?"
