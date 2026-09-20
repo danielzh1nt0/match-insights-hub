@@ -51,10 +51,13 @@ function Territory() {
       {territory && match && (
         <>
           <Visual
-            question="Where did the team live?"
-            caption="Brighter areas are where players spent more time."
+            question="Where did we play?"
+            caption="Brighter areas show where we spent more time."
+            takeaway={{ value: territory.playerCount, unit: "players", label: "typically visible in each frame" }}
+            comparison={{ label: "vs season average", value: "—", tone: "neutral" }}
+            honesty={`${territory.playerCount} players · ${territory.frameCount.toLocaleString()} frames`}
             info={{
-              title: "Where did the team live?",
+              title: "Where did we play?",
               glossaryId: "heat-map",
               rows: [
                 { label: "What it counts", value: "Player time per area" },
@@ -90,8 +93,11 @@ function Territory() {
 
           <div className="grid gap-3 md:grid-cols-2">
             <Visual
-              question="Where was the ball lost?"
+              question="Where did we lose it?"
               caption="Each dot is one giveaway, at the ball's position."
+              takeaway={{ value: territory.losses.length, unit: territory.losses.length === 1 ? "loss" : "losses" }}
+              comparison={{ label: "vs the opponent", value: `${territory.losses.length - territory.recoveries.length > 0 ? "+" : ""}${territory.losses.length - territory.recoveries.length}`, tone: territory.losses.length > territory.recoveries.length ? "bad" : "good" }}
+              honesty={`0 confirmed · ${territory.losses.length} detected`}
               info={{
                 title: "Where was the ball lost?",
                 glossaryId: "turnover",
@@ -112,8 +118,11 @@ function Territory() {
             </Visual>
 
             <Visual
-              question="Where was the ball won back?"
+              question="Where did we press?"
               caption="Each dot is one ball recovered, at the ball's position."
+              takeaway={{ value: territory.recoveries.length, unit: territory.recoveries.length === 1 ? "recovery" : "recoveries" }}
+              comparison={{ label: "vs the opponent", value: `${territory.recoveries.length - territory.losses.length > 0 ? "+" : ""}${territory.recoveries.length - territory.losses.length}`, tone: territory.recoveries.length >= territory.losses.length ? "good" : "bad" }}
+              honesty={`0 confirmed · ${territory.recoveries.length} detected`}
               info={{
                 title: "Where was the ball won back?",
                 glossaryId: "high-turnover",
@@ -135,8 +144,11 @@ function Territory() {
           </div>
 
           <Visual
-            question="How did the shape move?"
-            caption="A snapshot of positions every thirty seconds."
+            question="In which shape did we suffer?"
+            caption="One team shape every thirty seconds. Tap a time to move through the match."
+            takeaway={{ value: snapshot?.lengthM ?? "—", unit: "m", label: "long from back to front" }}
+            comparison={{ label: "vs our target", value: "—", tone: "neutral" }}
+            honesty={`${snapshot?.players.length ?? 0} players · ${territory.snapshots.length} snapshots`}
             info={{
               title: "How did the shape move?",
               glossaryId: "shape-snapshot",
