@@ -1,23 +1,33 @@
-import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Play, TriangleAlert, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { EventReviewControls } from "@/components/ip/event-review";
+import { FindingRow } from "@/components/insights/FindingRow";
+import { MetricBar } from "@/components/insights/MetricBar";
+import { MomentRow } from "@/components/insights/MomentRow";
+import { TuesdayCard } from "@/components/insights/TuesdayCard";
 import { FindingIcon, type FindingIconName } from "@/components/ip/finding-icon";
-import { Card, Pill } from "@/components/ip/primitives";
-import { StoryLauncher } from "@/components/ip/story-launcher";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import type { Finding } from "@/lib/match-data";
 import type { LibraryMatch } from "@/lib/sample-data";
 import { formatClock } from "@/lib/sample-data";
-import { cn } from "@/lib/utils";
 
 type Verdict = { eventId: string; verdict: "confirmed" | "deleted" | "retimed"; tCorrected?: number | null; teamCorrected?: string | null };
+type FindingResult = "on" | "off" | "critical";
 
 const ICONS: Record<string, FindingIconName> = {
   slow_press: "press", no_regain: "counter-press", press_alone: "press", slow_forward: "high-turnover",
   won_and_lost: "counter-press", better_option: "better-option", risky_passing: "better-option",
   long_block: "stretched", low_tilt: "low-possession", no_high_turnovers: "high-turnover",
 };
+
+function resultFor(finding: Finding): FindingResult {
+  const missed = finding.higherIsWorse ? finding.value > finding.target : finding.value < finding.target;
+  if (!missed) return "on";
+  return finding.id === "low_tilt" || finding.id === "no_high_turnovers" ? "critical" : "off";
+}
+
+function displayValue(value: number, unit: string) {
+  return `${Math.round(value * 10) / 10}${unit === "%" ? "%" : unit ? ` ${unit}` : ""}`;
+}
 
 function kindIs(event: ReviewedEvent, kind: string) {
   const payload = event.payload ?? {};
@@ -30,7 +40,7 @@ function preferredCount(events: ReviewedEvent[], test: (event: ReviewedEvent) =>
   return confirmed > 0 ? confirmed : found.length;
 }
 
-export function InsightsScreen({ matchId, match, findings, summary, events, iconColour, onReview }: {
+export function InsightsScreen({ matchId, match, findings, events, iconColour, onReview }: {
   matchId: string;
   match: LibraryMatch;
   findings: Finding[];
@@ -39,62 +49,112 @@ export function InsightsScreen({ matchId, match, findings, summary, events, icon
   iconColour: string;
   onReview: (input: Verdict) => void;
 }) {
+  const navigate = useNavigate();
   const eligible = findings.filter((finding) => !(finding.value === 0 && finding.target == null && finding.baseline == null));
+  const [expandedId, setExpandedId] = useState<string | null>(eligible[0]?.id ?? null);
+  const [checkedMoments, setCheckedMoments] = useState<Set<string>>(new Set());
+  const first = eligible[0];
+
+  if (!first || eligible.length < 3) {
+    return (
+      <div style={{ border: "1px solid var(--wire)", borderRadius: "16px", background: "var(--surface)", padding: "28px 20px", margin: "14px 16px 0", textAlign: "center" }}>
+        <h2 style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 800, fontStyle: "italic", fontSize: "22px", textTransform: "uppercase", color: "var(--cream)" }}>Not enough reliable findings yet.</h2>
+        <p style={{ marginTop: "8px", fontSize: "12.5px", lineHeight: 1.5, color: "var(--text-dim)" }}>Upload a longer clip or one with better camera coverage.</p>
+      </div>
+    );
+  }
+
   const shots = preferredCount(events, (event) => event.type === "shot");
   const corners = preferredCount(events, (event) => event.type === "set_piece" && kindIs(event, "corner"));
   const freeKicks = matchId === "SFKBP1109_s1200" ? 8 : preferredCount(events, (event) => event.type === "set_piece" && kindIs(event, "free"));
+  const firstResult = resultFor(first);
 
-  return <>
-    <StoryLauncher matchId={matchId} />
-    <Card className="rounded-[14px]">
-      <h2 className="display text-[17px] uppercase text-cream">The match in three sentences</h2>
-      <ol className="mt-3 flex flex-col gap-3">
-        {summary.slice(0, 3).map((line, index) => <li key={`${index}-${line}`} className="grid grid-cols-[28px_1fr] gap-2.5 text-[13px] leading-relaxed text-text-dim"><span className="display-i text-[20px] leading-snug text-cream">{index + 1}</span><span>{line}</span></li>)}
-      </ol>
-    </Card>
+  function toggleCheck(id: string) {
+    setCheckedMoments((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
-    <section aria-labelledby="findings-title">
-      <div className="mb-2 flex items-center justify-between gap-3"><h2 id="findings-title" className="display text-[19px] uppercase text-text">Findings</h2><span className="text-[11px] text-text-faint">{eligible.length} to review</span></div>
-      <div className="flex flex-col gap-3">
-        {eligible.map((finding, index) => <FindingCard key={finding.id} finding={finding} matchId={matchId} moments={events.filter((event) => finding.eventIds.includes(event.id)).slice(0, 6)} defaultOpen={index === 0} iconColour={iconColour} onReview={onReview} />)}
-        {eligible.length < 3 && <LimitedTracking />}
+  return (
+    <div style={{ flex: 1, overflowY: "auto", paddingBottom: 120, margin: "-14px -16px 0" }}>
+      <TuesdayCard
+        headline={first.headline}
+        target={displayValue(first.target, first.unit)}
+        today={displayValue(first.value, first.unit)}
+        isPositive={firstResult === "on"}
+        onAction={() => navigate({ to: "/match/$matchId/session", params: { matchId }, search: { finding: first.id } })}
+        actionLabel="Build the session →"
+      />
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "20px 16px 8px" }}>
+        <div style={{ fontFamily: "Barlow Condensed, sans-serif", fontSize: "14px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-dim)" }}>Findings</div>
+        <div style={{ fontSize: "11.5px", color: "var(--text-faint)", fontWeight: 600 }}>{eligible.length} to review</div>
       </div>
-    </section>
 
-    <p className="py-1 text-center text-[11.5px] font-medium text-text-faint" aria-label="Match facts">{shots} shots · {corners} corners · {freeKicks} free kicks</p>
-  </>;
-}
+      {eligible.map((finding) => {
+        const expanded = expandedId === finding.id;
+        const result = resultFor(finding);
+        const moments = events.filter((event) => finding.eventIds.includes(event.id)).slice(0, 6);
+        return (
+          <div key={finding.id}>
+            <FindingRow
+              icon={<FindingIcon name={ICONS[finding.id] ?? "press"} size={18} style={{ color: iconColour }} />}
+              headline={finding.headline}
+              result={result}
+              expanded={expanded}
+              onToggle={() => setExpandedId(expanded ? null : finding.id)}
+            />
+            {expanded && (
+              <div style={{ padding: "0 16px 16px", borderBottom: "1px solid var(--wire-2)" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: "12px", margin: "14px 0 6px" }}>
+                  <span style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 800, fontStyle: "italic", fontSize: "42px", lineHeight: 0.9, color: "var(--cream)" }}>{Math.round(finding.value * 10) / 10}</span>
+                  <span style={{ fontSize: "13px", color: "var(--text-faint)", fontWeight: 600 }}>{finding.unit}</span>
+                  <span style={{ marginLeft: "auto", fontSize: "11.5px", color: "var(--text-faint)", fontWeight: 600 }}>Target {displayValue(finding.target, finding.unit)}</span>
+                </div>
+                <MetricBar value={finding.value} target={finding.target} variant={result === "on" ? "good" : result === "off" ? "warn" : "bad"} />
+                <div style={{ fontSize: "12.5px", color: "var(--text-dim)", lineHeight: 1.55, padding: "10px 12px", borderLeft: "3px solid var(--wire)", background: "var(--surface-2)", borderRadius: "0 6px 6px 0", marginBottom: "14px" }}>{finding.interpretation}</div>
+                <div style={{ fontSize: "11px", color: "var(--text-faint)", fontWeight: 600, marginBottom: "8px" }}>{moments.length} moment{moments.length === 1 ? "" : "s"}</div>
+                {moments.map((event) => (
+                  <MomentRow
+                    key={event.id}
+                    time={formatClock(event.t)}
+                    label={event.status}
+                    confirmed={event.status === "confirmed"}
+                    checked={checkedMoments.has(event.id)}
+                    onCheck={() => toggleCheck(event.id)}
+                    onPlay={() => navigate({ to: "/match/$matchId/match", params: { matchId }, search: { t: Math.round(event.t * 10) / 10 } })}
+                    onConfirm={() => onReview({ eventId: event.id, verdict: "confirmed" })}
+                    onDelete={() => onReview({ eventId: event.id, verdict: "deleted" })}
+                  />
+                ))}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "14px" }}>
+                  <button type="button" onClick={() => navigate({ to: "/match/$matchId/session", params: { matchId }, search: { finding: finding.id } })} style={{ minHeight: "44px", padding: "12px", borderRadius: "10px", background: "var(--cream)", color: "#111", border: "none", fontSize: "12.5px", fontWeight: 700, cursor: "pointer" }}>Build session</button>
+                  <button type="button" onClick={() => navigate({ to: "/match/$matchId/reel", params: { matchId } })} style={{ minHeight: "44px", padding: "12px", borderRadius: "10px", background: "none", border: "1px solid var(--wire)", color: "var(--cream)", fontSize: "12.5px", fontWeight: 700, cursor: "pointer" }}>Clip reel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
-type FindingState = "track" | "warning" | "critical";
-function stateFor(finding: Finding): FindingState {
-  const missed = finding.higherIsWorse ? finding.value > finding.target : finding.value < finding.target;
-  if (!missed) return "track";
-  return finding.id === "low_tilt" || finding.id === "no_high_turnovers" ? "critical" : "warning";
-}
+      <p style={{ padding: "14px 16px 0", textAlign: "center", fontSize: "11.5px", fontWeight: 500, color: "var(--text-faint)" }} aria-label="Match facts">{shots} shots · {corners} corners · {freeKicks} free kicks</p>
 
-function FindingCard({ finding, matchId, moments, defaultOpen, iconColour, onReview }: { finding: Finding; matchId: string; moments: ReviewedEvent[]; defaultOpen: boolean; iconColour: string; onReview: (input: Verdict) => void }) {
-  const [open, setOpen] = useState(defaultOpen);
-  const state = stateFor(finding);
-  const ratio = Math.min(1, finding.value / Math.max(finding.target, finding.value, 1));
-  const label = state === "track" ? "On track" : state === "warning" ? "Off target" : "Critical";
-  const Icon = state === "track" ? Check : state === "warning" ? TriangleAlert : X;
-  return <article className="overflow-hidden rounded-[14px] border border-wire bg-surface">
-    <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="tap grid w-full grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 text-left hover:bg-surface-2">
-      <span className="grid h-10 w-10 place-items-center rounded-full border border-cream/40 text-cream"><FindingIcon name={ICONS[finding.id] ?? "press"} style={{ color: iconColour }} /></span>
-      <span className="display line-clamp-2 text-[15px] uppercase leading-[1.15] text-cream">{finding.headline}</span>
-      <span className="flex items-center gap-1.5"><span className={cn("inline-flex min-h-7 items-center gap-1 rounded-full px-2 text-[10px] font-semibold", state === "track" && "bg-cream text-primary-foreground", state === "warning" && "bg-quality-risky/10 text-quality-risky", state === "critical" && "bg-surface-3 text-text-faint")}><Icon size={11} aria-hidden="true"/><span className="hidden min-[380px]:inline">{label}</span></span><ChevronDown size={16} className={cn("text-text-faint transition-transform", open && "rotate-180")} aria-hidden="true"/></span>
-    </button>
-    {open && <div className="border-t border-wire-2 px-4 pb-4 pt-3">
-      <div className="flex items-end gap-4"><span className="display-i text-[34px] leading-none text-cream">{finding.value}<span className="ml-1 text-[14px] text-cream-dim">{finding.unit}</span></span><span className="pb-0.5 text-[11.5px] text-text-faint">Target {finding.target}{finding.unit === "%" ? "%" : ` ${finding.unit}`}</span>{finding.basis === "detected" && <Pill tone="risky" className="ml-auto">detected</Pill>}</div>
-      <div className="relative mt-3 h-1.5 w-full rounded-full bg-surface-3"><span className={cn("block h-full rounded-full", state === "track" ? "bg-cream" : state === "warning" ? "bg-quality-risky" : "bg-text-faint")} style={{ width: `${Math.max(4, ratio * 100)}%` }}/><span className="absolute top-[-3px] h-3 w-px bg-cream" style={{ left: `${Math.min(100, finding.target / Math.max(finding.target, finding.value, 1) * 100)}%` }}/></div>
-      <p className="mt-3 text-[13px] leading-relaxed text-text-dim">{finding.interpretation}</p>
-      <p className="mt-3 text-[11.5px] text-text-faint">{finding.events} moments</p>
-      <div className="mt-1.5 flex flex-col gap-1.5">{moments.map((event) => <div key={event.id} className="flex items-center gap-2"><Link to="/match/$matchId/match" params={{ matchId }} search={{ t: Math.round(event.t * 10) / 10 }} className="tap inline-flex flex-1 items-center gap-1.5 rounded-[8px] border border-wire px-2.5 text-[11.5px] text-cream"><Play size={12} aria-hidden="true"/><span className="num">{formatClock(event.t)}</span><span className="truncate text-text-faint">{event.status}</span></Link><EventReviewControls event={event} onReview={onReview}/></div>)}</div>
-      <div className="mt-4 grid grid-cols-2 gap-2"><Link to="/match/$matchId/session" params={{ matchId }} search={{ finding: finding.id }} className="tap flex items-center justify-center rounded-[12px] bg-cream px-3 text-sm font-semibold text-primary-foreground">Build session</Link><Link to="/match/$matchId/reel" params={{ matchId }} className="tap flex items-center justify-center rounded-[12px] border border-cream/60 px-3 text-sm font-semibold text-cream">Clip reel</Link></div>
-    </div>}
-  </article>;
-}
-
-function LimitedTracking() {
-  return <Card className="rounded-[14px] px-6 py-8 text-center"><h3 className="display text-[17px] uppercase text-cream">Not much to say about this clip.</h3><p className="mx-auto mt-3 max-w-sm text-[13px] leading-relaxed text-text-dim">The tracking for this match was limited.<br/>Upload a longer clip or one with better camera coverage.</p><Link to="/new" className="tap mt-5 inline-flex items-center justify-center rounded-[12px] bg-cream px-5 text-sm font-semibold text-primary-foreground">Upload another clip</Link></Card>;
+      {checkedMoments.size > 0 && (
+        <div style={{ position: "fixed", bottom: "90px", left: "16px", right: "16px", background: "var(--surface)", border: "1px solid var(--wire)", borderRadius: "16px", padding: "12px 14px", display: "flex", flexDirection: "column", gap: "10px", boxShadow: "0 12px 40px rgba(0,0,0,0.6)", zIndex: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--cream)" }}><span style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 800, fontStyle: "italic", fontSize: "16px", marginRight: "4px" }}>{checkedMoments.size}</span>moments selected</div>
+            <button type="button" aria-label="Clear selected moments" onClick={() => setCheckedMoments(new Set())} style={{ width: "44px", height: "44px", borderRadius: "50%", background: "var(--surface-2)", border: "1px solid var(--wire)", display: "grid", placeItems: "center", color: "var(--text-faint)", cursor: "pointer", fontSize: "12px" }}>✕</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            <button type="button" onClick={() => navigate({ to: "/match/$matchId/reel", params: { matchId } })} style={{ minHeight: "44px", padding: "10px", borderRadius: "10px", background: "var(--cream)", color: "#111", border: "none", fontSize: "12.5px", fontWeight: 700, cursor: "pointer" }}>Make reel</button>
+            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/match/${matchId}/reel`)} style={{ minHeight: "44px", padding: "10px", borderRadius: "10px", background: "none", border: "1px solid var(--wire)", color: "var(--cream)", fontSize: "12.5px", fontWeight: 700, cursor: "pointer" }}>Copy link</button>
+          </div>
+        </div>
+      )}
+      <span className="sr-only">{match.teamA} versus {match.teamB}</span>
+    </div>
+  );
 }

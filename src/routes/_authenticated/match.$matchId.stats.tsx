@@ -4,7 +4,7 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Card, Chip } from "@/components/ip/primitives";
 import { StatsVisual } from "@/components/ip/stats-visuals";
-import { DeepAnswer, LineBreakHero, LineStates, LineTimeline } from "@/components/ip/line-break-cards";
+import { DeepAnswer, LineBreakHero, LineTimeline } from "@/components/ip/line-break-cards";
 import { Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
 import { countEvents, countLine } from "@/lib/event-reviews";
@@ -120,7 +120,7 @@ function Stats() {
               value: comparisonValue === null ? "—" : `${comparisonValue > 0 ? "+" : ""}${Math.round(comparisonValue * 10) / 10}`,
               tone: comparisonValue === null ? "neutral" : (comparisonValue >= 0) === higherIsGood ? "good" : "bad",
             }}
-            honesty={`${sectionConfirmed} confirmed · ${sectionDetected} detected`}
+            honesty={sectionDetected > 0 ? `${sectionConfirmed} confirmed · ${sectionDetected} detected` : undefined}
             footerNote={active.key === "players" ? `${players.length} players in view` : `${active.rows.length} measures`}
             info={{
               title: active.label,
@@ -137,7 +137,7 @@ function Stats() {
           </Visual>
 
           {active.key === "pressing" && lineDefending && <LineBreakHero data={lineDefending} matchId={matchId} />}
-          {active.key === "shape" && lineDefending && <><DeepAnswer data={lineDefending} /><LineStates data={lineDefending} matchId={matchId} /><LineTimeline data={lineDefending} matchId={matchId} /></>}
+          {active.key === "shape" && lineDefending && <>{lineDefending.medianM !== null && lineDefending.usualM !== null && <DeepAnswer data={lineDefending} />}<LineTimeline data={lineDefending} matchId={matchId} /></>}
 
           {SECTION_EVENTS[active.key] && (
             <Card>
