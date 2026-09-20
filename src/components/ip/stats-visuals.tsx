@@ -10,8 +10,8 @@ import { Pitch, PortraitPitch, Visual } from "./visual";
 type Props = {
   tab: string;
   players: PlayerStat[];
-  stats?: StatsFile;
-  file?: MatchDataFile;
+  stats: StatsFile | undefined;
+  file: MatchDataFile | undefined;
   events: ReviewedEvent[];
   team: TeamKey;
   scopeBoth: boolean;
@@ -52,7 +52,7 @@ const inRange = (time: number | null, range: number[]) => time === null || (time
 const fmt = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
 
 function Card({ question, caption, children, honesty, footer }: { question: string; caption: string; children: React.ReactNode; honesty?: string; footer?: string }) {
-  return <Visual framing="custom" question={question} caption={caption} info={{ title: question, rows: [{ label: "What it shows", value: caption, cream: true }] }} honesty={honesty} footerNote={footer}>{children}</Visual>;
+  return <Visual framing="custom" question={question} caption={caption} info={{ title: question, rows: [{ label: "What it shows", value: caption, cream: true }] }} {...(honesty ? { honesty } : {})} {...(footer ? { footerNote: footer } : {})}>{children}</Visual>;
 }
 
 function EmptyTab() {
@@ -75,7 +75,7 @@ function Control({ stats, team, colours }: Props) {
 
 function Thirds({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour: string }) {
   const counts = [0, 0, 0];
-  frames.forEach(frame => frame.players.filter(player => player.team === team && player.state !== "stale").forEach(player => { counts[Math.min(2, Math.floor(clamp(player.m[0], 0, 104.99) / 35))] += 1; }));
+  frames.forEach(frame => frame.players.filter(player => player.team === team && player.state !== "stale").forEach(player => { const index = Math.min(2, Math.floor(clamp(player.m[0], 0, 104.99) / 35)); counts[index] = (counts[index] ?? 0) + 1; }));
   const total = counts.reduce((sum, count) => sum + count, 0);
   if (!total) return null;
   return <Card question="Which third did we occupy?" caption="Where our observed players spent their tracked time." honesty={`${frames.length} tracked frames`}>
@@ -90,7 +90,7 @@ function SequenceLength({ stats, team }: Props) {
   const rowMedian = value(teamRow(stats, team), "passes_per_sequence");
   if (!lengths.length && rowMedian === null) return null;
   const buckets = [lengths.filter(n => n <= 2).length, lengths.filter(n => n >= 3 && n <= 5).length, lengths.filter(n => n >= 6 && n <= 9).length, lengths.filter(n => n >= 10).length];
-  return <Card question="How long did we keep it?" caption="Possession spells grouped by the number of passes." honesty={lengths.length ? `${lengths.length} sequences` : undefined}>
+  return <Card question="How long did we keep it?" caption="Possession spells grouped by the number of passes." {...(lengths.length ? { honesty: `${lengths.length} sequences` } : {})}>
     <strong className="display-i block text-[56px] leading-none text-cream">{rowMedian === null ? "—" : Math.round(rowMedian * 10) / 10}</strong><span className="text-[11px] font-semibold text-text-faint">passes per spell</span>
     {lengths.length > 0 && <div className="mt-5 grid grid-cols-4 items-end gap-2" role="img" aria-label="Sequence length distribution">{buckets.map((count, index) => <div key={index} className="text-center"><span className="num text-[11px] text-text-dim">{count}</span><div className="mt-1 h-20 bg-surface-2 flex items-end"><span className="block w-full bg-cream/70" style={{ height: `${Math.max(3, count / Math.max(...buckets) * 100)}%` }} /></div><span className="mt-1 block text-[9px] text-text-faint">{["1–2", "3–5", "6–9", "10+"][index]}</span></div>)}</div>}
   </Card>;
@@ -178,7 +178,7 @@ function ShotSummary({ stats, team }: Props) {
 
 function EntriesConceded({ events, team, matchId }: Props) {
   const opponent=team==="A"?"B":"A"; const entries=events.filter(e=>e.team===opponent&&["final_third_entry","entry","shot","goal"].includes(e.type)).map(event=>({event,point:eventPoint(event)})).filter((x):x is {event:ReviewedEvent;point:Point}=>x.point!==null); if(!entries.length)return null;
-  const lanes=[0,0,0,0,0];entries.forEach(({point})=>{lanes[Math.min(4,Math.floor(point.y/20))]+=1});
+  const lanes=[0,0,0,0,0];entries.forEach(({point})=>{const index=Math.min(4,Math.floor(point.y/20));lanes[index]=(lanes[index]??0)+1});
   return <Card question="Where did they get in?" caption="Opponent entries into our defensive third, grouped into five lanes." honesty={`${entries.length} entries and shots`}>
     <Pitch>{entries.map(({event,point})=><Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch entry at ${fmt(event.t)}`}><line x1={point.x} y1={point.y/100*64} x2={Math.max(4,point.x-10)} y2={point.y/100*64} stroke="var(--graphite)" strokeWidth="1.2"/><circle cx={Math.max(4,point.x-10)} cy={point.y/100*64} r="1.8" fill={event.type==="shot"||event.type==="goal"?"var(--quality-bad)":"var(--text-faint)"}/></Link>)}</Pitch>
     <div className="mt-3 grid h-20 grid-cols-5 items-end gap-1" role="img" aria-label="Entries by lane">{lanes.map((count,index)=><div key={index} className="text-center"><span className="num text-[10px] text-text-dim">{count}</span><span className="mt-1 block bg-cream/50" style={{height:`${Math.max(2,count/Math.max(...lanes)*48)}px`}}/><span className="mt-1 block text-[8px] uppercase text-text-faint">{["Left","Half","Centre","Half","Right"][index]}</span></div>)}</div>
@@ -214,7 +214,7 @@ export function StatsVisuals(props: Props) {
   let cards: React.ReactNode[]=[];
   if(props.tab==="ball")cards=[<Control key="control" {...p}/>,<Thirds key="thirds" frames={frames} team={props.team} colour={colour}/>,<SequenceLength key="sequence" {...p}/>,<Runs key="runs" frames={frames} team={props.team} colour={colour}/>,<Distance key="distance" players={props.players.filter(x=>x.team===props.team)} colour={colour}/>];
   if(props.tab==="pressing")cards=[<PressMap key="press" {...p} colour={colour}/>,<CounterPress key="counter" {...p}/>,props.lineDefending&&props.lineDefending.lineBreakCount!==0?<LineBreakHero key="breaks" data={props.lineDefending} matchId={props.matchId}/>:null];
-  if(props.tab==="shape")cards=[props.lineDefending?.medianM!==null&&props.lineDefending?.usualM!==null?<DeepAnswer key="depth" data={props.lineDefending}/>:null,props.territory?<ShapeMultiples key="multiples" territory={props.territory} colour={colour}/>:null,props.lineDefending?<ShapeOutcome key="outcome" lineDefending={props.lineDefending} colour={colour}/>:null,props.lineDefending?.timeline.length?<LineTimeline key="timeline" data={props.lineDefending} matchId={props.matchId}/>:null];
+  if(props.tab==="shape"){const line=props.lineDefending;cards=[line&&line.medianM!==null&&line.usualM!==null?<DeepAnswer key="depth" data={line}/>:null,props.territory?<ShapeMultiples key="multiples" territory={props.territory} colour={colour}/>:null,line?<ShapeOutcome key="outcome" lineDefending={line} colour={colour}/>:null,line&&line.timeline.length?<LineTimeline key="timeline" data={line} matchId={props.matchId}/>:null];}
   if(props.tab==="shooting")cards=[<ShotMap key="map" {...p}/>,<ShotSummary key="summary" {...p}/>,<EntriesConceded key="entries" {...p}/>];
   if(props.tab==="players")cards=[<PlayerCards key="players" {...p}/>];
   if(props.tab==="passes")cards=[<LaneEffectiveness key="lanes" passes={passes} colour={colour}/>,<BetterOption key="better" {...p} colour={colour}/>,<PassNetwork key="network" passes={passes} colour={colour}/>,<PassMap key="map" passes={passes} colour={colour} matchId={props.matchId}/>,<Interceptions key="interceptions" {...p} colour={colour}/>,<PassLog key="log" passes={passes} matchId={props.matchId}/>];
