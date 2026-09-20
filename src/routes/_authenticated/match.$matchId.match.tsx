@@ -1,24 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Layers, Maximize2, Minimize2, Pause, Play } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
 import { Card, Segmented } from "@/components/ip/primitives";
-import { EventFixSheet, EventReviewControls } from "@/components/ip/event-review";
+import { EventFixSheet } from "@/components/ip/event-review";
 import {
   DEFAULT_EVENT_FILTER,
   EventFilter,
   eventMatchesFilter,
   type EventFilterValue,
 } from "@/components/ip/event-filter";
-import { MatchNumbers } from "@/components/ip/match-numbers";
-import { MomentumStrip } from "@/components/ip/momentum-strip";
+import { EventRow } from "@/components/match/EventRow";
+import { MatchNumbers, type MatchNumberTile } from "@/components/match/MatchNumbers";
+import { MomentumStrip } from "@/components/match/MomentumStrip";
+import { PlaybackBar } from "@/components/match/PlaybackBar";
+import type { StatIconName } from "@/components/match/StatIcon";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
-import { downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
+import { countEvents, downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
 import { feedLabel, videoSrc, type Frame } from "@/lib/match-source";
+import { teamRow } from "@/lib/match-analysis";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
@@ -63,6 +66,22 @@ const PHASE_WORD: Record<string, string> = {
   loose: "ball loose",
   dead: "ball dead",
 };
+
+const EVENT_ICONS: Record<string, StatIconName> = {
+  goal: "goal", shot: "shot", shot_blocked: "attempt", turnover_won: "turnover-won",
+  turnover_lost: "turnover-lost", high_turnover: "high-turnover", set_piece: "free-kick",
+  pass_bad: "pass", pass_risky: "pass", better_option: "better-option", sequence_end: "sequence",
+};
+
+function eventMetric(events: ReviewedEvent[], team: "A" | "B", test: (event: ReviewedEvent) => boolean) {
+  const count = countEvents(events, (event) => event.team === team && test(event));
+  return count.confirmed > 0 ? count.confirmed : count.detected;
+}
+
+function kindIs(event: ReviewedEvent, kind: string) {
+  const payload = event.payload ?? {};
+  return String(payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "").toLowerCase().includes(kind);
+}
 
 function MatchScreen() {
   const { matchId } = Route.useParams();
@@ -120,6 +139,43 @@ function MatchScreen() {
   });
 
   const total = row?.duration_s ?? match?.durationS ?? 1;
+  const teamAStats = teamRow(stats, "A");
+  const teamBStats = teamRow(stats, "B");
+  const reliableBall = row?.summary?.["ball_reliable"] !== false;
+  const tiles = useMemo<MatchNumberTile[]>(() => [
+    { icon: "goal", label: "Goals", valueA: eventMetric(events, "A", (e) => e.type === "goal"), valueB: eventMetric(events, "B", (e) => e.type === "goal") },
+    { icon: "shot", label: "Shots", valueA: eventMetric(events, "A", (e) => e.type === "shot"), valueB: eventMetric(events, "B", (e) => e.type === "shot") },
+    { icon: "corner", label: "Corners", valueA: eventMetric(events, "A", (e) => e.type === "set_piece" && kindIs(e, "corner")), valueB: eventMetric(events, "B", (e) => e.type === "set_piece" && kindIs(e, "corner")) },
+    { icon: "free-kick", label: "Free kicks", valueA: eventMetric(events, "A", (e) => e.type === "set_piece" && kindIs(e, "free")), valueB: eventMetric(events, "B", (e) => e.type === "set_piece" && kindIs(e, "free")) },
+    { icon: "attempt", label: "Attempts", valueA: eventMetric(events, "A", (e) => e.type === "shot" || e.type === "shot_blocked"), valueB: eventMetric(events, "B", (e) => e.type === "shot" || e.type === "shot_blocked") },
+    { icon: "possession", label: "Possession", valueA: Math.round(teamAStats?.possession_pct ?? 0), valueB: Math.round(teamBStats?.possession_pct ?? 0), unit: "%", unreliable: !reliableBall },
+  ], [events, teamAStats?.possession_pct, teamBStats?.possession_pct, reliableBall]);
+  const momentumWindows = useMemo(() => {
+    const frames = file?.frames ?? [];
+    const windows: { t: number; tiltA: number }[] = [];
+    for (let start = 0; start < total; start += 15) {
+      const sample = frames.filter((candidate) => candidate.t >= start && candidate.t < start + 15 && candidate.possession);
+      if (sample.length === 0) continue;
+      windows.push({ t: start, tiltA: sample.filter((candidate) => candidate.possession === "A").length / sample.length });
+    }
+    return windows;
+  }, [file?.frames, total]);
+  const momentumEvents = useMemo<{ t: number; type: "goal" | "turnover"; team: "A" | "B" }[]>(() => {
+    const markers: { t: number; type: "goal" | "turnover"; team: "A" | "B" }[] = [];
+    for (const event of events) {
+      if (!event.team) continue;
+      if (event.type === "goal") markers.push({ t: event.t, type: "goal", team: event.team });
+      else if (["turnover_lost", "turnover_won", "high_turnover"].includes(event.type)) markers.push({ t: event.t, type: "turnover", team: event.team });
+    }
+    return markers;
+  }, [events]);
+  const playbackMarkers = useMemo(() => (team ? events.filter((event) => event.team === team) : events).flatMap((event) => event.team ? [{ t: event.t, team: event.team, kind: event.type === "goal" ? "goal" as const : "event" as const }] : []), [events, team]);
+  const screenVars = { "--team-a": colours.A, "--team-b": colours.B } as CSSProperties;
+  const seek = useCallback((time: number) => {
+    const next = Math.max(0, Math.min(total, time));
+    setClock(next);
+    if (videoRef.current) videoRef.current.currentTime = next;
+  }, [total]);
 
 
   // The video clock is the only source of visibility: read it every frame.
@@ -252,7 +308,7 @@ function MatchScreen() {
       )}
 
       {match && (
-        <>
+        <div style={screenVars}>
           <Card className="p-3">
             <div className="flex flex-col bg-surface">
             <div
@@ -314,7 +370,7 @@ function MatchScreen() {
                     fullscreen ? "hidden" : "grid",
                   )}
                 >
-                  <Layers size={15} aria-hidden="true" />
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>
                 </button>
                 <button
                   type="button"
@@ -322,11 +378,7 @@ function MatchScreen() {
                   aria-label={fullscreen ? "Leave fullscreen" : "Fullscreen"}
                   className="tap grid h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md"
                 >
-                  {fullscreen ? (
-                    <Minimize2 size={15} aria-hidden="true" />
-                  ) : (
-                    <Maximize2 size={15} aria-hidden="true" />
-                  )}
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={fullscreen ? "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" : "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"}/></svg>
                 </button>
               </div>
 
@@ -378,55 +430,17 @@ function MatchScreen() {
               />
             </div>
 
-            <div className="mt-3 flex items-center gap-3">
-              <button
-                type="button"
-                onClick={togglePlay}
-                aria-label={playing ? "Pause" : "Play"}
-                className="tap grid h-11 w-11 shrink-0 place-items-center rounded-full bg-cream text-[#111315]"
-              >
-                {playing ? <Pause size={16} aria-hidden="true" /> : <Play size={16} aria-hidden="true" />}
-              </button>
-              <div className="min-w-0 flex-1">
-                <div className="relative h-9">
-                  <input
-                    type="range"
-                    min={0}
-                    max={total}
-                    step={0.1}
-                    value={clock}
-                    aria-label="Playback position"
-                    onChange={(e) => {
-                      const t = Number(e.target.value);
-                      setClock(t);
-                      if (videoRef.current) videoRef.current.currentTime = t;
-                    }}
-                    className="absolute inset-x-0 top-3 h-2 w-full appearance-none rounded-full bg-surface-3 accent-[var(--cream)]"
-                  />
-                  <div className="pointer-events-none absolute inset-x-0 top-0 h-2">
-                    {ticks.map((e) => (
-                      <span
-                        key={e.id}
-                        className="absolute top-0 h-2 w-[2px] rounded-full"
-                        style={{
-                          left: `${Math.min(100, (e.t / total) * 100)}%`,
-                          background: e.team === "B" ? colours.B : colours.A,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-between text-[11px] text-text-faint">
-                  <span className="num text-cream">{formatClock(clock)}</span>
-                  <span className="num">{formatClock(total)}</span>
-                </div>
-              </div>
-            </div>
             </div>
           </Card>
 
-          <MomentumStrip events={events} duration={total} colours={colours} />
-          <MatchNumbers matchId={matchId} onFilterTypes={(nextTypes) => setTypesOverride(nextTypes)} />
+          <PlaybackBar playing={playing} currentTime={clock} duration={total} markers={playbackMarkers} onPlayPause={togglePlay} onSeek={seek} onFullscreen={toggleFullscreen} />
+          <MomentumStrip windows={momentumWindows} events={momentumEvents} durationSeconds={total} currentTime={clock} onSeek={seek} />
+          <MatchNumbers tiles={tiles} onTileTap={(label) => {
+            const tile = tiles.find((candidate) => candidate.label === label);
+            if (!tile) return;
+            const types = label === "Goals" ? ["goal"] : label === "Shots" ? ["shot"] : label === "Corners" || label === "Free kicks" ? ["set_piece"] : label === "Attempts" ? ["shot", "shot_blocked"] : [];
+            setTypesOverride(types.length ? types : null);
+          }} />
 
           <div className="flex items-center gap-3 py-1" role="separator" aria-label="Every event">
             <span className="h-px flex-1 bg-wire" />
@@ -474,64 +488,11 @@ function MatchScreen() {
             </div>
           </div>
 
-          <Card className="p-0">
+          <div style={{ padding: "8px 16px 0" }}>
             <ul>
               {shown.map((e, i) => (
-                <li
-                  key={e.id}
-                  className={cn(
-                    "feed-in flex items-center gap-2 border-b border-wire-2 pr-3 last:border-0",
-                    i === focusIndex && "bg-surface-2",
-                  )}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFocusIndex(i);
-                      if (videoRef.current) videoRef.current.currentTime = e.t;
-                      setClock(e.t);
-                    }}
-                    className="tap flex min-w-0 flex-1 items-center gap-3 px-3.5 py-3 text-left hover:bg-surface-2"
-                  >
-                    <span className="num w-11 shrink-0 text-[13px] text-cream">{formatClock(e.t)}</span>
-                    <span
-                      className={cn(
-                        "h-6 w-1 shrink-0 rounded-full",
-                        e.status === "detected" && "opacity-40",
-                      )}
-                      style={{
-                        background:
-                          e.status === "confirmed"
-                            ? e.team === "B"
-                              ? colours.B
-                              : colours.A
-                            : "transparent",
-                        boxShadow:
-                          e.status === "confirmed"
-                            ? undefined
-                            : `inset 0 0 0 1px ${e.team === "B" ? colours.B : colours.A}`,
-                      }}
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] text-text">
-                        {feedLabel(e.type)}
-                        {e.corrected && <span className="ml-1.5 text-[11px] text-cream-dim">fixed</span>}
-                      </span>
-                      <span className="block truncate text-[11.5px] text-text-faint">
-                        {e.status === "confirmed" ? "confirmed" : "detected"} ·{" "}
-                        {e.subtitle || e.title}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-cream">
-                      <Play size={13} aria-hidden="true" />
-                    </span>
-                  </button>
-                  <EventReviewControls
-                    event={e}
-                    onReview={(input) => review.setVerdict.mutate(input)}
-                    onFix={() => setFixing(e)}
-                  />
+                <li key={e.id}>
+                  <EventRow time={formatClock(e.t)} icon={EVENT_ICONS[e.type] ?? "sequence"} iconTint={e.type.includes("won") ? "good" : e.type.includes("lost") || e.type === "pass_bad" ? "bad" : "default"} team={e.team === "B" ? "B" : "A"} title={feedLabel(e.type)} subtitle={`${e.status === "confirmed" ? "confirmed" : "detected"}${e.corrected ? " · fixed" : ""} · ${e.subtitle || e.title}`} state={e.status === "confirmed" ? "confirmed" : "untouched"} focused={i === focusIndex} onPlay={() => { setFocusIndex(i); seek(e.t); }} onConfirm={() => e.status === "confirmed" ? setFixing(e) : review.setVerdict.mutate({ eventId: e.id, verdict: "confirmed" })} onHide={() => review.setVerdict.mutate({ eventId: e.id, verdict: "deleted" })} />
                 </li>
               ))}
               {shown.length === 0 && (
@@ -576,7 +537,7 @@ function MatchScreen() {
                 )}
               </div>
             )}
-          </Card>
+          </div>
 
           {fixing && (
             <EventFixSheet
@@ -624,7 +585,7 @@ function MatchScreen() {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </MatchShell>
   );
