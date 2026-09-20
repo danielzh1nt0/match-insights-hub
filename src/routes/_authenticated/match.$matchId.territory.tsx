@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { LineBreakCards } from "@/components/ip/line-break-cards";
-import { Card, Chip } from "@/components/ip/primitives";
+import { Chip } from "@/components/ip/primitives";
 import { HeatBlobs, Pitch, PitchDots, PitchShirts, Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
 import { formatClock } from "@/lib/sample-data";
@@ -26,12 +26,17 @@ function Territory() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, territory, lineDefending, loading } = useAnalysis(matchId, scope);
+  const { match, team, colours, territory, lineDefending, loading, events } = useAnalysis(matchId, scope);
   const [snapIndex, setSnapIndex] = useState(0);
 
   const teamName = team === "B" ? match?.teamB : team === "A" ? match?.teamA : "Both teams";
   const teamColour = team === "B" ? colours.B : colours.A;
   const snapshot = territory?.snapshots[Math.min(snapIndex, territory.snapshots.length - 1)];
+  const selectedEvents = events.filter((event) => !team || event.team === team);
+  const evidenceFor = (type: string) => {
+    const found = selectedEvents.filter((event) => event.type === type);
+    return `${found.filter((event) => event.status === "confirmed").length} confirmed · ${found.length} detected`;
+  };
 
   return (
     <MatchShell
@@ -76,18 +81,19 @@ function Territory() {
             </p>
           </Visual>
 
-          <Card className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="display text-[17px] uppercase text-cream">How compact?</h2>
-              <p className="mt-1 text-[11.5px] text-text-faint">
-                Typical width side to side for {teamName}.
-              </p>
-            </div>
-            <span className="num text-[30px] leading-none text-cream">
-              {territory.compactBandM}
-              <span className="text-[14px] text-cream-dim"> m</span>
-            </span>
-          </Card>
+          <Visual
+            question="How compact were we?"
+            caption={`Typical width from side to side for ${teamName}.`}
+            takeaway={{ value: territory.compactBandM, unit: "m", label: "wide at our typical shape" }}
+            comparison={{ label: "vs our target", value: "—", tone: "neutral" }}
+            honesty={`${territory.frameCount.toLocaleString()} detected frames`}
+            info={{ title: "Team compactness", glossaryId: "compactness", rows: [{ label: "Typical width", value: `${territory.compactBandM} m`, cream: true }, { label: "Length back to front", value: `${territory.blockLengthM} m` }, { label: "Frames used", value: territory.frameCount.toLocaleString() }] }}
+          >
+            <Pitch>
+              <rect x="28" y="14" width="44" height="36" rx="3" fill="var(--cream)" fillOpacity=".08" stroke="var(--cream)" strokeOpacity=".42" strokeDasharray="2 2" />
+              <line x1="28" y1="32" x2="72" y2="32" stroke="var(--cream)" strokeOpacity=".7" strokeWidth=".8" />
+            </Pitch>
+          </Visual>
 
           {lineDefending && <LineBreakCards data={lineDefending} matchId={matchId} />}
 
@@ -97,7 +103,7 @@ function Territory() {
               caption="Each dot is one giveaway, at the ball's position."
               takeaway={{ value: territory.losses.length, unit: territory.losses.length === 1 ? "loss" : "losses" }}
               comparison={{ label: "vs the opponent", value: `${territory.losses.length - territory.recoveries.length > 0 ? "+" : ""}${territory.losses.length - territory.recoveries.length}`, tone: territory.losses.length > territory.recoveries.length ? "bad" : "good" }}
-              honesty={`0 confirmed · ${territory.losses.length} detected`}
+              honesty={evidenceFor("turnover_lost")}
               info={{
                 title: "Where was the ball lost?",
                 glossaryId: "turnover",
@@ -122,7 +128,7 @@ function Territory() {
               caption="Each dot is one ball recovered, at the ball's position."
               takeaway={{ value: territory.recoveries.length, unit: territory.recoveries.length === 1 ? "recovery" : "recoveries" }}
               comparison={{ label: "vs the opponent", value: `${territory.recoveries.length - territory.losses.length > 0 ? "+" : ""}${territory.recoveries.length - territory.losses.length}`, tone: territory.recoveries.length >= territory.losses.length ? "good" : "bad" }}
-              honesty={`0 confirmed · ${territory.recoveries.length} detected`}
+              honesty={evidenceFor("turnover_won")}
               info={{
                 title: "Where was the ball won back?",
                 glossaryId: "high-turnover",
