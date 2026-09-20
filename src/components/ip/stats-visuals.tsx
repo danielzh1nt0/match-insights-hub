@@ -28,12 +28,15 @@ const finite = (value: unknown): number | null => typeof value === "number" && N
 const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const teamRow = (stats: StatsFile | undefined, team: TeamKey) => (stats?.teams ?? []).find((row: any) => row?.team === team) as Record<string, unknown> | undefined;
 const value = (row: Record<string, unknown> | undefined, key: string) => finite(row?.[key]);
-const eventPoint = (event: ReviewedEvent): Point | null => {
+const eventPoint = (event: ReviewedEvent, file?: MatchDataFile): Point | null => {
   const p = event.payload ?? {};
   const x = finite(p["x"] ?? p["px"] ?? p["start_x"]);
   const y = finite(p["y"] ?? p["py"] ?? p["start_y"]);
-  if (x === null || y === null) return null;
-  return { x: clamp(x > 105 ? x / 19.2 : x), y: clamp(y > 100 ? y / 10.8 : y) };
+  if (x !== null && y !== null) return { x: clamp(x > 105 ? x / 19.2 : x), y: clamp(y > 100 ? y / 10.8 : y) };
+  const frames=file?.frames??[]; let nearest:Frame|undefined;
+  for(const frame of frames){if(!nearest||Math.abs(frame.t-event.t)<Math.abs(nearest.t-event.t))nearest=frame;}
+  const metres=nearest?.ball?.m;
+  return metres?{x:clamp(metres[0]/105*100),y:clamp(metres[1]/68*100)}:null;
 };
 const passTeam = (pass: Pass): TeamKey | null => pass["team"] === "A" || pass["team"] === "B" ? pass["team"] : null;
 const passTime = (pass: Pass) => finite(pass["t"] ?? pass["time"] ?? pass["start_t"]);
@@ -128,8 +131,8 @@ function Distance({ players, colour }: { players: PlayerStat[]; colour: string }
   </Card>;
 }
 
-function PressMap({ events, team, matchId, colour }: Props & { colour: string }) {
-  const press = events.filter(event => event.team === team && ["pressure", "press", "turnover_won", "high_turnover"].includes(event.type)).map(event => ({ event, point: eventPoint(event) })).filter((item): item is { event: ReviewedEvent; point: Point } => item.point !== null);
+function PressMap({ events, team, matchId, colour, file }: Props & { colour: string }) {
+  const press = events.filter(event => event.team === team && ["pressure", "press", "turnover_won", "high_turnover"].includes(event.type)).map(event => ({ event, point: eventPoint(event,file) })).filter((item): item is { event: ReviewedEvent; point: Point } => item.point !== null);
   if (!press.length) return null;
   return <Card question="Where did we press?" caption="Each dot is one pressure or regain at the ball position." honesty={`${press.filter(p => p.event.status === "confirmed").length} confirmed · ${press.length} detected`}>
     <Pitch>{press.map(({event, point}) => <Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch pressure at ${fmt(event.t)}`}><circle cx={point.x} cy={point.y/100*64} r="1.8" fill={colour} opacity=".82" /></Link>)}</Pitch>
@@ -163,21 +166,24 @@ function ShapeOutcome({ lineDefending, colour }: { lineDefending: LineDefending;
   </Card>;
 }
 
-function ShotMap({ stats, colours, matchId }: Props) {
-  const shots = Array.isArray(stats?.metrics?.["shots"]) ? stats.metrics["shots"] as Record<string,unknown>[] : []; if (!shots.length) return null;
+function ShotMap({ stats, colours, matchId, events, file }: Props) {
+  const metricShots = Array.isArray(stats?.metrics?.["shots"]) ? stats.metrics["shots"] as Record<string,unknown>[] : [];
+  const eventShots=events.filter(event=>event.type==="shot"||event.type==="goal").map(event=>{const point=eventPoint(event,file);return {id:event.id,t:event.t,team:event.team,x:point?.x,y:point?.y,goal:event.type==="goal",on_target:event.payload?.["on_target"]===true}});
+  const shots = metricShots.length?metricShots:eventShots; if (!shots.length) return null;
   return <Card question="Where did shots come from?" caption="Filled means on target. A cream ring marks a goal." honesty={`${shots.length} shots`}>
     <Pitch>{shots.map((shot,index)=>{const shotTeam:TeamKey=shot["team"]==="B"?"B":"A";const x=finite(shot["x"]??shot["px"])??(shotTeam==="A"?25:75);const y=finite(shot["y"]??shot["py"])??50;const t=finite(shot["t"])??0;const goal=shot["goal"]===true;const on=goal||shot["on_target"]===true;return <Link key={String(shot["id"]??index)} to="/match/$matchId/match" params={{matchId}} search={{t}} aria-label={`Watch ${shotTeam} shot`}><circle cx={clamp(x)} cy={clamp(y)/100*64} r={goal?2.8:2.2} fill={on?colours[shotTeam]:"var(--surface-2)"} stroke={goal?"var(--cream)":colours[shotTeam]} strokeWidth={goal?1.2:.8}/></Link>})}</Pitch>
   </Card>;
 }
 
-function ShotSummary({ stats, team }: Props) {
-  const shots = (Array.isArray(stats?.metrics?.["shots"]) ? stats.metrics["shots"] : []).filter((shot:any)=>shot?.team===team); if (!shots.length) return null;
+function ShotSummary({ stats, team, events }: Props) {
+  const metricShots = (Array.isArray(stats?.metrics?.["shots"]) ? stats.metrics["shots"] : []).filter((shot:any)=>shot?.team===team);
+  const shots = metricShots.length?metricShots:events.filter(event=>event.team===team&&(event.type==="shot"||event.type==="goal")).map(event=>({goal:event.type==="goal",on_target:event.payload?.["on_target"]===true,x:event.payload?.["x"]})); if (!shots.length) return null;
   const on = shots.filter((shot:any)=>shot?.on_target||shot?.goal).length; const goals=shots.filter((shot:any)=>shot?.goal).length; const box=shots.filter((shot:any)=>(finite(shot?.x)??50)<18||(finite(shot?.x)??50)>82).length;
   return <Card question="What did our shooting produce?" caption="The shot total, accuracy and penalty-area share without a score dial." honesty={`${shots.length} shot moments`}><div className="grid grid-cols-3 divide-x divide-wire border border-wire"><Metric value={`${shots.length}`} label="shots"/><Metric value={`${on}`} label="on target"/><Metric value={`${goals}`} label="goals"/></div><p className="mt-3 text-[12px] text-text-dim">{box} of {shots.length} attempts came from inside the penalty area.</p></Card>;
 }
 
-function EntriesConceded({ events, team, matchId }: Props) {
-  const opponent=team==="A"?"B":"A"; const entries=events.filter(e=>e.team===opponent&&["final_third_entry","entry","shot","goal"].includes(e.type)).map(event=>({event,point:eventPoint(event)})).filter((x):x is {event:ReviewedEvent;point:Point}=>x.point!==null); if(!entries.length)return null;
+function EntriesConceded({ events, team, matchId, file }: Props) {
+  const opponent=team==="A"?"B":"A"; const entries=events.filter(e=>e.team===opponent&&["final_third_entry","entry","shot","goal"].includes(e.type)).map(event=>({event,point:eventPoint(event,file)})).filter((x):x is {event:ReviewedEvent;point:Point}=>x.point!==null); if(!entries.length)return null;
   const lanes=[0,0,0,0,0];entries.forEach(({point})=>{const index=Math.min(4,Math.floor(point.y/20));lanes[index]=(lanes[index]??0)+1});
   return <Card question="Where did they get in?" caption="Opponent entries into our defensive third, grouped into five lanes." honesty={`${entries.length} entries and shots`}>
     <Pitch>{entries.map(({event,point})=><Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch entry at ${fmt(event.t)}`}><line x1={point.x} y1={point.y/100*64} x2={Math.max(4,point.x-10)} y2={point.y/100*64} stroke="var(--graphite)" strokeWidth="1.2"/><circle cx={Math.max(4,point.x-10)} cy={point.y/100*64} r="1.8" fill={event.type==="shot"||event.type==="goal"?"var(--quality-bad)":"var(--text-faint)"}/></Link>)}</Pitch>
@@ -201,7 +207,7 @@ function PassNetwork({passes,colour}:{passes:Pass[];colour:string}){const pairs=
 
 function PassMap({passes,matchId,colour}:{passes:Pass[];matchId:string;colour:string}){const mapped=passes.map(pass=>({pass,start:passPoint(pass,"start"),end:passPoint(pass,"end")})).filter((x):x is {pass:Pass;start:Point;end:Point}=>x.start!==null&&x.end!==null).slice(0,80);if(!mapped.length)return null;return <Card question="Where did our passes go?" caption="Every tracked pass is drawn from release to reception." honesty={`${mapped.length} located passes`}><Pitch>{mapped.map(({pass,start,end},index)=>{const t=passTime(pass)??0;return <Link key={index} to="/match/$matchId/match" params={{matchId}} search={{t}} aria-label={`Watch pass at ${fmt(t)}`}><line x1={start.x} y1={start.y/100*64} x2={end.x} y2={end.y/100*64} stroke={passCompleted(pass)?colour:"var(--text-faint)"} strokeWidth=".65" strokeDasharray={passCompleted(pass)?undefined:"2 1"} opacity=".55"/></Link>})}</Pitch></Card>}
 
-function Interceptions({events,team,matchId,colour}:Props&{colour:string}){const items=events.filter(e=>e.team===team&&["interception","pass_intercepted","turnover_won"].includes(e.type)).map(event=>({event,point:eventPoint(event)})).filter((x):x is {event:ReviewedEvent;point:Point}=>x.point!==null);if(!items.length)return null;return <Card question="Where did we cut passes out?" caption="Each mark is an interception or pass-led regain." honesty={`${items.length} moments`}><Pitch>{items.map(({event,point})=><Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch interception at ${fmt(event.t)}`}><g transform={`translate(${point.x} ${point.y/100*64})`}><path d="M-2 -2 2 2M2 -2-2 2" stroke={colour} strokeWidth="1.2"/><path d="M2 0h5" stroke="var(--cream)" strokeWidth=".7"/></g></Link>)}</Pitch></Card>}
+function Interceptions({events,team,matchId,colour,file}:Props&{colour:string}){const items=events.filter(e=>e.team===team&&["interception","pass_intercepted","turnover_won"].includes(e.type)).map(event=>({event,point:eventPoint(event,file)})).filter((x):x is {event:ReviewedEvent;point:Point}=>x.point!==null);if(!items.length)return null;return <Card question="Where did we cut passes out?" caption="Each mark is an interception or pass-led regain." honesty={`${items.length} moments`}><Pitch>{items.map(({event,point})=><Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch interception at ${fmt(event.t)}`}><g transform={`translate(${point.x} ${point.y/100*64})`}><path d="M-2 -2 2 2M2 -2-2 2" stroke={colour} strokeWidth="1.2"/><path d="M2 0h5" stroke="var(--cream)" strokeWidth=".7"/></g></Link>)}</Pitch></Card>}
 
 function PassLog({passes,matchId}:{passes:Pass[];matchId:string}){if(!passes.length)return null;return <Card question="Which passes should we review?" caption="A chronological log of player, direction, quality and outcome." honesty={`${passes.length} passes in this period`}><div className="divide-y divide-wire-2">{passes.slice(0,30).map((pass,index)=>{const t=passTime(pass)??0;const from=passPlayer(pass,"from"),to=passPlayer(pass,"to");const s=passPoint(pass,"start"),e=passPoint(pass,"end");const direction=s&&e?e.x-s.x>8?"Forward":e.x-s.x<-8?"Back":"Across":"Pass";return <Link key={index} to="/match/$matchId/match" params={{matchId}} search={{t}} className="grid min-h-11 grid-cols-[44px_1fr_auto] items-center gap-2 py-1.5"><span className="num text-[11px] text-text-faint">{fmt(t)}</span><span className="text-[12px]">{from??"—"} → {to??"—"} <small className="ml-1 text-text-faint">{direction}</small></span><span className={cn("text-[10px] font-bold uppercase",passCompleted(pass)?"text-quality-good":"text-quality-bad")}>{passCompleted(pass)?"Complete":"Lost"}</span></Link>})}</div></Card>}
 
