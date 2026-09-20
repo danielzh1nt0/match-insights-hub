@@ -31,3 +31,11 @@ export function crestForTeam(name: string) {
 
   return undefined;
 }
+
+/** Majority crest colour for known clubs; saved match colours remain the fallback. */
+export function colourForTeam(name: string, fallback: string) {
+  const normalised = normaliseTeamName(name);
+  if (normalised.includes("bvb") || normalised.includes("dortmund") || normalised.includes("borussia d")) return "var(--club-bvb)";
+  if (normalised.includes("bayern") || normalised.includes("fcb") || normalised.includes("munchen")) return "var(--club-bayern)";
+  return fallback;
+}
