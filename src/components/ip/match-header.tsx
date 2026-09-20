@@ -46,7 +46,7 @@ function TeamTile({
       type="button"
       onClick={onSelect}
       aria-label={`Filter to ${name}`}
-      className="tap flex flex-col items-center gap-1.5 rounded-[12px]"
+      className="tap flex flex-col items-center gap-1.5 rounded-[6px]"
     >
       <span
         className="relative grid h-11 w-11 place-items-center md:h-[52px] md:w-[52px]"
@@ -58,10 +58,10 @@ function TeamTile({
         ) : (
           <>
             <span
-              className="absolute inset-0 rounded-[12px]"
+              className="absolute inset-0 rounded-[6px]"
               style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.12)" }}
             />
-            <span className="display-i text-[22px] leading-none tracking-[-0.02em] text-[#ffffff]">
+            <span className="display-i text-[22px] leading-none text-text">
               {initialOf(name)}
             </span>
           </>

@@ -62,6 +62,14 @@ function EmptyTab() {
   return <div className="border border-dashed border-wire px-4 py-10 text-center text-[12.5px] text-text-faint">There is not enough reliable evidence for this view.</div>;
 }
 
+function EvidenceUnavailable({ question, caption }: { question: string; caption: string }) {
+  return <Card question={question} caption={caption} footer="Evidence threshold not met">
+    <div className="flex min-h-28 items-center border-l-2 border-text-faint bg-surface-2 px-4">
+      <p className="max-w-[460px] text-[12.5px] leading-relaxed text-text-dim">This match does not contain enough reliable evidence to answer this coaching question.</p>
+    </div>
+  </Card>;
+}
+
 function Control({ stats, team, colours }: Props) {
   const a = value(teamRow(stats, "A"), "possession_pct");
   const b = value(teamRow(stats, "B"), "possession_pct");
@@ -220,9 +228,9 @@ export function StatsVisuals(props: Props) {
   let cards: React.ReactNode[]=[];
   if(props.tab==="ball")cards=[<Control key="control" {...p}/>,<Thirds key="thirds" frames={frames} team={props.team} colour={colour}/>,<SequenceLength key="sequence" {...p}/>,<Runs key="runs" frames={frames} team={props.team} colour={colour}/>,<Distance key="distance" players={props.players.filter(x=>x.team===props.team)} colour={colour}/>];
   if(props.tab==="pressing")cards=[<PressMap key="press" {...p} colour={colour}/>,<CounterPress key="counter" {...p}/>,props.lineDefending&&props.lineDefending.lineBreakCount!==0?<LineBreakHero key="breaks" data={props.lineDefending} matchId={props.matchId}/>:null];
-  if(props.tab==="shape"){const line=props.lineDefending;cards=[line&&line.medianM!==null&&line.usualM!==null?<DeepAnswer key="depth" data={line}/>:null,props.territory?<ShapeMultiples key="multiples" territory={props.territory} colour={colour}/>:null,line?<ShapeOutcome key="outcome" lineDefending={line} colour={colour}/>:null,line&&line.timeline.length?<LineTimeline key="timeline" data={line} matchId={props.matchId}/>:null];}
-  if(props.tab==="shooting")cards=[<ShotMap key="map" {...p}/>,<ShotSummary key="summary" {...p}/>,<EntriesConceded key="entries" {...p}/>];
+  if(props.tab==="shape"){const line=props.lineDefending;cards=[line&&line.medianM!==null&&line.usualM!==null?<DeepAnswer key="depth" data={line}/>:<EvidenceUnavailable key="depth-empty" question="Did we defend too deep?" caption="Our defensive line compared with its usual height."/>,props.territory?<ShapeMultiples key="multiples" territory={props.territory} colour={colour}/>:<EvidenceUnavailable key="multiples-empty" question="How did our shape change?" caption="Observed moments show how our block expanded and contracted."/>,line?<ShapeOutcome key="outcome" lineDefending={line} colour={colour}/>:<EvidenceUnavailable key="outcome-empty" question="In which shape did we suffer?" caption="Defensive states compared with opponent outcomes."/>,line&&line.timeline.length?<LineTimeline key="timeline" data={line} matchId={props.matchId}/>:<EvidenceUnavailable key="timeline-empty" question="Where was our line over time?" caption="Defensive line height across the selected period."/>];}
+  if(props.tab==="shooting")cards=[<ShotMap key="map" {...p}/>,<ShotSummary key="summary" {...p}/>,<EntriesConceded key="entries" {...p}/>].map((card,index)=>card??<EvidenceUnavailable key={`shooting-empty-${index}`} question={["Where did shots come from?","What did our shooting produce?","Where did they get in?"][index]??"Shooting evidence"} caption={["The location and outcome of each reliable shot.","Shot volume, accuracy and penalty-area share.","Opponent entries into our defensive third."][index]??"Evidence from the selected period."}/>);
   if(props.tab==="players")cards=[<PlayerCards key="players" {...p}/>];
-  if(props.tab==="passes")cards=[<LaneEffectiveness key="lanes" passes={passes} colour={colour}/>,<BetterOption key="better" {...p} colour={colour}/>,<PassNetwork key="network" passes={passes} colour={colour}/>,<PassMap key="map" passes={passes} colour={colour} matchId={props.matchId}/>,<Interceptions key="interceptions" {...p} colour={colour}/>,<PassLog key="log" passes={passes} matchId={props.matchId}/>];
+  if(props.tab==="passes")cards=[<LaneEffectiveness key="lanes" passes={passes} colour={colour}/>,<BetterOption key="better" {...p} colour={colour}/>,<PassNetwork key="network" passes={passes} colour={colour}/>,<PassMap key="map" passes={passes} colour={colour} matchId={props.matchId}/>,<Interceptions key="interceptions" {...p} colour={colour}/>,<PassLog key="log" passes={passes} matchId={props.matchId}/>].map((card,index)=>card??<EvidenceUnavailable key={`passes-empty-${index}`} question={["Which lanes worked?","Where was the better option?","How did we build?","Where did our passes go?","Where did we cut passes out?","Which passes should we review?"][index]??"Passing evidence"} caption={["Lane use and completion quality.","Detected alternatives to the pass played.","Connections and passing volume between players.","Release and reception locations for reliable passes.","Interceptions and pass-led regains.","A chronological review of passing decisions."][index]??"Evidence from the selected period."}/>);
   const shown=cards.filter(Boolean); return <div className="flex flex-col gap-3">{shown.length?shown:<EmptyTab/>}</div>;
 }

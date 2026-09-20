@@ -45,7 +45,7 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-[#05070a]/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-ink/70 backdrop-blur-sm"
       />
       <motion.div
         role="dialog"
@@ -53,7 +53,7 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
-        className="relative w-full max-w-[520px] rounded-t-[16px] border border-wire bg-surface p-4 pb-6"
+        className="relative w-full max-w-[520px] rounded-t-[8px] border border-wire bg-surface p-4 pb-6"
       >
         <div className="flex items-start justify-between gap-3">
           <h2 className="display text-[17px] uppercase text-cream">{info.title}</h2>
@@ -93,7 +93,7 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
             to="/glossary"
             {...(info.glossaryId ? { hash: info.glossaryId } : {})}
             onClick={onClose}
-            className="tap inline-flex h-12 flex-1 items-center justify-center rounded-[12px] border border-cream/60 px-5 text-sm font-semibold text-cream transition-colors duration-150 ease-out hover:bg-cream/10"
+            className="tap inline-flex h-12 flex-1 items-center justify-center rounded-[6px] border border-cream/60 px-5 text-sm font-semibold text-cream transition-colors duration-150 ease-out hover:bg-cream/10"
           >
             Glossary
           </Link>
@@ -136,7 +136,7 @@ export function Visual({
   const inferred = info.rows.find((row) => row.cream)?.value ?? "—";
   const shownTakeaway = takeaway ?? { value: inferred };
   return (
-    <section className={cn("overflow-hidden rounded-[14px] border border-wire bg-surface", className)}>
+    <section className={cn("overflow-hidden rounded-[8px] border border-wire bg-surface", className)}>
       <div className="flex items-start justify-between gap-3 px-4 pb-1.5 pt-3.5">
         <h2 className="display text-[17px] uppercase leading-tight text-cream">{question}</h2>
         <button
@@ -206,7 +206,7 @@ export function Pitch({
 }) {
   return (
     <div className={cn("w-full", className)}>
-      <div className="mx-auto w-full max-w-[640px] overflow-hidden rounded-[12px] bg-surface-2">
+      <div className="mx-auto w-full max-w-[640px] overflow-hidden rounded-[6px] bg-surface-2">
       <svg viewBox="0 0 100 64" className="block h-auto w-full" role="img" aria-label="Pitch">
         <rect x="0" y="0" width="100" height="64" fill="var(--surface-2)" />
         <g stroke="var(--wire)" strokeWidth="0.4" fill="none">
@@ -239,7 +239,7 @@ export function PortraitPitch({
 }) {
   return (
     <div className="mx-auto w-full max-w-[300px]">
-      <svg viewBox="0 0 64 100" className="block h-auto w-full rounded-[12px] bg-surface-2" role="img" aria-label="Pitch">
+      <svg viewBox="0 0 64 100" className="block h-auto w-full rounded-[6px] bg-surface-2" role="img" aria-label="Pitch">
         <rect x="0" y="0" width="64" height="100" fill="var(--surface-2)" />
         <g stroke="var(--cream)" strokeOpacity=".28" strokeWidth=".45" fill="none">
           <rect x="2" y="2" width="60" height="96" />

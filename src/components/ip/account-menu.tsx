@@ -54,7 +54,7 @@ export function AccountMenu() {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-11 z-50 w-[220px] rounded-[12px] border border-wire bg-surface-2 p-2 shadow-lg"
+          className="absolute right-0 top-11 z-50 w-[220px] rounded-[6px] border border-wire bg-surface-2 p-2"
         >
           <div className="px-2 pb-2 pt-1">
             <p className="truncate text-[13px] font-semibold text-text">{name || "Coach"}</p>
@@ -68,7 +68,7 @@ export function AccountMenu() {
               setOpen(false);
               navigate({ to: "/settings/club" });
             }}
-            className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
+            className="tap flex w-full items-center rounded-[5px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
           >
             Club setup
           </button>
@@ -79,7 +79,7 @@ export function AccountMenu() {
               setOpen(false);
               navigate({ to: "/settings/account" });
             }}
-            className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
+            className="tap flex w-full items-center rounded-[5px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
           >
             Account
           </button>
@@ -90,7 +90,7 @@ export function AccountMenu() {
               setOpen(false);
               navigate({ to: "/glossary" });
             }}
-            className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
+            className="tap flex w-full items-center rounded-[5px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
           >
             Glossary
           </button>
@@ -99,7 +99,7 @@ export function AccountMenu() {
             type="button"
             role="menuitem"
             onClick={signOut}
-            className="tap flex w-full items-center rounded-[10px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
+            className="tap flex w-full items-center rounded-[5px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text"
           >
             Sign out
           </button>
