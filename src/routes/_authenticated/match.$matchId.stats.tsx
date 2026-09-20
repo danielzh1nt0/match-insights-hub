@@ -1,14 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Card, Chip } from "@/components/ip/primitives";
+import { StatsVisual } from "@/components/ip/stats-visuals";
 import { Visual } from "@/components/ip/visual";
 import { useAnalysis } from "@/hooks/use-match";
 import { countEvents, countLine } from "@/lib/event-reviews";
 import { feedLabel } from "@/lib/match-source";
-import { cn } from "@/lib/utils";
 
 /** Which detected moments each stats card is built from. */
 const SECTION_EVENTS: Record<string, string[]> = {
@@ -51,7 +50,7 @@ function Stats() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, sections, players, loading, events, confirmedCount } = useAnalysis(
+  const { match, team, colours, sections, players, loading, events, confirmedCount, stats, file } = useAnalysis(
     matchId,
     scope,
   );
@@ -121,6 +120,7 @@ function Stats() {
               tone: comparisonValue === null ? "neutral" : (comparisonValue >= 0) === higherIsGood ? "good" : "bad",
             }}
             honesty={`${sectionConfirmed} confirmed · ${sectionDetected} detected`}
+            footerNote={active.key === "players" ? `${players.length} players in view` : `${active.rows.length} measures`}
             info={{
               title: active.label,
               rows: [
@@ -132,74 +132,7 @@ function Stats() {
               ],
             }}
           >
-            {active.key === "players" ? (
-              <ul>
-                {players.map((p) => (
-                  <li key={`${p.team}-${p.id}`}>
-                    <Link
-                      to="/match/$matchId/player/$playerId"
-                      params={{ matchId, playerId: String(p.id) }}
-                      className="tap flex items-center gap-3 border-b border-wire-2 py-2.5 last:border-0 hover:bg-surface-2"
-                    >
-                      <span className="num w-7 shrink-0 text-[13px] text-cream">{p.id}</span>
-                      <span className="min-w-0 flex-1 truncate text-[13.5px] text-text">
-                        {p.team === "A" ? match.teamA : match.teamB}
-                      </span>
-                      <span className="num shrink-0 text-[11.5px] text-text-faint">{p.distanceM} m</span>
-                      <span className="num shrink-0 text-[12.5px] text-text-dim">{p.touches} touches</span>
-                      <ChevronRight size={15} className="shrink-0 text-text-faint" aria-hidden="true" />
-                    </Link>
-                  </li>
-                ))}
-                {players.length === 0 && (
-                  <li className="py-6 text-center text-[12.5px] text-text-faint">
-                    No player numbers in this match.
-                  </li>
-                )}
-              </ul>
-            ) : (
-              <div>
-                <div className="flex items-center gap-3 border-b border-wire pb-2 text-[11px] uppercase tracking-[0.06em] text-text-faint">
-                  <span className="flex-1" />
-                  <span className="flex w-20 items-center justify-end gap-1.5">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: colours.A }}
-                      aria-hidden="true"
-                    />
-                    {match.teamA.split(" ").at(-1)}
-                  </span>
-                  <span className="flex w-20 items-center justify-end gap-1.5">
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ background: colours.B }}
-                      aria-hidden="true"
-                    />
-                    {match.teamB.split(" ").at(-1)}
-                  </span>
-                  <span className="w-20 text-right">Target</span>
-                </div>
-                {active.rows.map((r) => (
-                  <div
-                    key={r.label}
-                    className="flex items-center gap-3 border-b border-wire-2 py-2.5 text-[13px] last:border-0"
-                  >
-                    <span className="min-w-0 flex-1 text-text-dim">{r.label}</span>
-                    <span
-                      className={cn("num w-20 text-right", team === "B" ? "text-text-faint" : "text-text")}
-                    >
-                      {r.a}
-                    </span>
-                    <span
-                      className={cn("num w-20 text-right", team === "A" ? "text-text-faint" : "text-text-dim")}
-                    >
-                      {r.b}
-                    </span>
-                    <span className="num w-20 text-right text-cream">{r.target ?? "—"}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <StatsVisual section={active} players={players} stats={stats} file={file} events={events} team={team ?? "A"} colours={colours} matchId={matchId} />
           </Visual>
 
           {SECTION_EVENTS[active.key] && (
