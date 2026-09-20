@@ -120,7 +120,7 @@ function Stats() {
               value: comparisonValue === null ? "—" : `${comparisonValue > 0 ? "+" : ""}${Math.round(comparisonValue * 10) / 10}`,
               tone: comparisonValue === null ? "neutral" : (comparisonValue >= 0) === higherIsGood ? "good" : "bad",
             }}
-            honesty={sectionDetected > 0 ? `${sectionConfirmed} confirmed · ${sectionDetected} detected` : undefined}
+            {...(sectionDetected > 0 ? { honesty: `${sectionConfirmed} confirmed · ${sectionDetected} detected` } : {})}
             footerNote={active.key === "players" ? `${players.length} players in view` : `${active.rows.length} measures`}
             info={{
               title: active.label,
