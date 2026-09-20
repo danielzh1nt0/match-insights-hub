@@ -20,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/library")({
       { name: "description", content: "Every match you've uploaded, with possession, turnovers and shots at a glance." },
       { property: "og:title", content: "Library — Ipanema" },
       { property: "og:description", content: "Choose a match to open its analysis workspace." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: LibraryPage,

@@ -16,6 +16,8 @@ export const Route = createFileRoute("/signin")({
       { name: "description", content: "Sign in to your club and open your match library in Ipanema." },
       { property: "og:title", content: "Sign in — Ipanema" },
       { property: "og:description", content: "Sign in to your club and open your match library." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary" },
     ],
   }),
   component: SignIn,

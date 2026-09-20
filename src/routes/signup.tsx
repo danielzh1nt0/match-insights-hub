@@ -18,6 +18,8 @@ export const Route = createFileRoute("/signup")({
       },
       { property: "og:title", content: "Request access — Ipanema" },
       { property: "og:description", content: "Request access to Ipanema for your club." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary" },
     ],
   }),
   component: SignUp,
