@@ -22,12 +22,9 @@ function BallShare({ section, team, colours }: Pick<Props, "section" | "team" | 
   const a = Number.parseFloat(section.rows[0]?.a ?? "0") || 0;
   const b = Number.parseFloat(section.rows[0]?.b ?? "0") || 0;
   const own = team === "A" ? a : b;
-  return <div className="grid grid-cols-[108px_1fr] items-center gap-4">
-    <svg viewBox="0 0 100 100" className="h-[108px] w-[108px]" role="img" aria-label={`${own}% possession`}>
-      <circle cx="50" cy="50" r="38" fill="none" stroke="var(--surface-3)" strokeWidth="12" />
-      <circle cx="50" cy="50" r="38" fill="none" stroke={colours[team]} strokeWidth="12" pathLength="100" strokeDasharray={`${own} ${100-own}`} strokeLinecap="round" transform="rotate(-90 50 50)" />
-      <text x="50" y="55" textAnchor="middle" fill="var(--cream)" fontFamily="var(--font-display)" fontWeight="800" fontStyle="italic" fontSize="22">{own}%</text>
-    </svg>
+  return <div>
+    <div className="mb-4 flex items-end justify-between gap-4"><strong className="display-i text-[56px] leading-none text-cream">{own}%</strong><span className="pb-1 text-[11px] font-semibold text-text-faint">control</span></div>
+    <div className="mb-4 flex h-3 overflow-hidden rounded-[3px] bg-surface-3" role="img" aria-label={`${a}% Team A possession and ${b}% Team B possession`}><span style={{ width: `${a}%`, background: colours.A }} /><span style={{ width: `${b}%`, background: colours.B }} /></div>
     <dl className="divide-y divide-wire-2">
       {section.rows.slice(1,4).map(row => <div key={row.label} className="flex items-baseline justify-between gap-3 py-2"><dt className="text-[11px] text-text-faint">{row.label}</dt><dd className="num text-[14px] text-text">{team === "A" ? row.a : row.b}</dd></div>)}
     </dl>
@@ -68,9 +65,10 @@ function DistanceRows({ players, colours }: Pick<Props,"players"|"colours">) {
   return <div className="divide-y divide-wire-2">{ranked.map(p=>{const rate=p.minutes?Math.round(p.distanceM/p.minutes):0;return <div key={`${p.team}-${p.id}`} className="grid grid-cols-[28px_1fr_62px] items-center gap-2 py-2"><span className="num text-center text-[14px] text-text">{p.id}</span><div className="h-3 overflow-hidden rounded-[3px] bg-surface-2"><div className="h-full" style={{width:`${pct(rate,max)}%`,background:colours[p.team]}}/></div><span className="num text-right text-[12px] text-text">{rate}<small className="ml-1 text-[9px] text-text-faint">m/min</small></span></div>})}</div>;
 }
 
-function ProgressionFlow({ stats, team, colours }: Pick<Props,"stats"|"team"|"colours">) {
+function PassLeaders({ stats, team, colours }: Pick<Props,"stats"|"team"|"colours">) {
   const passes=(stats?.passes??[]).filter((p:any)=>p?.team===team); const counts=new Map<number,number>(); for(const p of passes){for(const key of [p?.from,p?.from_id,p?.player_id,p?.to,p?.to_id]){if(typeof key==="number")counts.set(key,(counts.get(key)??0)+1)}} const nodes=[...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0,9);
-  return <div className="relative grid h-[180px] grid-cols-3 gap-4" role="img" aria-label="Player progression flow across thirds"><svg viewBox="0 0 300 180" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">{nodes.slice(0,6).map((node,i)=><path key={node[0]} d={`M${50+(i%3)*100},${32+Math.floor(i/3)*90} C${95+(i%2)*90},70 ${120+(i%2)*80},110 ${150+(i%3)*50},${52+(i%2)*72}`} fill="none" stroke={colours[team]} strokeOpacity=".28" strokeWidth={Math.max(2,Math.min(10,node[1]/3))}/>)}</svg>{[0,1,2].map(col=><div key={col} className="z-10 flex flex-col justify-around">{nodes.slice(col*3,col*3+3).map(([id,count])=><span key={id} className="num mx-auto grid rounded-full border border-wire bg-surface-2 text-center text-[14px] text-text" style={{width:`${Math.min(52,34+count)}px`,height:`${Math.min(52,34+count)}px`,placeItems:"center"}}>{id}</span>)}</div>) }</div>;
+  const max=Math.max(...nodes.map(([,count])=>count),1);
+  return <div className="divide-y divide-wire-2" role="img" aria-label="Most involved passers">{nodes.map(([id,count])=><div key={id} className="grid grid-cols-[32px_1fr_36px] items-center gap-3 py-2"><span className="num text-[14px] text-text">{id}</span><span className="h-2 overflow-hidden rounded-[2px] bg-surface-3"><span className="block h-full" style={{width:`${pct(count,max)}%`,background:colours[team]}} /></span><span className="num text-right text-[12px] text-text-dim">{count}</span></div>)}</div>;
 }
 
 export function StatsVisual(props: Props) {
@@ -79,5 +77,5 @@ export function StatsVisual(props: Props) {
   if(props.section.key==="shape")return <ShapeRibbon {...props}/>;
   if(props.section.key==="shooting")return <ShotMap {...props}/>;
   if(props.section.key==="players")return <DistanceRows {...props}/>;
-  return <ProgressionFlow {...props}/>;
+  return <PassLeaders {...props}/>;
 }
