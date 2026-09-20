@@ -81,7 +81,7 @@ function Territory() {
             <p className="num mt-2 text-[11.5px] text-text-faint">
               n = {territory.playerCount} players · {territory.frameCount.toLocaleString()} frames
             </p>
-            {players.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Tracked players">{players.slice(0, 12).map((player) => <Chip key={player.id} className="min-h-11 min-w-11 justify-center px-2">#{player.shirt}</Chip>)}</div>}
+            {players.length > 0 && <div className="mt-3 flex flex-wrap gap-1.5" aria-label="Tracked players">{players.slice(0, 12).map((player) => <Chip key={player.id} className="min-h-11 min-w-11 justify-center px-2">#{player.id}</Chip>)}</div>}
           </Visual>
 
           <Visual
