@@ -13,12 +13,12 @@
 - Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
-- [ ] Complete approved Elite tactical workspace redesign across shared shell, front door, match workspace, and secondary destinations with full responsive QA
-- [ ] Complete Stats rebuild: all 24 approved Ball, Pressing, Shape, Shooting, Players, and Passes slots, using Visualisation Library v16 patterns and full QA
+- [x] Complete approved Elite tactical workspace redesign across shared shell, front door, match workspace, and secondary destinations with full responsive QA
+- [x] Complete Stats rebuild: all 24 approved Ball, Pressing, Shape, Shooting, Players, and Passes slots, using Visualisation Library v16 patterns and full QA
 - [x] Pack 2 and 3: Match and Territory component integration with reviewed real data, preserved video/review behavior, mobile/desktop screenshots, interaction checks, no-overflow checks, and prohibited-pattern audit
 - [x] Prompt B: Veo-style number-led visual refactor across Insights, Stats, and Territory
 - [x] Match event filter: wrapped chip row, responsive More sheet, grouped filtering, and mobile/desktop QA
-- [ ] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
+- [x] `<MatchHeader>` rebuild (3 rows: score row with team tiles, divider, meta line + gear); replaces MatchBar on every match screen; mobile/desktop sizes; pre-match and second-half states
 - [x] `<MatchStory>` full-screen match-specific 5-slide recap + route `/match/:id/story` + `<StoryLauncher>` pill on library cards and insights
 - [x] Correct Territory and Stats against Visualisation Library v16: exact card anatomy and six distinct visual families
 - [ ] Phase 3 remainder: settings screens, coach marks per screen, skeleton/empty/error/offline states
