@@ -1,217 +1,144 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion } from "motion/react";
+import { ArrowRight, Check, Play, Target } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
-import { Wordmark, PrimaryButton, SecondaryButton, Card } from "@/components/ip/primitives";
+import { Wordmark, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
+import bvbCrest from "@/assets/bvb-crest.png.asset.json";
+import bayernCrest from "@/assets/bayern-crest.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Ipanema — Match analysis that ends in Tuesday's session" },
-      {
-        name: "description",
-        content:
-          "Ipanema turns match video into three to five coach-readable findings, every number backed by a clip, and a printable training session.",
-      },
+      { title: "Ipanema — Football match analysis for coaches" },
+      { name: "description", content: "Turn match footage into clear coaching findings, reviewable clips, and Tuesday's training session." },
       { property: "og:title", content: "Ipanema — Football match analysis for coaches" },
-      {
-        property: "og:description",
-        content: "Findings, not dashboards. Every number has a clip. It writes the session.",
-      },
+      { property: "og:description", content: "Findings, not dashboards. Every number has a clip. It writes the session." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Landing,
 });
 
-const claims = [
-  {
-    title: "Findings, not dashboards",
-    body: "Three to five coach-readable findings per match. The numbers have targets. The targets have drills.",
-    shot: (
-      <div className="flex h-full flex-col items-center justify-center">
-        <span className="num text-[34px] text-cream">3</span>
-        <span className="mt-1 text-[10px] text-text-faint">better options missed</span>
-      </div>
-    ),
-  },
-  {
-    title: "Every number has a clip",
-    body: "Tap a finding, watch the moment. Every event in the feed seeks the video to the second.",
-    shot: (
-      <div className="pitch-turf relative h-full w-full">
-        <span className="absolute left-[30%] top-[40%] h-2.5 w-2.5 rounded-full bg-team-a" />
-        <span className="absolute left-[58%] top-[62%] h-2.5 w-2.5 rounded-full bg-team-b" />
-        <span className="num absolute bottom-2 right-2 text-[12px] text-cream">0:14</span>
-      </div>
-    ),
-  },
-  {
-    title: "It writes the session",
-    body: "Findings turn into a printable training plan with drills, timings and coaching points.",
-    shot: (
-      <div className="flex h-full flex-col justify-center bg-[#fdfdfd] p-3">
-        <span className="display text-[13px] text-[#111315]">Rondo · lane rule</span>
-        <span className="mt-1 text-[10px] text-[#666]">20 min</span>
-      </div>
-    ),
-  },
-];
-
-const steps = [
-  { n: "01", title: "Upload", body: "Drop a video. Choose the teams and the date." },
-  { n: "02", title: "Analysed", body: "About 30 minutes for a 45-minute half." },
-  { n: "03", title: "Findings", body: "Three to five, with moments and targets." },
-  { n: "04", title: "Session", body: "A printable plan for the next training." },
-];
-
-const audiences = [
-  {
-    title: "Youth academies",
-    body: "Age-group targets, player pages, and a session that fits a 60-minute slot.",
-  },
-  { title: "Amateur clubs", body: "One camera, one clip, findings the whole staff can read." },
-  { title: "Individual coaches", body: "No analyst needed. Upload after the game, plan on Sunday." },
-];
-
-function SectionTitle({ children }: { children: string }) {
+function TacticalPreview() {
   return (
-    <h2 className="display mb-5 text-[15px] tracking-[0.06em] text-text-dim">{children}</h2>
+    <div className="overflow-hidden rounded-[8px] border border-wire bg-workspace">
+      <div className="flex min-h-14 items-center justify-between border-b border-wire-2 px-4">
+        <span className="section-kicker">Match review · Full time</span>
+        <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
+          <span className="h-1.5 w-1.5 rounded-full bg-quality-good" /> Analysis ready
+        </span>
+      </div>
+      <div className="grid lg:grid-cols-[180px_minmax(0,1fr)_220px]">
+        <aside className="hidden border-r border-wire-2 p-4 lg:block">
+          <p className="section-kicker text-cream">Coach summary</p>
+          <div className="mt-4 space-y-2">
+            {["Insights", "Match", "Territory", "Stats"].map((item, index) => (
+              <div key={item} className={`flex min-h-10 items-center gap-3 rounded-[5px] px-3 text-[11px] font-bold uppercase ${index === 0 ? "bg-surface-2 text-cream" : "text-text-faint"}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${index === 0 ? "bg-cream" : "bg-wire"}`} />{item}
+              </div>
+            ))}
+          </div>
+          <div className="mt-8 border-t border-wire-2 pt-4">
+            <p className="text-[10px] uppercase text-text-faint">Next session</p>
+            <p className="display mt-1 text-[16px] text-text">Tuesday · 18:30</p>
+            <p className="mt-1 text-[11px] text-text-dim">3 drills · 68 min</p>
+          </div>
+        </aside>
+
+        <div className="p-4 md:p-6">
+          <div className="flex items-center justify-center gap-5 border-b border-wire-2 pb-5 md:gap-10">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <img src={bvbCrest.url} alt="Borussia Dortmund" className="h-10 w-10 object-contain md:h-12 md:w-12" />
+              <span className="display hidden text-[15px] text-text sm:block">Dortmund</span>
+            </div>
+            <span className="display-i text-[40px] leading-none text-cream md:text-[52px]">2 : 1</span>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="display hidden text-[15px] text-text sm:block">FC Bayern</span>
+              <img src={bayernCrest.url} alt="FC Bayern München" className="h-10 w-10 object-contain md:h-12 md:w-12" />
+            </div>
+          </div>
+
+          <div className="mt-4 border border-wire bg-surface p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="section-kicker">01 · Defensive transition</p>
+                <h3 className="display-i mt-2 max-w-[420px] text-[26px] leading-[.95] text-cream md:text-[32px]">The first pressure arrived too late</h3>
+              </div>
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-wire text-text-faint"><Target size={15} /></span>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_124px]">
+              <div className="tactical-grid relative min-h-[166px] overflow-hidden border border-wire-2 bg-surface-2">
+                <svg viewBox="0 0 100 58" className="absolute inset-0 h-full w-full" role="img" aria-label="Tactical pitch showing a late defensive pressure">
+                  <g fill="none" stroke="var(--cream)" strokeOpacity=".18" strokeWidth=".35"><rect x="3" y="3" width="94" height="52"/><line x1="50" y1="3" x2="50" y2="55"/><circle cx="50" cy="29" r="8"/><rect x="3" y="17" width="13" height="24"/><rect x="84" y="17" width="13" height="24"/></g>
+                  <path d="M26 40 C40 30 54 35 70 18" fill="none" stroke="var(--cream)" strokeWidth="1.1" strokeDasharray="2 2"/>
+                  {[{x:25,y:40,c:"var(--club-bvb)"},{x:39,y:34,c:"var(--club-bvb)"},{x:57,y:31,c:"var(--club-bvb)"},{x:69,y:18,c:"var(--club-bayern)"},{x:75,y:34,c:"var(--club-bayern)"}].map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="2.4" fill={p.c}/>) }
+                  <circle cx="66" cy="21" r="1.1" fill="var(--cream)"/>
+                </svg>
+                <span className="absolute bottom-3 left-3 inline-flex items-center gap-2 bg-bg/90 px-2.5 py-1.5 text-[10px] font-bold text-cream"><Play size={11} fill="currentColor"/> 64:18</span>
+              </div>
+              <div className="grid grid-cols-2 gap-px border border-wire-2 bg-wire-2 sm:grid-cols-1">
+                <div className="bg-surface-2 p-3"><strong className="display-i text-[31px] leading-none text-cream">4.8s</strong><span className="mt-1 block text-[9px] uppercase text-text-faint">Reaction</span></div>
+                <div className="bg-surface-2 p-3"><strong className="display-i text-[31px] leading-none text-cream">7</strong><span className="mt-1 block text-[9px] uppercase text-text-faint">Moments</span></div>
+              </div>
+            </div>
+            <p className="mt-4 border-l-2 border-cream pl-3 text-[12px] leading-relaxed text-text-dim">When possession turned over, the nearest player delayed instead of closing the first pass.</p>
+          </div>
+        </div>
+
+        <aside className="hidden border-l border-wire-2 p-4 lg:flex lg:flex-col">
+          <p className="section-kicker">Match facts</p>
+          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden border border-wire-2 bg-wire-2">
+            {[['61%','Ball'],['9','Regains'],['4.8s','Reaction'],['3','Findings']].map(([value,label]) => (
+              <div key={label} className="bg-surface-2 p-3"><strong className="num text-[24px] text-cream">{value}</strong><span className="block text-[9px] uppercase text-text-faint">{label}</span></div>
+            ))}
+          </div>
+          <div className="mt-auto border-t border-wire-2 pt-4 text-[11px] text-text-dim">
+            <p className="inline-flex items-center gap-2"><Check size={13} className="text-quality-good" /> Evidence checked</p>
+            <p className="mt-2 inline-flex items-center gap-2"><Check size={13} className="text-quality-good" /> Session ready</p>
+          </div>
+        </aside>
+      </div>
+    </div>
   );
 }
 
 function Landing() {
   const { session } = useSession();
   const signedIn = Boolean(session);
-
   return (
     <div className="min-h-screen bg-bg">
-      <header className="mx-auto flex max-w-[1400px] items-center justify-between px-4 py-4 md:px-7">
-        <Wordmark size="sm" />
-        <nav className="flex items-center gap-2">
-          {signedIn ? (
-            <Link to="/library">
-              <PrimaryButton className="h-11">Open your library</PrimaryButton>
-            </Link>
-          ) : (
-            <>
-              <Link to="/signin">
-                <SecondaryButton className="h-11">Sign in</SecondaryButton>
-              </Link>
-              <Link to="/signup" className="hidden sm:block">
-                <PrimaryButton className="h-11">Request access</PrimaryButton>
-              </Link>
-            </>
-          )}
-        </nav>
+      <header className="border-b border-wire-2">
+        <div className="mx-auto flex min-h-16 max-w-[1440px] items-center justify-between px-4 md:px-7">
+          <div className="flex items-center gap-3"><span className="display-i grid h-9 w-9 place-items-center rounded-[6px] border border-cream text-[21px] text-cream">I</span><Wordmark size="sm" /></div>
+          <nav className="flex items-center gap-2">
+            {!signedIn && <Link to="/signin"><SecondaryButton>Sign in</SecondaryButton></Link>}
+            <Link to={signedIn ? "/library" : "/signup"}><PrimaryButton>{signedIn ? "Open library" : "Request access"}</PrimaryButton></Link>
+          </nav>
+        </div>
       </header>
-
-      <main className="mx-auto max-w-[1400px] px-4 pb-20 md:px-7">
-        {/* Hero */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="border-b border-wire-2 py-14 text-center md:py-20"
-        >
-          <Wordmark size="lg" className="block md:hidden" />
-          <Wordmark size="hero" className="hidden md:block" />
-          <h1 className="mx-auto mt-5 max-w-[620px] text-[19px] leading-snug text-text md:text-[24px]">
-            Match analysis that ends in Tuesday's session.
-          </h1>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {signedIn ? (
-              <Link to="/library">
-                <PrimaryButton className="h-12 px-7">Open your library</PrimaryButton>
-              </Link>
-            ) : (
-              <>
-                <Link to="/signin">
-                  <PrimaryButton className="h-12 px-7">Sign in</PrimaryButton>
-                </Link>
-                <Link to="/signup">
-                  <SecondaryButton className="h-12 px-7">Request access</SecondaryButton>
-                </Link>
-              </>
-            )}
-          </div>
-
-          <div className="relative mx-auto mt-10 aspect-[16/9] w-full max-w-[900px] overflow-hidden rounded-[16px] border border-wire pitch-turf">
-            <video
-              className="h-full w-full object-cover opacity-70"
-              muted
-              loop
-              autoPlay
-              playsInline
-              aria-label="Looping sample of an analysed match clip"
-            />
-            <span className="absolute left-3.5 top-3.5 rounded-[8px] bg-bg/70 px-2.5 py-1 text-[11px] font-semibold text-text backdrop-blur">
-              Köln · controlled
-            </span>
-            <span className="num absolute right-3.5 top-3.5 rounded-[8px] bg-bg/70 px-2.5 py-1 text-[14px] text-cream backdrop-blur">
-              0:14
-            </span>
-            <span className="absolute left-[34%] top-[46%] h-3 w-3 rounded-full bg-team-a" />
-            <span className="absolute left-[52%] top-[58%] h-3 w-3 rounded-full bg-team-b" />
-            <span className="absolute left-[64%] top-[36%] h-3 w-3 rounded-full bg-team-b" />
-          </div>
-        </motion.section>
-
-        {/* Claims */}
-        <section className="border-b border-wire-2 py-12">
-          <SectionTitle>What it does</SectionTitle>
-          <div className="grid gap-4 md:grid-cols-3">
-            {claims.map((c) => (
-              <Card key={c.title}>
-                <h3 className="display text-[17px] text-cream">{c.title}</h3>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-text-dim">{c.body}</p>
-                <div className="mt-4 h-[132px] overflow-hidden rounded-[12px] border border-wire bg-surface-2">
-                  {c.shot}
-                </div>
-              </Card>
-            ))}
+      <main>
+        <section className="tactical-grid border-b border-wire-2">
+          <div className="mx-auto max-w-[1440px] px-4 pb-12 pt-12 md:px-7 md:pb-20 md:pt-20">
+            <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.28,ease:"easeOut"}} className="max-w-[850px]">
+              <p className="section-kicker">Match intelligence for football coaches</p>
+              <h1 className="display-i mt-4 text-[54px] leading-[.86] text-cream sm:text-[72px] lg:text-[96px]">FROM FINAL WHISTLE<br/>TO TUESDAY’S SESSION.</h1>
+              <p className="mt-5 max-w-[620px] text-[15px] leading-relaxed text-text-dim md:text-[17px]">Ipanema turns your match footage into clear findings, reviewable moments, and a training plan your staff can use.</p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <Link to={signedIn ? "/library" : "/signup"}><PrimaryButton className="h-12 px-6">{signedIn ? "Open your library" : "Request access"}<ArrowRight size={16}/></PrimaryButton></Link>
+                {!signedIn && <Link to="/signin"><SecondaryButton className="h-12 px-6">Sign in</SecondaryButton></Link>}
+              </div>
+            </motion.div>
+            <div className="mt-10 lg:mt-14"><TacticalPreview /></div>
           </div>
         </section>
-
-        {/* How it works */}
-        <section className="border-b border-wire-2 py-12">
-          <SectionTitle>How it works</SectionTitle>
-          <div className="grid gap-4 md:grid-cols-4">
-            {steps.map((s) => (
-              <Card key={s.n} small>
-                <span className="num text-[13px] text-text-faint">{s.n}</span>
-                <h3 className="display mt-1 text-[17px] text-text">{s.title}</h3>
-                <p className="mt-1.5 text-[12.5px] leading-relaxed text-text-dim">{s.body}</p>
-              </Card>
-            ))}
-          </div>
+        <section className="mx-auto grid max-w-[1440px] gap-px border-x border-wire-2 bg-wire-2 md:grid-cols-3">
+          {[
+            ["01", "Find the pattern", "Three to five coaching findings, ranked by what changes the next performance."],
+            ["02", "Watch the evidence", "Every claim opens the exact match moment, ready for your review."],
+            ["03", "Train the response", "Turn confirmed findings into drills, timings, cues, and progressions."],
+          ].map(([number,title,body])=><article key={number} className="bg-bg p-6 md:p-8"><span className="num text-[12px] text-text-faint">{number}</span><h2 className="display-i mt-5 text-[27px] text-cream">{title}</h2><p className="mt-2 max-w-[360px] text-[13px] leading-relaxed text-text-dim">{body}</p></article>)}
         </section>
-
-        {/* Who it's for */}
-        <section className="border-b border-wire-2 py-12">
-          <SectionTitle>Who it's for</SectionTitle>
-          <div className="grid gap-4 md:grid-cols-3">
-            {audiences.map((a) => (
-              <Card key={a.title}>
-                <h3 className="display text-[17px] text-cream">{a.title}</h3>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-text-dim">{a.body}</p>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        <footer className="flex flex-col gap-3 py-10 text-[12px] text-text-faint md:flex-row md:items-center md:justify-between">
-          <Wordmark size="sm" />
-          <div className="flex flex-wrap gap-5">
-            <a href="mailto:hello@ipanema.football" className="tap inline-flex items-center hover:text-text-dim">
-              hello@ipanema.football
-            </a>
-            <a href="#privacy" className="tap inline-flex items-center hover:text-text-dim">
-              Privacy
-            </a>
-            <a href="#terms" className="tap inline-flex items-center hover:text-text-dim">
-              Terms
-            </a>
-          </div>
-        </footer>
       </main>
     </div>
   );

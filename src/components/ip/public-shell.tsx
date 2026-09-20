@@ -13,7 +13,7 @@ export function PublicShell({ children, note }: { children: ReactNode; note?: st
         </Link>
         <Link
           to="/signin"
-          className="tap inline-flex items-center rounded-[12px] border border-cream/60 px-4 text-sm font-semibold text-cream transition-colors duration-150 ease-out hover:bg-cream/10"
+          className="tap inline-flex items-center rounded-[3px] border border-cream/60 px-4 text-sm font-semibold text-cream transition-colors duration-150 ease-out hover:bg-cream/10"
         >
           Sign in
         </Link>

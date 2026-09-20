@@ -46,7 +46,7 @@ function TeamTile({
       type="button"
       onClick={onSelect}
       aria-label={`Filter to ${name}`}
-      className="tap flex flex-col items-center gap-1.5 rounded-[12px]"
+      className="tap flex flex-col items-center gap-1.5 rounded-[6px]"
     >
       <span
         className="relative grid h-11 w-11 place-items-center md:h-[52px] md:w-[52px]"
@@ -58,10 +58,10 @@ function TeamTile({
         ) : (
           <>
             <span
-              className="absolute inset-0 rounded-[12px]"
+              className="absolute inset-0 rounded-[6px]"
               style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.12)" }}
             />
-            <span className="display-i text-[22px] leading-none tracking-[-0.02em] text-[#ffffff]">
+            <span className="display-i text-[22px] leading-none text-text">
               {initialOf(name)}
             </span>
           </>
@@ -117,18 +117,8 @@ export function MatchHeader({
   return (
     <section
       aria-label={`${teamA} against ${teamB}`}
-      className={cn("relative overflow-hidden rounded-[16px] border border-wire", className)}
-      style={{ background: "linear-gradient(180deg, #1a1e24 0%, #14171c 100%)" }}
+      className={cn("tactical-grid relative overflow-hidden rounded-[8px] border border-wire bg-workspace", className)}
     >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.015]"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(45deg, #ffffff 0 1px, transparent 1px 10px), repeating-linear-gradient(-45deg, #ffffff 0 1px, transparent 1px 10px)",
-        }}
-      />
-
       {/* Row 1 — score */}
       <div className="relative flex min-h-14 items-center justify-between px-5 py-4 md:px-7 md:py-5">
         <TeamTile

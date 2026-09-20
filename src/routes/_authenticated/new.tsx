@@ -16,6 +16,8 @@ export const Route = createFileRoute("/_authenticated/new")({
       },
       { property: "og:title", content: "New analysis — Ipanema" },
       { property: "og:description", content: "Drop your video and tell us what we're looking at." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary" },
     ],
   }),
   component: NewAnalysis,
@@ -55,19 +57,20 @@ function NewAnalysis() {
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader backTo="/library" />
-      <Screen className="pt-5 pb-16">
+      <Screen className="tactical-grid min-h-[calc(100vh-64px)] pt-7 pb-16">
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.18, ease: "easeOut" }}
           className="mx-auto max-w-[560px]"
         >
-          <h1 className="display text-[26px] text-text">New analysis</h1>
+          <p className="section-kicker">Match intake</p>
+          <h1 className="display mt-2 text-[30px] uppercase text-text">New analysis</h1>
           <p className="mt-1 text-[13px] text-text-dim">
             Drop your video and tell us what we're looking at.
           </p>
 
-          <div className="mt-5 flex flex-col gap-4">
+          <div className="workspace-panel mt-6 flex flex-col gap-4 p-4 md:p-6">
             <Field label="Your team">
               <Input value={team} onChange={(e) => setTeam(e.target.value)} aria-label="Your team" />
             </Field>
@@ -114,7 +117,7 @@ function NewAnalysis() {
                   const f = e.dataTransfer.files?.[0];
                   if (f) setFileName(f.name);
                 }}
-                className={`flex min-h-[132px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border border-dashed px-4 py-6 text-center transition-colors duration-150 ease-out ${
+                className={`flex min-h-[156px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[4px] border border-dashed px-4 py-6 text-center transition-colors duration-150 ease-out ${
                   dragging ? "border-cream bg-cream/5" : "border-wire bg-surface-2"
                 }`}
               >

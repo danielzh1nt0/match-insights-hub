@@ -15,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/player/$pla
       { name: "description", content: "One player's own numbers from this match, nothing else." },
       { property: "og:title", content: "Player page — Ipanema" },
       { property: "og:description", content: "Touches, passes, losses and where they played." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: PlayerPage,

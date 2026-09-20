@@ -76,7 +76,7 @@ function DrillInfo({ name, onClose }: { name: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <button type="button" aria-label="Close drill glossary" onClick={onClose} className="absolute inset-0 bg-pitch-control backdrop-blur-sm" />
-      <motion.section role="dialog" aria-modal="true" aria-label={`${name} drill glossary`} initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative w-full max-w-[520px] rounded-t-[16px] border border-wire bg-surface p-5 pb-7">
+      <motion.section role="dialog" aria-modal="true" aria-label={`${name} drill glossary`} initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative w-full max-w-[520px] rounded-t-[6px] border border-wire bg-surface p-5 pb-7">
         <div className="flex items-start justify-between gap-3">
           <div><p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-faint">Drill glossary</p><h3 className="display-i mt-1 text-[20px] text-cream">{name}</h3></div>
           <button type="button" aria-label="Close drill glossary" onClick={onClose} className="tap -mr-2 -mt-2 flex items-center justify-center text-text-faint hover:text-text"><X size={18} /></button>
@@ -99,7 +99,7 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
   const finalBall = template.ball[template.ball.length - 1] ?? { x: 50, y: 31 };
 
   return (
-    <div className="relative aspect-[16/10] overflow-hidden rounded-[14px] border border-wire bg-gradient-to-b from-pitch-top to-pitch-bottom">
+    <div className="relative aspect-[16/10] overflow-hidden rounded-[4px] border border-wire bg-pitch-bottom">
       <svg viewBox="0 0 100 62.5" className="h-full w-full" role="img" aria-label={template.label}>
         <defs>
           <marker id={`arrow-${templateId}`} markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="var(--cream)" /></marker>
@@ -126,8 +126,8 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
       </svg>
       <button type="button" aria-label={`Open ${drillName} glossary entry`} onClick={() => setInfoOpen(true)} className="tap absolute right-1 top-1 flex items-center justify-center text-text hover:text-cream"><span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-pitch-control backdrop-blur-md"><Info size={13} /></span></button>
       <div className="absolute bottom-2 right-2 flex gap-1.5">
-        <button type="button" aria-label={showPause ? `Pause ${drillName} animation` : `Play ${drillName} animation`} onClick={() => setPlaying((value) => !value)} className="flex h-8 w-8 items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream">{showPause ? <Pause size={14} /> : <Play size={14} />}</button>
-        <button type="button" aria-label={`Replay ${drillName} animation`} onClick={() => { setReplay((value) => value + 1); setPlaying(true); }} className="flex h-8 w-8 items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream"><RotateCcw size={14} /></button>
+        <button type="button" aria-label={showPause ? `Pause ${drillName} animation` : `Play ${drillName} animation`} onClick={() => setPlaying((value) => !value)} className="tap flex items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream">{showPause ? <Pause size={14} /> : <Play size={14} />}</button>
+        <button type="button" aria-label={`Replay ${drillName} animation`} onClick={() => { setReplay((value) => value + 1); setPlaying(true); }} className="tap flex items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream"><RotateCcw size={14} /></button>
       </div>
       <AnimatePresence>{infoOpen && <DrillInfo name={drillName} onClose={() => setInfoOpen(false)} />}</AnimatePresence>
     </div>

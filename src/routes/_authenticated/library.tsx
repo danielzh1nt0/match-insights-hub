@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAccount } from "@/lib/profile.functions";
 import { motion } from "motion/react";
-import { Search, Video } from "lucide-react";
+import { Plus, Search, Video } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
 import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitives";
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
@@ -20,6 +20,8 @@ export const Route = createFileRoute("/_authenticated/library")({
       { name: "description", content: "Every match you've uploaded, with possession, turnovers and shots at a glance." },
       { property: "og:title", content: "Library — Ipanema" },
       { property: "og:description", content: "Choose a match to open its analysis workspace." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: LibraryPage,
@@ -77,9 +79,11 @@ function LibraryPage() {
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader />
-      <Screen className="pt-5 pb-16">
-        <h1 className="display text-[26px] text-text">Library</h1>
-        <p className="mt-1 text-[13px] text-text-dim">Choose a match to open its analysis workspace.</p>
+      <Screen className="pb-16 pt-7">
+        <div className="flex flex-col gap-4 border-b border-wire-2 pb-6 sm:flex-row sm:items-end sm:justify-between">
+          <div><p className="section-kicker">Analysis workspace</p><h1 className="display-i mt-1 text-[38px] leading-none text-cream md:text-[48px]">Match library</h1><p className="mt-2 text-[13px] text-text-dim">Choose a match to open its coaching review.</p></div>
+          <Link to="/new"><PrimaryButton className="h-12"><Plus size={16}/>New analysis</PrimaryButton></Link>
+        </div>
 
         {isPending && (
           <div className="mt-5 h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading matches">
@@ -99,7 +103,7 @@ function LibraryPage() {
           <EmptyState />
         ) : (
           <>
-            <div className="mt-5 flex flex-col gap-3">
+            <div className="mt-6 grid gap-3 md:grid-cols-[minmax(240px,420px)_1fr] md:items-start">
               <div className="relative">
                 <Search
                   size={16}
@@ -128,7 +132,7 @@ function LibraryPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <div className="mt-6 grid gap-4 lg:grid-cols-2">
               {visible.map((m, i) => (
                 <motion.div
                   key={m.id}
@@ -146,11 +150,6 @@ function LibraryPage() {
           </>
         )}
 
-        <div className="mt-6">
-          <Link to="/new">
-            <PrimaryButton className="h-12">+ New analysis</PrimaryButton>
-          </Link>
-        </div>
       </Screen>
     </div>
   );
@@ -184,12 +183,12 @@ function MatchCard({ match }: { match: LibraryMatch }) {
       : `${match.summary.turnovers[0]} / ${match.summary.turnovers[1]}`;
 
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="pitch-turf relative h-[132px] border-b border-wire">
+    <Card className="group overflow-hidden p-0 transition-colors hover:border-cream/30">
+      <div className="tactical-grid relative h-[132px] border-b border-wire bg-workspace">
         <span className="absolute left-3 top-3">
           <Pill tone={statusTone[match.status]}>{statusLabel[match.status]}</Pill>
         </span>
-        <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-5" aria-hidden="true">
+        <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-6" aria-hidden="true">
           {crestA ? (
             <img src={crestA} alt="" className="h-12 w-12 object-contain" />
           ) : (
@@ -207,12 +206,13 @@ function MatchCard({ match }: { match: LibraryMatch }) {
             />
           )}
         </div>
+        {ready && <span className="display-i absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-8 text-[20px] text-cream">{match.scoreA} : {match.scoreB}</span>}
         <span className="num absolute bottom-3 right-3 text-[13px] text-cream">
           {formatClock(match.durationS)}
         </span>
       </div>
       <div className="p-4">
-        <h3 className="display text-[17px] text-text">{title}</h3>
+          <h3 className="display text-[19px] text-text transition-colors group-hover:text-cream">{title}</h3>
         <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-text-faint">
           <span>{match.date}</span>
           <span>·</span>

@@ -27,8 +27,9 @@ export const Route = createFileRoute("/glossary")({
 function Glossary() {
   return (
     <PublicShell>
-      <header className="mt-2">
-        <h1 className="display text-[28px] uppercase text-text">Glossary</h1>
+      <header className="tactical-grid border border-wire bg-workspace px-4 py-8 md:px-7 md:py-10">
+        <p className="section-kicker">Coaching language</p>
+        <h1 className="display mt-2 text-[32px] uppercase text-text">Glossary</h1>
         <p className="mt-2 max-w-[62ch] text-[13.5px] leading-relaxed text-text-dim">
           Every number we show, in the words you would use on the touchline. Nothing here needs a stats
           background.
@@ -40,7 +41,7 @@ function Glossary() {
           <a
             key={t.id}
             href={`#${t.id}`}
-            className="inline-flex min-h-11 items-center rounded-[10px] border border-wire px-3 text-xs font-semibold text-text-dim transition-colors duration-150 ease-out hover:border-cream/40 hover:text-text"
+            className="inline-flex min-h-11 items-center rounded-[3px] border border-wire px-3 text-xs font-semibold text-text-dim transition-colors duration-150 ease-out hover:border-cream/40 hover:text-text"
           >
             {t.term}
           </a>

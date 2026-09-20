@@ -12,6 +12,8 @@ export const Route = createFileRoute("/reset")({
       { name: "description", content: "Reset the password for your Ipanema coaching account." },
       { property: "og:title", content: "Reset your password — Ipanema" },
       { property: "og:description", content: "Reset the password for your Ipanema account." },
+       { property: "og:type", content: "website" },
+       { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Reset,
