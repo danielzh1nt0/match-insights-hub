@@ -119,12 +119,16 @@ function Control({ stats, team, colours }: Props) {
   const b = value(teamRow(stats, "B"), "possession_pct");
   if (a === null && b === null) return null;
   const own = team === "A" ? a : b;
-  return <Card question="Who controlled the ball?" caption="Share of reliable ball-control time for each team." footer="Whole selected period">
-    <strong className="display-i block text-[56px] leading-none text-cream">{own === null ? "—" : `${Math.round(own)}%`}</strong>
+  const opponent = team === "A" ? b : a;
+  const identity = team === "A" ? arguments[0].teamA : arguments[0].teamB;
+  const events = arguments[0].events;
+  return <Card question="Who controlled the ball?" caption="Share of reliable ball-control time for each team." comparison={{ opponent: opponent === null ? "—" : `${Math.round(opponent)}%`, last5: "—" }} honesty={`${events.filter(event => event.status === "confirmed").length} confirmed · ${events.length} detected`}>
+    <strong className="display-i block text-[48px] leading-none text-cream">{own === null ? "—" : `${Math.round(own)}%`}</strong>
+    <p className="mt-1 text-[11px] font-semibold text-text-dim">possession · {identity.name}</p>
     <div className="mt-4 flex h-3 overflow-hidden rounded-[3px] bg-surface-3" role="img" aria-label={`${a ?? 0}% Team A and ${b ?? 0}% Team B`}>
-      <span style={{ width: `${a ?? 0}%`, background: colours.A }} /><span style={{ width: `${b ?? 0}%`, background: colours.B }} />
+      <span style={{ width: `${own ?? 0}%`, background: colours[team] }} /><span className="bg-graphite" style={{ width: `${opponent ?? 0}%` }} />
     </div>
-    <div className="mt-2 flex justify-between text-[11px] font-semibold text-text-faint"><span>{Math.round(a ?? 0)}%</span><span>{Math.round(b ?? 0)}%</span></div>
+    <div className="mt-2 flex justify-between text-[11px] font-semibold text-text-faint"><span>{identity.code} {Math.round(own ?? 0)}%</span><span>{team === "A" ? arguments[0].teamB.code : arguments[0].teamA.code} {Math.round(opponent ?? 0)}%</span></div>
   </Card>;
 }
 
@@ -196,18 +200,27 @@ function CounterPress({ events, team, stats, matchId }: Props) {
   const reactions = losses.map(event => ({ event, seconds: finite(event.payload?.["time_to_press"]) })).filter((item): item is {event: ReviewedEvent; seconds: number} => item.seconds !== null);
   if (!reactions.length) return null;
   const sorted = reactions.map(r=>r.seconds).sort((a,b)=>a-b); const median = sorted[Math.floor(sorted.length/2)] ?? 0; const row = teamRow(stats, team);
-  return <Card question="How fast did we react?" caption="Each dot is one loss. Further right means the first pressure came later." honesty={`${losses.filter(e=>e.status==="confirmed").length} confirmed · ${losses.length} detected`}>
-    <div className="relative h-[92px] border-b border-wire" role="img" aria-label="Reaction time from zero to eight seconds"><div className="absolute inset-x-0 top-10 h-px bg-wire" />{reactions.map(({event,seconds}) => <Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch ${seconds} second reaction`} className="tap absolute top-[18px] -translate-x-1/2" style={{left:`${clamp(seconds/8*100)}%`}}><span className={cn("block h-3 w-3 rounded-full border border-bg",seconds<=2?"bg-quality-good":seconds<=4?"bg-quality-risky":"bg-quality-bad")} /></Link>)}<div className="absolute bottom-1 left-0 right-0 flex justify-between text-[9px] text-text-faint"><span>0 s</span><span>2 s</span><span>4 s</span><span>6 s</span><span>8 s</span></div></div>
+  const identity=team==="A"?arguments[0].teamA:arguments[0].teamB;
+  return <Card question="How fast did we react?" caption={`${identity.name} · ${losses.length} losses`} comparison={{target:"2 s",opponent:"—",last5:"—",tones:[median<=2?"good":"bad","neutral","neutral"]}} honesty={`${losses.filter(e=>e.status==="confirmed").length} confirmed · ${losses.length} detected`}>
+    <div className="relative h-[108px] border-b border-wire" role="img" aria-label={`${identity.name} reaction time from zero to eight seconds`}><div className="absolute inset-x-0 top-14 h-px bg-wire" /><span className="absolute top-1 -translate-x-1/2 rounded-[3px] bg-surface-3 px-1.5 py-1 text-[9px] text-text-dim" style={{left:"25%"}}>Target 2 s</span><span className="absolute top-7 -translate-x-1/2 rounded-[3px] bg-cream px-1.5 py-1 text-[9px] text-ink" style={{left:`${clamp(median/8*100)}%`}}>Median {Math.round(median*100)/100} s</span>{reactions.map(({event,seconds}) => <Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch ${seconds} second reaction`} className="tap absolute top-[33px] -translate-x-1/2" style={{left:`${clamp(seconds/8*100)}%`}}><span className={cn("block h-3 w-3 rounded-full border border-bg",seconds<=2?"bg-quality-good":seconds<=4?"bg-quality-risky":"bg-quality-bad")} /></Link>)}<div className="absolute bottom-1 left-0 right-0 flex justify-between text-[9px] text-text-faint"><span>0 s</span><span>2 s</span><span>4 s</span><span>6 s</span><span>8 s</span></div></div>
     <div className="grid grid-cols-3 divide-x divide-wire-2 border border-wire-2"><Metric value={`${Math.round(value(row,"pressed_within_2s_pct") ?? 0)}%`} label="within 2 s"/><Metric value={`${Math.round(value(row,"regained_within_5s_pct") ?? 0)}%`} label="back in 5 s"/><Metric value={`${Math.round(median*10)/10}s`} label="median"/></div>
   </Card>;
 }
 
 function Metric({value,label}:{value:string;label:string}) { return <div className="p-2 text-center"><strong className="display-i block text-[24px] text-cream">{value}</strong><span className="text-[9px] uppercase text-text-faint">{label}</span></div>; }
 
-function ShapeMultiples({ territory, colour }: { territory: Territory; colour: string }) {
-  const snapshots = territory.snapshots.slice(0, 6); if (!snapshots.length) return null;
-  return <Card question="How did our shape change?" caption="Six observed moments show how our block expanded and contracted." honesty={`${territory.frameCount} tracked frames`}>
-    <div className="grid grid-cols-2 gap-2 md:grid-cols-3" role="img" aria-label="Six team shape snapshots">{snapshots.map(snapshot => <div key={snapshot.t} className="border border-wire bg-surface-2 p-2"><svg viewBox="0 0 100 64" className="w-full"><rect x="1" y="1" width="98" height="62" fill="none" stroke="var(--wire)" />{snapshot.players.map(player=><circle key={player.id} cx={player.x} cy={player.y/100*64} r="2" fill={colour} opacity={player.predicted?.45:.9}/>)}</svg><div className="mt-1 flex justify-between text-[9px] text-text-faint"><span>{fmt(snapshot.t)}</span><span>{snapshot.lengthM} × {snapshot.widthM} m</span></div></div>)}</div>
+function ShapeMultiples({ territory, colour, identity }: { territory: Territory; colour: string; identity: StatsTeamIdentity }) {
+  const snapshots = territory.snapshots.filter(snapshot => snapshot.players.length >= 4); if (!snapshots.length) return null;
+  const ids=[...new Set(snapshots.flatMap(snapshot=>snapshot.players.map(player=>player.id)))];
+  const averages=ids.map(id=>{const points=snapshots.flatMap(snapshot=>snapshot.players.filter(player=>player.id===id));return points.length?{id,x:points.reduce((sum,p)=>sum+p.x,0)/points.length,y:points.reduce((sum,p)=>sum+p.y,0)/points.length}:null}).filter((point):point is {id:string;x:number;y:number}=>point!==null);
+  if(averages.length<4)return null;
+  const cx=averages.reduce((sum,p)=>sum+p.x,0)/averages.length,cy=averages.reduce((sum,p)=>sum+p.y,0)/averages.length;
+  const polygon=[...averages].sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx)).map(point=>`${point.y/100*64},${100-point.x}`).join(" ");
+  const length=Math.round(snapshots.reduce((sum,s)=>sum+s.lengthM,0)/snapshots.length*10)/10;
+  const width=Math.round(snapshots.reduce((sum,s)=>sum+s.widthM,0)/snapshots.length*10)/10;
+  return <Card question="How did our shape change?" caption={`Average shape · ${identity.name}`} comparison={{target:"—",opponent:"—",last5:"—"}} honesty={`${territory.frameCount} tracked frames`}>
+    <StatsPitch portrait attackLabel={identity.code} ariaLabel={`${identity.name} average shape on the pitch`}><polygon points={polygon} fill={colour} fillOpacity=".25" stroke={colour} strokeWidth=".8"/><path d={`M${cy/100*64-2},${100-cx}h4M${cy/100*64},${98-cx}v4`} stroke={colour} strokeWidth="1"/>{averages.map(point=><circle key={point.id} cx={point.y/100*64} cy={100-point.x} r="1.5" fill={colour}/>)}</StatsPitch>
+    <div className="mt-3 grid grid-cols-3 divide-x divide-wire-2 border border-wire-2"><Metric value={`${length} m`} label="Length"/><Metric value={`${width} m`} label="Width"/><Metric value={`${territory.lineHeightM || "—"}${territory.lineHeightM?" m":""}`} label="Line height"/></div>
   </Card>;
 }
 
