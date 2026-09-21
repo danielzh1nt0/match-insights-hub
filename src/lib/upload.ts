@@ -27,7 +27,7 @@ type Session = {
 };
 
 const STORE = "ipanema-upload-session";
-const CONCURRENCY = 4;
+const CONCURRENCY = 6;
 const RETRIES = 5;
 
 const fileKeyOf = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
