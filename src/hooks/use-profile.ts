@@ -55,10 +55,12 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (patch: { fullName?: string; role?: string; clubName?: string }) => {
       if (!user) throw new Error("Not signed in");
-      const row: Record<string, unknown> = { id: user.id };
-      if (patch.fullName !== undefined) row["full_name"] = patch.fullName.trim();
-      if (patch.role !== undefined) row["role"] = patch.role.trim();
-      if (patch.clubName !== undefined) row["club_name"] = patch.clubName.trim();
+      const row = {
+        id: user.id,
+        ...(patch.fullName !== undefined ? { full_name: patch.fullName.trim() } : {}),
+        ...(patch.role !== undefined ? { role: patch.role.trim() } : {}),
+        ...(patch.clubName !== undefined ? { club_name: patch.clubName.trim() } : {}),
+      };
       const { error } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
       if (error) throw new Error(error.message);
       if (patch.fullName !== undefined) {

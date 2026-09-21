@@ -8,11 +8,11 @@ export function Avatar({
   size = 36,
   className,
 }: {
-  url?: string | null;
-  name?: string | null;
-  email?: string | null;
-  size?: number;
-  className?: string;
+  url?: string | null | undefined;
+  name?: string | null | undefined;
+  email?: string | null | undefined;
+  size?: number | undefined;
+  className?: string | undefined;
 }) {
   const initials = initialsFor(name, email);
   return (
