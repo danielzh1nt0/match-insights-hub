@@ -11,8 +11,9 @@ export const KIT_COLOURS = [
 
 export function clubMonogram(name: string) {
   const words = name.trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return "";
-  return (words.length === 1 ? words[0]?.slice(0, 2) : `${words[0]?.[0] ?? ""}${words[1]?.[0] ?? ""}`).toUpperCase();
+  const firstWord = words[0];
+  if (!firstWord) return "";
+  return (words.length === 1 ? firstWord.slice(0, 2) : `${firstWord[0] ?? ""}${words[1]?.[0] ?? ""}`).toUpperCase();
 }
 
 export function suggestedTeamName(club: string, ageGroup: string, country: string) {
