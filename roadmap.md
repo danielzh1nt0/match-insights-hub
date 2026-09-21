@@ -27,3 +27,4 @@
 - [x] Replace Insights with the Four Phases B+C hybrid and eight shared SVG visual components
 
 - [x] Name the Bundesliga sample match BVB vs FC Bayern and add both crests (BVB = uploaded yellow crest)
+- [ ] Rebuild Stats visuals with real team identity, pitch anchors, comparisons, honesty, and requested mobile/desktop QA
