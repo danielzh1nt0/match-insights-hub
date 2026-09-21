@@ -20,6 +20,8 @@ import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
+import { Route as SignupClubRouteImport } from './routes/signup.club'
+import { Route as SignupTeamRouteImport } from './routes/signup.team'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings.account'
 import { Route as AuthenticatedSettingsClubRouteImport } from './routes/_authenticated/settings.club'
 import { Route as SPlayerTokenRouteImport } from './routes/s.player.$token'
@@ -86,6 +88,16 @@ const AuthenticatedProcessingRoute = AuthenticatedProcessingRouteImport.update({
   id: '/processing',
   path: '/processing',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const SignupClubRoute = SignupClubRouteImport.update({
+  id: '/club',
+  path: '/club',
+  getParentRoute: () => SignupRoute,
+} as any)
+const SignupTeamRoute = SignupTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => SignupRoute,
 } as any)
 const AuthenticatedSettingsAccountRoute =
   AuthenticatedSettingsAccountRouteImport.update({
@@ -164,11 +176,13 @@ export interface FileRoutesByFullPath {
   '/reset': typeof ResetRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/signup/club': typeof SignupClubRoute
+  '/signup/team': typeof SignupTeamRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/s/player/$token': typeof SPlayerTokenRoute
@@ -188,11 +202,13 @@ export interface FileRoutesByTo {
   '/reset': typeof ResetRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/signup/club': typeof SignupClubRoute
+  '/signup/team': typeof SignupTeamRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/s/player/$token': typeof SPlayerTokenRoute
@@ -214,11 +230,13 @@ export interface FileRoutesById {
   '/reset': typeof ResetRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
-  '/signup': typeof SignupRoute
+  '/signup': typeof SignupRouteWithChildren
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/processing': typeof AuthenticatedProcessingRoute
+  '/signup/club': typeof SignupClubRoute
+  '/signup/team': typeof SignupTeamRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/club': typeof AuthenticatedSettingsClubRoute
   '/s/player/$token': typeof SPlayerTokenRoute
@@ -245,6 +263,8 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/signup/club'
+    | '/signup/team'
     | '/settings/account'
     | '/settings/club'
     | '/s/player/$token'
@@ -269,6 +289,8 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/signup/club'
+    | '/signup/team'
     | '/settings/account'
     | '/settings/club'
     | '/s/player/$token'
@@ -294,6 +316,8 @@ export interface FileRouteTypes {
     | '/_authenticated/new'
     | '/_authenticated/onboarding'
     | '/_authenticated/processing'
+    | '/signup/club'
+    | '/signup/team'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/club'
     | '/s/player/$token'
@@ -315,7 +339,7 @@ export interface RootRouteChildren {
   ResetRoute: typeof ResetRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
-  SignupRoute: typeof SignupRoute
+  SignupRoute: typeof SignupRouteWithChildren
   SPlayerTokenRoute: typeof SPlayerTokenRoute
   SReelTokenRoute: typeof SReelTokenRoute
 }
@@ -398,6 +422,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/processing'
       preLoaderRoute: typeof AuthenticatedProcessingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/signup/club': {
+      id: '/signup/club'
+      path: '/club'
+      fullPath: '/signup/club'
+      preLoaderRoute: typeof SignupClubRouteImport
+      parentRoute: typeof SignupRoute
+    }
+    '/signup/team': {
+      id: '/signup/team'
+      path: '/team'
+      fullPath: '/signup/team'
+      preLoaderRoute: typeof SignupTeamRouteImport
+      parentRoute: typeof SignupRoute
     }
     '/_authenticated/settings/account': {
       id: '/_authenticated/settings/account'
@@ -526,6 +564,19 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface SignupRouteChildren {
+  SignupClubRoute: typeof SignupClubRoute
+  SignupTeamRoute: typeof SignupTeamRoute
+}
+
+const SignupRouteChildren: SignupRouteChildren = {
+  SignupClubRoute: SignupClubRoute,
+  SignupTeamRoute: SignupTeamRoute,
+}
+
+const SignupRouteWithChildren =
+  SignupRoute._addFileChildren(SignupRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -533,7 +584,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetRoute: ResetRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
-  SignupRoute: SignupRoute,
+  SignupRoute: SignupRouteWithChildren,
   SPlayerTokenRoute: SPlayerTokenRoute,
   SReelTokenRoute: SReelTokenRoute,
 }
