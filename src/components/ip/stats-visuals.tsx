@@ -1,11 +1,14 @@
 import { Link } from "@tanstack/react-router";
+import { createContext, useContext, useMemo, useState } from "react";
 import type { Period } from "./chrome";
 import type { ReviewedEvent } from "@/lib/event-reviews";
-import type { LineDefending, PlayerStat, StatsFile, TeamKey, Territory } from "@/lib/match-analysis";
+import type { LineDefending, PlayerStat, StatsFile, TeamKey, Territory, Thresholds } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
 import { DeepAnswer, LineBreakHero, LineTimeline } from "./line-break-cards";
 import { Pitch, PortraitPitch, Visual } from "./visual";
+import { Button } from "./primitives";
+import { StatsTeamPill, type StatsTeamIdentity } from "./stats-team-selector";
 
 type Props = {
   tab: string;
@@ -20,6 +23,9 @@ type Props = {
   period: Period;
   territory: Territory | null;
   lineDefending: LineDefending | null;
+  thresholds: Thresholds;
+  teamA: StatsTeamIdentity;
+  teamB: StatsTeamIdentity;
 };
 
 type Point = { x: number; y: number };
@@ -54,8 +60,46 @@ const periodRange = (file: MatchDataFile | undefined, period: Period) => {
 const inRange = (time: number | null, range: number[]) => time === null || (time >= (range[0] ?? 0) && time <= (range[1] ?? Infinity));
 const fmt = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
 
-function Card({ question, caption, children, honesty, footer }: { question: string; caption: string; children: React.ReactNode; honesty?: string; footer?: string }) {
-  return <Visual framing="custom" question={question} caption={caption} info={{ title: question, rows: [{ label: "What it shows", value: caption, cream: true }] }} {...(honesty ? { honesty } : {})} {...(footer ? { footerNote: footer } : {})}>{children}</Visual>;
+type Comparison = { target?: string; opponent?: string; last5?: string; tones?: ["good" | "warn" | "bad" | "neutral", "good" | "warn" | "bad" | "neutral", "good" | "warn" | "bad" | "neutral"] };
+type StatsCardContextValue = { identity: StatsTeamIdentity; other: StatsTeamIdentity; both: boolean };
+const StatsCardContext = createContext<StatsCardContextValue | null>(null);
+
+function ComparisonRow({ comparison }: { comparison?: Comparison }) {
+  const cells = [
+    ["Target", comparison?.target ?? "—"],
+    ["vs Opponent", comparison?.opponent ?? "—"],
+    ["vs Last 5", comparison?.last5 ?? "—"],
+  ] as const;
+  return <div className="grid grid-cols-3 divide-x divide-wire-2 border-t border-wire-2" aria-label="Comparison"><>{cells.map(([label, amount], index) => <div key={label} className="px-2 py-2 text-right"><span className="block text-[8px] font-bold uppercase text-text-faint">{label}</span><strong className={cn("num mt-0.5 block text-[11px]", comparison?.tones?.[index] === "good" ? "text-reaction-good" : comparison?.tones?.[index] === "warn" ? "text-reaction-warn" : comparison?.tones?.[index] === "bad" ? "text-reaction-bad" : "text-text-dim")}>{amount}</strong></div>)}</></div>;
+}
+
+function Card({ question, caption, children, honesty, footer, comparison }: { question: string; caption: string; children: React.ReactNode; honesty?: string; footer?: string; comparison?: Comparison }) {
+  const context = useContext(StatsCardContext);
+  return <section className="overflow-hidden rounded-[8px] border border-wire bg-surface">
+    <div className="px-4 pb-3 pt-3.5">
+      {context && <StatsTeamPill identity={context.identity} {...(context.both ? { both: context.other } : {})} />}
+      <h2 className="display mt-2 text-[17px] uppercase leading-tight text-cream">{question}</h2>
+      <p className="mt-1 text-[11.5px] leading-[1.5] text-text-faint">{caption}</p>
+    </div>
+    <div className="px-4 pb-3">{children}</div>
+    <ComparisonRow comparison={comparison} />
+    <div className="flex min-h-9 items-center justify-between gap-3 border-t border-wire-2 px-4 py-2 text-[10.5px] font-medium text-text-faint">
+      <span className="inline-flex items-center gap-1.5 before:h-[5px] before:w-[5px] before:shrink-0 before:rounded-full before:bg-text-faint">{honesty ?? "Source: selected match"}</span>
+      {footer && <span className="text-right">{footer}</span>}
+    </div>
+  </section>;
+}
+
+function StatsPitch({ children, portrait = false, attackLabel, ariaLabel }: { children?: React.ReactNode; portrait?: boolean; attackLabel: string; ariaLabel: string }) {
+  const viewBox = portrait ? "0 0 64 100" : "0 0 100 64";
+  return <div className={cn("relative mx-auto w-full", portrait ? "max-w-[300px]" : "max-w-[640px]")}>
+    <svg viewBox={viewBox} className="block h-auto w-full rounded-[6px] bg-surface-2" role="img" aria-label={ariaLabel}>
+      <rect x="0" y="0" width={portrait ? 64 : 100} height={portrait ? 100 : 64} fill="var(--surface-2)" />
+      {portrait ? <g stroke="var(--cream)" strokeOpacity=".3" strokeWidth=".45" fill="none"><rect x="2" y="3" width="60" height="94"/><rect x="25" y="0.5" width="14" height="2.5"/><rect x="25" y="97" width="14" height="2.5"/><line x1="2" y1="50" x2="62" y2="50"/><circle cx="32" cy="50" r="8"/><rect x="14" y="3" width="36" height="12"/><rect x="14" y="85" width="36" height="12"/><line x1="2" y1="33.3" x2="62" y2="33.3" strokeDasharray="2 2"/><line x1="2" y1="66.6" x2="62" y2="66.6" strokeDasharray="2 2"/></g> : <g stroke="var(--cream)" strokeOpacity=".3" strokeWidth=".4" fill="none"><rect x="3" y="2" width="94" height="60"/><rect x=".5" y="25" width="2.5" height="14"/><rect x="97" y="25" width="2.5" height="14"/><line x1="50" y1="2" x2="50" y2="62"/><circle cx="50" cy="32" r="8"/><rect x="3" y="14" width="12" height="36"/><rect x="85" y="14" width="12" height="36"/><line x1="33.3" y1="2" x2="33.3" y2="62" strokeDasharray="2 2"/><line x1="66.6" y1="2" x2="66.6" y2="62" strokeDasharray="2 2"/></g>}
+      {children}
+    </svg>
+    <span className="mt-1.5 block text-right text-[8px] font-bold uppercase text-text-faint">{portrait ? "↑" : "→"} {attackLabel} attack</span>
+  </div>;
 }
 
 function EmptyTab() {

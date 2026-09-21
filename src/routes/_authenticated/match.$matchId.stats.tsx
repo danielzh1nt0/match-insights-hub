@@ -32,7 +32,7 @@ function Stats() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, team, colours, sections, players, loading, events, stats, file, lineDefending, territory } = useAnalysis(
+  const { match, team, colours, thresholds, sections, players, loading, events, stats, file, lineDefending, territory } = useAnalysis(
     matchId,
     scope,
   );
@@ -69,7 +69,7 @@ function Stats() {
             ))}
           </div>
 
-          {teamA && teamB && <StatsVisuals tab={active.key} players={players} stats={stats} file={file} events={events} team={team ?? "A"} scopeBoth={team === null} colours={colours} matchId={matchId} period={period} territory={territory} lineDefending={lineDefending} teamA={teamA} teamB={teamB} />}
+          {teamA && teamB && <StatsVisuals tab={active.key} players={players} stats={stats} file={file} events={events} team={team ?? "A"} scopeBoth={team === null} colours={colours} thresholds={thresholds} matchId={matchId} period={period} territory={territory} lineDefending={lineDefending} teamA={teamA} teamB={teamB} />}
           {import.meta.env.DEV && <section className="border border-dashed border-wire bg-surface px-4 py-4" aria-label="Stats screen anatomy reference"><p className="section-kicker">Team reference</p><h2 className="display mt-2 text-[17px] text-cream">Stats screen anatomy</h2><ol className="mt-3 grid gap-2 text-[12px] text-text-dim sm:grid-cols-3"><li>1. Team pill</li><li>2. Chart title</li><li>3. Subtitle</li><li>4. Visual</li><li>5. Comparison row</li><li>6. Honesty marker</li></ol></section>}
         </>
       )}
