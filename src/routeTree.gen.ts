@@ -27,6 +27,7 @@ import { Route as SignupTeamRouteImport } from './routes/signup_.team'
 import { Route as UploadProcessingRouteImport } from './routes/upload_.processing'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings.account'
 import { Route as AuthenticatedSettingsClubRouteImport } from './routes/_authenticated/settings.club'
+import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings.profile'
 import { Route as SPlayerTokenRouteImport } from './routes/s.player.$token'
 import { Route as SReelTokenRouteImport } from './routes/s.reel.$token'
 import { Route as AuthenticatedMatchMatchIdInsightsRouteImport } from './routes/_authenticated/match.$matchId.insights'
@@ -129,6 +130,12 @@ const AuthenticatedSettingsClubRoute =
     path: '/settings/club',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedSettingsProfileRoute =
+  AuthenticatedSettingsProfileRouteImport.update({
+    id: '/settings/profile',
+    path: '/settings/profile',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const SPlayerTokenRoute = SPlayerTokenRouteImport.update({
   id: '/s/player/$token',
   path: '/s/player/$token',
@@ -206,6 +213,7 @@ export interface FileRoutesByFullPath {
   '/upload/processing': typeof UploadProcessingRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
+  '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/s/player/$token': typeof SPlayerTokenRoute
   '/s/reel/$token': typeof SReelTokenRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
@@ -235,6 +243,7 @@ export interface FileRoutesByTo {
   '/upload/processing': typeof UploadProcessingRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
+  '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/s/player/$token': typeof SPlayerTokenRoute
   '/s/reel/$token': typeof SReelTokenRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
@@ -266,6 +275,7 @@ export interface FileRoutesById {
   '/upload_/processing': typeof UploadProcessingRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/club': typeof AuthenticatedSettingsClubRoute
+  '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/s/player/$token': typeof SPlayerTokenRoute
   '/s/reel/$token': typeof SReelTokenRoute
   '/_authenticated/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/upload/processing'
     | '/settings/account'
     | '/settings/club'
+    | '/settings/profile'
     | '/s/player/$token'
     | '/s/reel/$token'
     | '/match/$matchId/insights'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/upload/processing'
     | '/settings/account'
     | '/settings/club'
+    | '/settings/profile'
     | '/s/player/$token'
     | '/s/reel/$token'
     | '/match/$matchId/insights'
@@ -356,6 +368,7 @@ export interface FileRouteTypes {
     | '/upload_/processing'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/club'
+    | '/_authenticated/settings/profile'
     | '/s/player/$token'
     | '/s/reel/$token'
     | '/_authenticated/match/$matchId/insights'
@@ -513,6 +526,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsClubRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings/profile': {
+      id: '/_authenticated/settings/profile'
+      path: '/settings/profile'
+      fullPath: '/settings/profile'
+      preLoaderRoute: typeof AuthenticatedSettingsProfileRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/s/player/$token': {
       id: '/s/player/$token'
       path: '/s/player/$token'
@@ -593,6 +613,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProcessingRoute: typeof AuthenticatedProcessingRoute
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsClubRoute: typeof AuthenticatedSettingsClubRoute
+  AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
   AuthenticatedMatchMatchIdInsightsRoute: typeof AuthenticatedMatchMatchIdInsightsRoute
   AuthenticatedMatchMatchIdMatchRoute: typeof AuthenticatedMatchMatchIdMatchRoute
   AuthenticatedMatchMatchIdReelRoute: typeof AuthenticatedMatchMatchIdReelRoute
@@ -610,6 +631,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProcessingRoute: AuthenticatedProcessingRoute,
   AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
   AuthenticatedSettingsClubRoute: AuthenticatedSettingsClubRoute,
+  AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,
   AuthenticatedMatchMatchIdInsightsRoute:
     AuthenticatedMatchMatchIdInsightsRoute,
   AuthenticatedMatchMatchIdMatchRoute: AuthenticatedMatchMatchIdMatchRoute,
