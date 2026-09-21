@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useFrameChunks } from "@/hooks/use-frame-chunks";
+import { ballVerdict } from "@/lib/ball-verdict";
 import { MatchCanvas, LAYERS, PRESETS, presetLayers, type LayerKey, type PresetKey } from "@/components/ip/match-canvas";
 import { Card, Segmented } from "@/components/ip/primitives";
 import { EventFixSheet } from "@/components/ip/event-review";
@@ -170,10 +171,9 @@ function MatchScreen() {
   const total = row?.duration_s ?? match?.durationS ?? 1;
   const teamAStats = teamRow(stats, "A");
   const teamBStats = teamRow(stats, "B");
-  const reliableBall = row?.summary?.["ball_reliable"] !== false;
-  const grade = (row?.summary?.["ball_grade"] ?? null) as { possession_ok?: boolean; events_ok?: boolean } | null;
-  const layerAllowed = (needs: null | "possession" | "events") =>
-    needs === null ? true : grade ? Boolean(needs === "possession" ? grade.possession_ok : grade.events_ok) : reliableBall;
+  const verdict = ballVerdict(row?.summary);
+  const reliableBall = verdict.possession;
+  const layerAllowed = (needs: null | "possession" | "events") => (needs === null ? true : needs === "possession" ? verdict.possession : verdict.events);
   const shownLayers = Object.fromEntries(
     LAYERS.map((l) => [l.key, layers[l.key] && layerAllowed(l.needs)]),
   ) as Record<LayerKey, boolean>;

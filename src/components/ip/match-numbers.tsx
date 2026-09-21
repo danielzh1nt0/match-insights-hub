@@ -1,3 +1,4 @@
+import { ballVerdict } from "@/lib/ball-verdict";
 import { Link } from "@tanstack/react-router";
 import { Info, Play, X } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -44,9 +45,8 @@ export function MatchNumbers({
   const [selected, setSelected] = useState<Metric | null>(null);
   const teamA = teamRow(stats, "A");
   const teamB = teamRow(stats, "B");
-  const reliable = row?.summary?.["ball_reliable"] !== false;
+  const reliable = ballVerdict(row?.summary).possession;
 
-  const isSfkDemo = matchId === "SFKBP1109_s1200";
   const eventMetric = (team: "A" | "B", test: (event: ReviewedEvent) => boolean) =>
     valueFor(events, team, test);
   const metrics: Metric[] = [
@@ -68,8 +68,8 @@ export function MatchNumbers({
     },
     {
       key: "free-kicks", label: "Free kicks", icon: "free-kicks",
-      a: isSfkDemo ? 8 : eventMetric("A", (e) => e.type === "set_piece" && kindIs(e, "free")),
-      b: isSfkDemo ? 14 : eventMetric("B", (e) => e.type === "set_piece" && kindIs(e, "free")),
+      a: eventMetric("A", (e) => e.type === "set_piece" && kindIs(e, "free")),
+      b: eventMetric("B", (e) => e.type === "set_piece" && kindIs(e, "free")),
       types: ["set_piece"], meaning: "Free kicks show how often each team restarted play after an infringement.", glossaryId: "finding",
     },
     {
@@ -82,7 +82,7 @@ export function MatchNumbers({
       key: "possession", label: "Possession", icon: "possession",
       a: Math.round(teamA?.possession_pct ?? 0), b: Math.round(teamB?.possession_pct ?? 0),
       types: [], meaning: "Possession is the share of reliable ball-tracked playing time controlled by each team.", glossaryId: "possession",
-      unreliable: !reliable || isSfkDemo,
+      unreliable: !reliable,
     },
   ];
 
