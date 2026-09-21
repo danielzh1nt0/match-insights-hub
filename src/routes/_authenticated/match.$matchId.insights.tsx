@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { StatsTeamPill } from "@/components/ip/stats-team-selector";
+import { teamIdentities } from "@/lib/team-identity";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { InsightsScreen } from "@/components/insights/InsightsScreen";
@@ -35,6 +37,15 @@ function Insights() {
 
       {match && (
         <>
+          {(() => {
+            const ids = teamIdentities(match, colours);
+            if (!ids) return null;
+            return (
+              <div className="mb-3 flex items-center" aria-label="Teams in view">
+                {scope === "both" ? <StatsTeamPill identity={ids.A} both={ids.B} /> : <StatsTeamPill identity={scope === "b" ? ids.B : ids.A} />}
+              </div>
+            );
+          })()}
           <InsightsScreen matchId={matchId} match={match} findings={findings} summary={summary} events={events} stats={stats} team={team} iconColour={scope === "b" ? colours.B : colours.A} onReview={(input) => review.setVerdict.mutate(input)} />
         </>
       )}

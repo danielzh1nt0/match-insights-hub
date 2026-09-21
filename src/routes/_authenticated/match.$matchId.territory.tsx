@@ -1,3 +1,5 @@
+import { StatsTeamPill } from "@/components/ip/stats-team-selector";
+import { teamIdentities } from "@/lib/team-identity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type CSSProperties } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
@@ -119,6 +121,10 @@ function TerritoryScreen() {
       <div style={{ ...screenVars, display: "flex", flexDirection: "column", paddingBottom: "120px" }}>
         {loading && <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading territory"><div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" /></div>}
         {territory && match && <>
+          {(() => {
+            const ids = teamIdentities(match, colours);
+            return ids ? <div className="mb-3 flex items-center" aria-label="Team in view"><StatsTeamPill identity={chosenTeam === "B" ? ids.B : ids.A} /></div> : null;
+          })()}
           <TeamHeatMap teamColour={teamColour} attackLabel={`${teamName ?? "Team"} attack ${attackRight ? "right" : "left"}`} teamBlobs={teamBlobs} playerBlobs={playerBlobs} activePlayer={activePlayer} players={playerIds.map((id) => ({ id, num: id }))} onPlayerTap={(id) => setActivePlayer(id === "all" ? null : id)} sliderValue={heatTime} onSliderChange={setHeatTime} reliabilityLabel={`${typicalInView} of ${playerIds.length} in view`} frameCount={visibleFrames.length} />
           {timeline.length > 1 && <ShapeRibbon teamColour={teamColour} timeline={timeline} durationSeconds={duration} currentTime={selectedMoment} onSeek={(t) => { setShapeTime(t / duration); seekToMatch(t); }} medianLength={Math.round(teamStats?.block_length_median_m ?? territory.blockLengthM)} />}
           {(territory.losses.length > 0 || territory.recoveries.length > 0) && <LossWinPitches teamColour={teamColour} losses={territory.losses.map((point) => ({ ...point, x: point.x / 100, y: point.y / 100 }))} wins={territory.recoveries.map((point) => ({ ...point, x: point.x / 100, y: point.y / 100 }))} onDotTap={(point) => seekToMatch(point.t)} />}
