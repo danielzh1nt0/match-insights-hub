@@ -213,15 +213,15 @@ function Metric({value,label}:{value:string;label:string}) { return <div classNa
 
 function ShapeMultiples({ territory, colour, identity }: { territory: Territory; colour: string; identity: StatsTeamIdentity }) {
   const snapshots = territory.snapshots.filter(snapshot => snapshot.players.length >= 4); if (!snapshots.length) return null;
-  const ids=[...new Set(snapshots.flatMap(snapshot=>snapshot.players.map(player=>player.id)))];
-  const averages=ids.map(id=>{const points=snapshots.flatMap(snapshot=>snapshot.players.filter(player=>player.id===id));return points.length?{id,x:points.reduce((sum,p)=>sum+p.x,0)/points.length,y:points.reduce((sum,p)=>sum+p.y,0)/points.length}:null}).filter((point):point is {id:string;x:number;y:number}=>point!==null);
-  if(averages.length<4)return null;
-  const cx=averages.reduce((sum,p)=>sum+p.x,0)/averages.length,cy=averages.reduce((sum,p)=>sum+p.y,0)/averages.length;
-  const polygon=[...averages].sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx)).map(point=>`${point.y/100*64},${100-point.x}`).join(" ");
+  const observed=snapshots.map(snapshot=>{const players=snapshot.players.filter(player=>!player.isGK);const xs=players.map(player=>player.x),ys=players.map(player=>player.y);return {cx:xs.reduce((sum,x)=>sum+x,0)/xs.length,cy:ys.reduce((sum,y)=>sum+y,0)/ys.length,minX:Math.min(...xs),maxX:Math.max(...xs),minY:Math.min(...ys),maxY:Math.max(...ys)}});
+  const average=(key:keyof typeof observed[number])=>observed.reduce((sum,item)=>sum+item[key],0)/observed.length;
+  const cx=average("cx"),cy=average("cy"),halfLength=(average("maxX")-average("minX"))/2,halfWidth=(average("maxY")-average("minY"))/2;
+  const shape=[{x:cx-halfLength,y:cy-halfWidth*.55},{x:cx-halfLength*.55,y:cy-halfWidth},{x:cx+halfLength*.55,y:cy-halfWidth},{x:cx+halfLength,y:cy-halfWidth*.55},{x:cx+halfLength,y:cy+halfWidth*.55},{x:cx+halfLength*.55,y:cy+halfWidth},{x:cx-halfLength*.55,y:cy+halfWidth},{x:cx-halfLength,y:cy+halfWidth*.55}];
+  const polygon=shape.map(point=>`${clamp(point.y)/100*64},${100-clamp(point.x)}`).join(" ");
   const length=Math.round(snapshots.reduce((sum,s)=>sum+s.lengthM,0)/snapshots.length*10)/10;
   const width=Math.round(snapshots.reduce((sum,s)=>sum+s.widthM,0)/snapshots.length*10)/10;
   return <Card question="How did our shape change?" caption={`Average shape · ${identity.name}`} comparison={{target:"—",opponent:"—",last5:"—"}} honesty={`${territory.frameCount} tracked frames`}>
-    <StatsPitch portrait attackLabel={identity.code} ariaLabel={`${identity.name} average shape on the pitch`}><polygon points={polygon} fill={colour} fillOpacity=".25" stroke={colour} strokeWidth=".8"/><path d={`M${cy/100*64-2},${100-cx}h4M${cy/100*64},${98-cx}v4`} stroke={colour} strokeWidth="1"/>{averages.map(point=><circle key={point.id} cx={point.y/100*64} cy={100-point.x} r="1.5" fill={colour}/>)}</StatsPitch>
+    <StatsPitch portrait attackLabel={identity.code} ariaLabel={`${identity.name} average shape on the pitch`}><polygon points={polygon} fill={colour} fillOpacity=".25" stroke={colour} strokeWidth=".8"/><path d={`M${cy/100*64-2},${100-cx}h4M${cy/100*64},${98-cx}v4`} stroke={colour} strokeWidth="1.2"/></StatsPitch>
     <div className="mt-3 grid grid-cols-3 divide-x divide-wire-2 border border-wire-2"><Metric value={`${length} m`} label="Length"/><Metric value={`${width} m`} label="Width"/><Metric value={`${territory.lineHeightM || "—"}${territory.lineHeightM?" m":""}`} label="Line height"/></div>
   </Card>;
 }
