@@ -5,7 +5,7 @@ import { BottomSheet, CrestSheet, CrestTile, FormLabel, ProgressDashes, Registra
 import { PrimaryButton } from "@/components/ip/primitives";
 import { clubMonogram, useRegistration } from "@/store/registration-store";
 
-export const Route = createFileRoute("/signup/club")({ head: () => ({ meta: [{ title: "Your club — Ipanema" }, { name: "description", content: "Add your club identity and home ground to Ipanema." }, { property: "og:title", content: "Your club — Ipanema" }, { property: "og:description", content: "Add your club identity and home ground." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: ClubRegistration });
+export const Route = createFileRoute("/signup_/club")({ head: () => ({ meta: [{ title: "Your club — Ipanema" }, { name: "description", content: "Add your club identity and home ground to Ipanema." }, { property: "og:title", content: "Your club — Ipanema" }, { property: "og:description", content: "Add your club identity and home ground." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }), component: ClubRegistration });
 const grounds = [{ name: "Norrviken IP", place: "Sollentuna, Sweden" }, { name: "Sollentunavallen", place: "Sollentuna, Sweden" }, { name: "Skytteholms IP", place: "Solna, Sweden" }];
 function ClubRegistration() {
  const navigate=useNavigate(); const data=useRegistration(); const [crestOpen,setCrestOpen]=useState(false); const [focused,setFocused]=useState(false); const monogram=clubMonogram(data.clubName); const valid=data.clubName.trim().length>=2 && data.crestMode!=="empty" && data.ground.trim().length>0;
