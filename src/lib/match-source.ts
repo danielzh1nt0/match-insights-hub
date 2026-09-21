@@ -8,6 +8,8 @@ export type MatchFiles = {
   kit_A?: string;
   kit_B?: string;
   thumb?: string;
+  /** full matches: frames_000 … frames_020, one file per 5 minutes */
+  [key: string]: string | undefined;
 };
 
 export type MatchRow = {
@@ -90,6 +92,8 @@ export type MatchDataFile = {
   attack_right?: Record<string, boolean>;
   frames: Frame[];
   events: FeedEvent[];
+  /** full matches: frames live in separate files, loaded as the video reaches them */
+  frame_chunks?: { key: string; t_start: number; t_end: number }[];
 };
 
 export async function fetchMatches(): Promise<MatchListItem[]> {
@@ -264,4 +268,14 @@ export const FEED_LABEL: Record<string, string> = {
 
 export function feedLabel(type: string) {
   return FEED_LABEL[type] ?? type.replace(/_/g, " ");
+}
+
+/** One 5-minute frame file of a full match. Not kept in the JSON cache, so files you've moved away from can be freed. */
+export async function fetchFrameChunk(files: MatchFiles, key: string): Promise<Frame[]> {
+  const path = files[key];
+  if (!path) return [];
+  const res = await fetch(await signedUrl(path));
+  if (!res.ok) throw new Error(`Could not load ${key}`);
+  const body = (await res.json()) as { frames?: Frame[] };
+  return body.frames ?? [];
 }

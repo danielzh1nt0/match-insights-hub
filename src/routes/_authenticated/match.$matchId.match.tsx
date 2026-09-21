@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useQuery } from "@tanstack/react-query";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
+import { useFrameChunks } from "@/hooks/use-frame-chunks";
 import { MatchCanvas, LAYERS, PRESETS, presetLayers, type LayerKey, type PresetKey } from "@/components/ip/match-canvas";
 import { Card, Segmented } from "@/components/ip/primitives";
 import { EventFixSheet } from "@/components/ip/event-review";
@@ -116,6 +117,7 @@ function MatchScreen() {
   const [mode, setMode] = useState<Mode>("video");
   const [filter, setFilter] = useState<EventFilterValue>(DEFAULT_EVENT_FILTER);
   const [clock, setClock] = useState<number>(startT ?? 0);
+  const liveFile = useFrameChunks(row?.files, file, clock);
   const [playing, setPlaying] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -376,7 +378,7 @@ function MatchScreen() {
                   style={{ background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))" }}
                 >
                   <MatchCanvas
-                    file={file}
+                    file={liveFile}
                     videoRef={videoRef}
                     team={team}
                     colours={colours}
@@ -387,7 +389,7 @@ function MatchScreen() {
                 </div>
               ) : (
                 <MatchCanvas
-                  file={file}
+                  file={liveFile}
                   videoRef={videoRef}
                   team={team}
                   colours={colours}
@@ -426,7 +428,7 @@ function MatchScreen() {
                 >
                   <div className="relative aspect-[16/10] w-full">
                     <MatchCanvas
-                      file={file}
+                      file={liveFile}
                       videoRef={videoRef}
                       team={team}
                       colours={colours}

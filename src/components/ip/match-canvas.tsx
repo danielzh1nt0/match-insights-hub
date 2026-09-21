@@ -107,6 +107,8 @@ function frameBracket(frames: Frame[], t: number): FrameBracket | null {
   const before = frames[lo];
   const after = frames[Math.min(lo + 1, frames.length - 1)];
   if (!before || !after) return null;
+  // no frame within a second of the video's time (e.g. that part of a full match is still loading): draw nothing
+  if (t < before.t - 1 || t > after.t + 1 || (t - before.t > 1 && after.t - t > 1)) return null;
   const span = after.t - before.t;
   return {
     before,
