@@ -177,8 +177,8 @@ function deriveRuns(frames: Frame[], team: TeamKey) {
 
 function Runs({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour: string }) {
   const runs = deriveRuns(frames, team); if (!runs.length) return null;
-  return <Card question="Where did our runs go?" caption="Solid arrows had the ball. Dashed arrows were off it. Brighter means faster." honesty={`${runs.length} tracked runs`}>
-    <PortraitPitch arrowLabel="attack">{runs.map((run, index) => <line key={`${run.id}-${index}`} x1={run.start.y / 100 * 64} y1={100 - run.start.x} x2={run.end.y / 100 * 64} y2={100 - run.end.x} stroke={colour} strokeWidth={run.withBall ? 1.4 : .8} strokeDasharray={run.withBall ? undefined : "2 2"} opacity={clamp(.3 + (run.speed - 5.5) / 5, .3, 1)} />)}</PortraitPitch>
+  return <Card question="Where did our runs go?" caption="Five fastest tracked runs. Solid had the ball; dashed were off it." honesty={`${runs.length} tracked runs`}>
+    <PortraitPitch arrowLabel="attack">{[...runs].sort((a,b)=>b.speed-a.speed).slice(0,5).map((run, index) => <line key={`${run.id}-${index}`} x1={run.start.y / 100 * 64} y1={100 - run.start.x} x2={run.end.y / 100 * 64} y2={100 - run.end.x} stroke={colour} strokeWidth={run.withBall ? 1.4 : .8} strokeDasharray={run.withBall ? undefined : "2 2"} opacity={clamp(.3 + (run.speed - 5.5) / 5, .3, 1)} />)}</PortraitPitch>
   </Card>;
 }
 
@@ -254,7 +254,7 @@ function EntriesConceded({ events, team, matchId, file }: Props) {
   const opponent=team==="A"?"B":"A"; const entries=events.filter(e=>e.team===opponent&&["final_third_entry","entry","shot","goal"].includes(e.type)).map(event=>({event,point:eventPoint(event,file)})).filter((x):x is {event:ReviewedEvent;point:Point}=>x.point!==null); if(!entries.length)return <EvidenceUnavailable question="Where did they get in?" caption="Opponent entries into our defensive third."/>;
   const lanes=[0,0,0,0,0];entries.forEach(({point})=>{const index=Math.min(4,Math.floor(point.y/20));lanes[index]=(lanes[index]??0)+1});
   return <Card question="Where did they get in?" caption="Opponent entries into our defensive third, grouped into five lanes." honesty={`${entries.length} entries and shots`}>
-    <Pitch>{entries.map(({event,point})=><Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch entry at ${fmt(event.t)}`}><line x1={point.x} y1={point.y/100*64} x2={Math.max(4,point.x-10)} y2={point.y/100*64} stroke="var(--graphite)" strokeWidth="1.2"/><circle cx={Math.max(4,point.x-10)} cy={point.y/100*64} r="1.8" fill={event.type==="shot"||event.type==="goal"?"var(--quality-bad)":"var(--text-faint)"}/></Link>)}</Pitch>
+    <Pitch>{entries.slice(0,5).map(({event,point})=><Link key={event.id} to="/match/$matchId/match" params={{matchId}} search={{t:event.t}} aria-label={`Watch entry at ${fmt(event.t)}`}><line x1={point.x} y1={point.y/100*64} x2={Math.max(4,point.x-10)} y2={point.y/100*64} stroke="var(--graphite)" strokeWidth="1.2"/><circle cx={Math.max(4,point.x-10)} cy={point.y/100*64} r="1.8" fill={event.type==="shot"||event.type==="goal"?"var(--quality-bad)":"var(--text-faint)"}/></Link>)}</Pitch>
     <div className="mt-3 grid h-20 grid-cols-5 items-end gap-1" role="img" aria-label="Entries by lane">{lanes.map((count,index)=><div key={index} className="text-center"><span className="num text-[10px] text-text-dim">{count}</span><span className="mt-1 block bg-cream/50" style={{height:`${Math.max(2,count/Math.max(...lanes)*48)}px`}}/><span className="mt-1 block text-[8px] uppercase text-text-faint">{["Left","Half","Centre","Half","Right"][index]}</span></div>)}</div>
   </Card>;
 }
