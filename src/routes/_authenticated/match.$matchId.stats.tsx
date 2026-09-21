@@ -39,8 +39,10 @@ function Stats() {
   const [tab, setTab] = useState("ball");
 
   const active = sections.find((t) => t.key === tab);
-  const teamA: StatsTeamIdentity | null = match ? { name: match.teamA, code: shortCode(match.teamA), colour: colours.A, ...(crestForTeam(match.teamA) ? { crest: crestForTeam(match.teamA) } : {}) } : null;
-  const teamB: StatsTeamIdentity | null = match ? { name: match.teamB, code: shortCode(match.teamB), colour: colours.B, ...(crestForTeam(match.teamB) ? { crest: crestForTeam(match.teamB) } : {}) } : null;
+  const crestA = match ? crestForTeam(match.teamA) : undefined;
+  const crestB = match ? crestForTeam(match.teamB) : undefined;
+  const teamA: StatsTeamIdentity | null = match ? { name: match.teamA, code: shortCode(match.teamA), colour: colours.A, ...(crestA ? { crest: crestA } : {}) } : null;
+  const teamB: StatsTeamIdentity | null = match ? { name: match.teamB, code: shortCode(match.teamB), colour: colours.B, ...(crestB ? { crest: crestB } : {}) } : null;
 
   return (
     <MatchShell
