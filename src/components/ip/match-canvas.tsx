@@ -304,15 +304,52 @@ function project(H: number[] | null | undefined, x: number, y: number) {
   return [u / w, v / w] as Point;
 }
 
-function withAlpha(colour: string, alpha: number) {
-  const hex = colour.trim();
-  if (/^#[0-9a-f]{6}$/i.test(hex)) {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
+/* Canvas can't read CSS variables (e.g. "var(--club-bvb)"): an unreadable colour is silently ignored and the previous
+   fill is reused, which painted whole areas opaque cream. Colours are resolved to real rgb values before drawing. */
+let colourProbe: CanvasRenderingContext2D | null = null;
+const rgbCache = new Map<string, [number, number, number]>();
+function cssColour(colour: string): string {
+  let c = colour.trim();
+  for (let i = 0; i < 3; i++) {
+    const m = c.match(/^var\(\s*(--[^,\s)]+)\s*(?:,\s*([^)]+))?\)$/);
+    if (!m || typeof document === "undefined") break;
+    const v = getComputedStyle(document.documentElement).getPropertyValue(m[1] ?? "").trim();
+    c = v || (m[2] ?? "").trim() || "#ede6d6";
   }
-  return colour;
+  return c;
+}
+function rgbOf(colour: string): [number, number, number] {
+  const hit = rgbCache.get(colour);
+  if (hit) return hit;
+  const c = cssColour(colour);
+  let rgb: [number, number, number] = [237, 230, 214];
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);
+  if (hex) {
+    const h = hex[1] ?? "";
+    const full = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
+    rgb = [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16), parseInt(full.slice(4, 6), 16)];
+  } else if (typeof document !== "undefined") {
+    colourProbe ??= document.createElement("canvas").getContext("2d");
+    if (colourProbe) {
+      colourProbe.fillStyle = "#010203";
+      colourProbe.fillStyle = c;
+      const out = String(colourProbe.fillStyle);
+      const h6 = /^#([0-9a-f]{6})$/i.exec(out);
+      const rgba = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(out);
+      if (h6 && out !== "#010203") rgb = [parseInt(out.slice(1, 3), 16), parseInt(out.slice(3, 5), 16), parseInt(out.slice(5, 7), 16)];
+      else if (rgba) rgb = [Number(rgba[1]), Number(rgba[2]), Number(rgba[3])];
+    }
+  }
+  rgbCache.set(colour, rgb);
+  return rgb;
+}
+function solidColour(colour: string) {
+  const [r, g, b] = rgbOf(colour);
+  return `rgb(${r},${g},${b})`;
+}
+function withAlpha(colour: string, alpha: number) {
+  const [r, g, b] = rgbOf(colour);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 /** Draws interpolated match data with short renderer-only dropout protection. */
@@ -450,7 +487,7 @@ export function MatchCanvas({
 
       const at = (player: DrawnPlayer) =>
         cfg.mode === "video" ? (player.px ? map(player.px) : null) : metres(player.m);
-      const teamColour = (key: TeamKey) => (key === "B" ? cfg.colours.B : cfg.colours.A);
+      const teamColour = (key: TeamKey) => solidColour(key === "B" ? cfg.colours.B : cfg.colours.A);
       const visible = drawnPlayers.filter((player) => (cfg.team ? player.team === cfg.team : true));
 
       const stroke = Math.max(1.5, rect.height / 400);
@@ -513,6 +550,7 @@ export function MatchCanvas({
           spaceCache = { t, cells };
         }
         for (const cell of spaceCache.cells) {
+          if (cfg.team && cell.team !== cfg.team) continue;
           const corners: Point[] = [
             [cell.x, cell.y],
             [Math.min(length, cell.x + SPACE_CELL_M), cell.y],
@@ -659,7 +697,8 @@ export function MatchCanvas({
         }
       }
 
-      const carrierPlayer = carrier.id === null ? null : players.get(carrier.id) ?? null;
+      const carrierFound = carrier.id === null ? null : players.get(carrier.id) ?? null;
+      const carrierPlayer = carrierFound && (!cfg.team || carrierFound.team === cfg.team) ? carrierFound : null;
       const carrierAt = carrierPlayer ? at(carrierPlayer) : null;
       const carrierStable = carrier.id !== null && t - carrier.stableSince >= LANE_STABLE_S;
       if (cfg.layers.lanes && carrierStable && carrierAt) {
