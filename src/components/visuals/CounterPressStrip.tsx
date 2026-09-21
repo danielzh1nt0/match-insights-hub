@@ -3,7 +3,8 @@ type Props = { losses: Loss[]; targetSeconds?: number; axisSeconds?: number };
 export function CounterPressStrip({ losses, targetSeconds = 2, axisSeconds = 8 }: Props) {
   const values = losses.flatMap((loss) => loss.timeToPress === null ? [] : [loss.timeToPress]);
   const ordered = [...values].sort((a, b) => a - b);
-  const median = ordered.length ? ordered[Math.floor(ordered.length / 2)] : null;
+  const medianIndex = Math.floor(ordered.length / 2);
+  const median = ordered.length ? (ordered[medianIndex] ?? null) : null;
   const position = (value: number | null) => value === null ? 98 : Math.min(98, Math.max(2, value / axisSeconds * 100));
   return <div className="relative h-[86px] overflow-hidden rounded-[10px] border border-wire bg-pitch-insight" role="img" aria-label={`${losses.length} possession losses on a zero to ${axisSeconds} second counter-press axis`}>
     <span className="absolute inset-x-4 top-1/2 h-px bg-wire" />
