@@ -54,7 +54,7 @@ const TRAIL_S = 1.0;
 const SPRINT_MS = 5.5;
 const SPACE_CELL_M = 3;
 
-const PLAYER_HOLD_S = 0.4;
+const PLAYER_HOLD_S = 0.6;
 const BALL_HOLD_S = 0.3;
 const CARRIER_HOLD_S = 0.1;
 const LANE_STABLE_S = 0.3;
@@ -72,6 +72,8 @@ type DrawnPlayer = {
   lastSeen: number;
   sourcePredicted: boolean;
   gapPredicted: boolean;
+  /** eased marker opacity, so brief detection misses fade instead of blinking */
+  alpha?: number;
 };
 
 type DrawnBall = {
@@ -380,7 +382,7 @@ export function MatchCanvas({
     let raf = 0;
     let lastFrame: Frame | null = null;
     let lastTime: number | null = null;
-    let lastFile: MatchDataFile | undefined;
+    let lastFrames: Frame[] | undefined;
     const players = new Map<number, DrawnPlayer>();
     let ball: DrawnBall | null = null;
     let carrier: CarrierMemory = { id: null, stableSince: 0, lastSeen: 0, lanes: [] };
@@ -406,7 +408,7 @@ export function MatchCanvas({
       ball = null;
       carrier = { id: null, stableSince: time, lastSeen: time, lanes: [] };
       lastTime = time;
-      lastFile = data;
+      lastFrames = data?.frames;
     };
 
     const draw = () => {
@@ -429,7 +431,7 @@ export function MatchCanvas({
 
       const t = videoRef.current?.currentTime ?? 0;
       if (
-        lastFile !== data ||
+        lastFrames !== data.frames ||   // only a real change of frame data resets smoothing (not a rebuilt wrapper object)
         lastTime === null ||
         t < lastTime - 0.05 ||
         Math.abs(t - lastTime) > SEEK_RESET_S
@@ -725,9 +727,14 @@ export function MatchCanvas({
         for (const player of visible) {
           const point = at(player);
           if (!point) continue;
-          const predicted = player.sourcePredicted || player.gapPredicted;
+          // opacity follows how long ago the player was last detected, eased, so one-frame misses don't blink
+          const age = Math.max(0, t - player.lastSeen);
+          const fade = age <= 0.12 ? 1 : Math.max(0.25, 1 - ((age - 0.12) / (PLAYER_HOLD_S - 0.12)) * 0.75);
+          const target = Math.min(fade, player.sourcePredicted ? 0.55 : 1);
+          player.alpha = player.alpha === undefined ? target : player.alpha + (target - player.alpha) * 0.25;
+          const predicted = player.sourcePredicted || age > 0.25;
           const radius = Math.max(4, rect.height * 0.014);
-          ctx.globalAlpha = player.gapPredicted ? 0.6 : player.sourcePredicted ? 0.45 : 1;
+          ctx.globalAlpha = player.alpha;
           ctx.beginPath();
           ctx.ellipse(point[0], point[1], radius, radius * 0.85, 0, 0, Math.PI * 2);
           ctx.fillStyle = teamColour(player.team);

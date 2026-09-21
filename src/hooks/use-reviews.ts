@@ -11,6 +11,9 @@ import {
   type Verdict,
 } from "@/lib/event-reviews";
 
+/** one shared empty list: a new [] on every render made every derived object (and the overlays) reset each render */
+const EMPTY_ROWS: EventReview[] = [];
+
 export function useReviews(matchId: string) {
   const queryClient = useQueryClient();
   const key = useMemo(() => ["event-reviews", matchId], [matchId]);
@@ -21,7 +24,7 @@ export function useReviews(matchId: string) {
     staleTime: 30_000,
   });
 
-  const rows: EventReview[] = query.data ?? [];
+  const rows: EventReview[] = query.data ?? EMPTY_ROWS;
   const reviews = useMemo(() => reviewMap(rows), [rows]);
 
   const invalidate = useCallback(() => {
