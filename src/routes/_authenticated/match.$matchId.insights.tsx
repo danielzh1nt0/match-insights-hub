@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
-import { InsightsScreen } from "@/components/ip/insights-screen";
+import { InsightsScreen } from "@/components/insights/InsightsScreen";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useAnalysis } from "@/hooks/use-match";
 
@@ -23,7 +23,7 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, colours, findings, summary, loading, events, review } = useAnalysis(matchId, scope);
+  const { match, colours, findings, summary, loading, events, review, stats, team } = useAnalysis(matchId, scope);
 
   return (
     <MatchShell matchId={matchId} match={match} scope={scope} setScope={setScope} period={period} setPeriod={setPeriod}>
@@ -35,7 +35,7 @@ function Insights() {
 
       {match && (
         <>
-          <InsightsScreen matchId={matchId} match={match} findings={findings} summary={summary} events={events} iconColour={scope === "b" ? colours.B : colours.A} onReview={(input) => review.setVerdict.mutate(input)} />
+          <InsightsScreen matchId={matchId} match={match} findings={findings} summary={summary} events={events} stats={stats} team={team} iconColour={scope === "b" ? colours.B : colours.A} onReview={(input) => review.setVerdict.mutate(input)} />
         </>
       )}
     </MatchShell>
