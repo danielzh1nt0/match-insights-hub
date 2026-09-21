@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useQuery } from "@tanstack/react-query";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
-import { MatchCanvas, LAYERS, type LayerKey } from "@/components/ip/match-canvas";
+import { MatchCanvas, LAYERS, PRESETS, presetLayers, type LayerKey, type PresetKey } from "@/components/ip/match-canvas";
 import { Card, Segmented } from "@/components/ip/primitives";
 import { EventFixSheet } from "@/components/ip/event-review";
 import {
@@ -51,7 +51,13 @@ const DEFAULT_LAYERS: Record<LayerKey, boolean> = {
   carrier: true,
   shapes: false,
   lanes: false,
+  line: false,
+  units: false,
+  block: false,
+  trails: false,
+  space: false,
 };
+const MAX_LAYERS = 4; // players + three analysis layers
 
 function readLayers(): Record<LayerKey, boolean> {
   if (typeof window === "undefined") return DEFAULT_LAYERS;
@@ -122,9 +128,28 @@ function MatchScreen() {
 
   useEffect(() => setLayers(readLayers()), []);
 
+  const saveLayers = (next: Record<LayerKey, boolean>) => {
+    try {
+      window.localStorage.setItem(LAYER_STORE, JSON.stringify(next));
+    } catch {
+      /* private mode — layers just won't persist */
+    }
+  };
+  const applyPreset = (key: PresetKey) => {
+    const next = presetLayers(key);
+    saveLayers(next);
+    setLayers(next);
+  };
   const toggleLayer = (key: LayerKey) =>
     setLayers((prev) => {
       const next = { ...prev, [key]: !prev[key] };
+      if (next[key]) {
+        const on = (Object.keys(next) as LayerKey[]).filter((k) => next[k]);
+        if (on.length > MAX_LAYERS) {
+          const drop = on.find((k) => k !== key && k !== "players");
+          if (drop) next[drop] = false;
+        }
+      }
       try {
         window.localStorage.setItem(LAYER_STORE, JSON.stringify(next));
       } catch {
@@ -144,6 +169,12 @@ function MatchScreen() {
   const teamAStats = teamRow(stats, "A");
   const teamBStats = teamRow(stats, "B");
   const reliableBall = row?.summary?.["ball_reliable"] !== false;
+  const grade = (row?.summary?.["ball_grade"] ?? null) as { possession_ok?: boolean; events_ok?: boolean } | null;
+  const layerAllowed = (needs: null | "possession" | "events") =>
+    needs === null ? true : grade ? Boolean(needs === "possession" ? grade.possession_ok : grade.events_ok) : reliableBall;
+  const shownLayers = Object.fromEntries(
+    LAYERS.map((l) => [l.key, layers[l.key] && layerAllowed(l.needs)]),
+  ) as Record<LayerKey, boolean>;
   const tiles = useMemo<MatchNumberTile[]>(() => [
     { icon: "goal", label: "Goals", valueA: eventMetric(events, "A", (e) => e.type === "goal"), valueB: eventMetric(events, "B", (e) => e.type === "goal") },
     { icon: "shot", label: "Shots", valueA: eventMetric(events, "A", (e) => e.type === "shot"), valueB: eventMetric(events, "B", (e) => e.type === "shot") },
@@ -349,7 +380,7 @@ function MatchScreen() {
                     videoRef={videoRef}
                     team={team}
                     colours={colours}
-                    layers={layers}
+                    layers={shownLayers}
                     mode="pitch"
                     onFrame={setFrame}
                   />
@@ -360,7 +391,7 @@ function MatchScreen() {
                   videoRef={videoRef}
                   team={team}
                   colours={colours}
-                  layers={layers}
+                  layers={shownLayers}
                   mode="video"
                   onFrame={setFrame}
                 />
@@ -399,7 +430,7 @@ function MatchScreen() {
                       videoRef={videoRef}
                       team={team}
                       colours={colours}
-                      layers={layers}
+                      layers={shownLayers}
                       mode="pitch"
                     />
                   </div>
@@ -567,16 +598,44 @@ function MatchScreen() {
               />
               <div className="relative w-full max-w-[420px] rounded-t-[16px] border border-wire bg-surface p-5 md:rounded-[16px]">
                 <h2 className="display text-[17px] uppercase text-cream">Layers</h2>
-                <ul className="mt-3 flex flex-col gap-1">
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {PRESETS.map((p) => {
+                    const active = (Object.keys(layers) as LayerKey[]).every((k) => layers[k] === presetLayers(p.key)[k]);
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => applyPreset(p.key)}
+                        aria-pressed={active}
+                        className={cn(
+                          "tap h-10 rounded-[10px] border text-[13px] font-semibold",
+                          active ? "border-cream bg-cream text-[#111315]" : "border-wire text-text hover:bg-surface-2",
+                        )}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-4 text-[11px] uppercase tracking-wide text-text-dim">Custom · up to 3 besides players</p>
+                <ul className="mt-2 flex flex-col gap-1">
                   {LAYERS.map((l) => (
                     <li key={l.key}>
                       <button
                         type="button"
-                        onClick={() => toggleLayer(l.key)}
+                        onClick={() => layerAllowed(l.needs) && toggleLayer(l.key)}
                         aria-pressed={layers[l.key]}
-                        className="tap flex w-full items-center justify-between rounded-[10px] px-2 text-left text-[13.5px] text-text hover:bg-surface-2"
+                        aria-disabled={!layerAllowed(l.needs)}
+                        title={layerAllowed(l.needs) ? undefined : "Needs reliable ball tracking"}
+                        className={cn(
+                          "tap flex w-full items-center justify-between rounded-[10px] px-2 text-left text-[13.5px] text-text hover:bg-surface-2",
+                          !layerAllowed(l.needs) && "opacity-40",
+                        )}
                       >
-                        {l.label}
+                        <span>
+                          {l.label}
+                          {!layerAllowed(l.needs) && <span className="ml-2 text-[11px] text-text-dim">needs reliable ball</span>}
+                        </span>
                         <span
                           className={cn(
                             "h-4 w-4 rounded-[5px] border",

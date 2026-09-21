@@ -3,15 +3,56 @@ import type { RefObject } from "react";
 import { pitchSize, type TeamKey } from "@/lib/match-analysis";
 import type { Frame, FramePlayer, Lane, MatchDataFile } from "@/lib/match-source";
 
-export type LayerKey = "players" | "ball" | "carrier" | "shapes" | "lanes";
+export type LayerKey =
+  | "players"
+  | "ball"
+  | "carrier"
+  | "shapes"
+  | "lanes"
+  | "line"
+  | "units"
+  | "block"
+  | "trails"
+  | "space";
 
-export const LAYERS: { key: LayerKey; label: string }[] = [
-  { key: "players", label: "Players" },
-  { key: "ball", label: "Ball" },
-  { key: "carrier", label: "Ball carrier" },
-  { key: "shapes", label: "Team shapes" },
-  { key: "lanes", label: "Passing lanes" },
+/** needs: which ball reliability the layer depends on (null = positions only). */
+export const LAYERS: { key: LayerKey; label: string; needs: null | "possession" | "events" }[] = [
+  { key: "players", label: "Players", needs: null },
+  { key: "line", label: "Defensive line", needs: null },
+  { key: "units", label: "Unit lines", needs: null },
+  { key: "block", label: "Block box", needs: null },
+  { key: "shapes", label: "Team shapes", needs: null },
+  { key: "trails", label: "Sprint trails", needs: null },
+  { key: "space", label: "Space control", needs: null },
+  { key: "ball", label: "Ball", needs: "possession" },
+  { key: "carrier", label: "Ball carrier", needs: "possession" },
+  { key: "lanes", label: "Passing lanes", needs: "events" },
 ];
+
+export const NO_LAYERS: Record<LayerKey, boolean> = {
+  players: false, ball: false, carrier: false, shapes: false, lanes: false,
+  line: false, units: false, block: false, trails: false, space: false,
+};
+
+export type PresetKey = "clean" | "defending" | "building" | "transitions";
+
+export const PRESETS: { key: PresetKey; label: string; layers: LayerKey[] }[] = [
+  { key: "clean", label: "Clean", layers: ["players"] },
+  { key: "defending", label: "Defending", layers: ["players", "line", "units"] },
+  { key: "building", label: "Building up", layers: ["players", "carrier", "lanes"] },
+  { key: "transitions", label: "Transitions", layers: ["players", "trails", "carrier"] },
+];
+
+export function presetLayers(key: PresetKey): Record<LayerKey, boolean> {
+  const preset = PRESETS.find((p) => p.key === key);
+  const next = { ...NO_LAYERS };
+  for (const layer of preset?.layers ?? ["players"]) next[layer] = true;
+  return next;
+}
+
+const TRAIL_S = 1.0;
+const SPRINT_MS = 5.5;
+const SPACE_CELL_M = 3;
 
 const PLAYER_HOLD_S = 0.4;
 const BALL_HOLD_S = 0.3;
@@ -226,6 +267,24 @@ function convexHull(points: Point[]): Point[] {
   return [...lower, ...upper];
 }
 
+/** 1-D k-means with k=3 on attack-relative x; returns groups sorted from own goal outward. */
+function threeUnits(xs: number[]): number[][] {
+  const sorted = [...xs].sort((a, b) => a - b);
+  const q = (f: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(f * (sorted.length - 1))))] ?? 0;
+  let c = [q(0.2), q(0.5), q(0.8)];
+  let groups: number[][] = [[], [], []];
+  for (let it = 0; it < 12; it++) {
+    groups = [[], [], []];
+    for (const x of sorted) {
+      let best = 0;
+      for (let k = 1; k < 3; k++) if (Math.abs(x - (c[k] ?? 0)) < Math.abs(x - (c[best] ?? 0))) best = k;
+      groups[best]?.push(x);
+    }
+    c = groups.map((g, k) => (g.length ? g.reduce((a, b) => a + b, 0) / g.length : c[k] ?? 0));
+  }
+  return groups.filter((g) => g.length > 0);
+}
+
 /** Project metres to pixels with the frame's 3x3 homography (row-major). */
 function project(H: number[] | null | undefined, x: number, y: number) {
   if (!H || H.length < 9) return null;
@@ -286,9 +345,13 @@ export function MatchCanvas({
     const players = new Map<number, DrawnPlayer>();
     let ball: DrawnBall | null = null;
     let carrier: CarrierMemory = { id: null, stableSince: 0, lastSeen: 0, lanes: [] };
+    const trails = new Map<number, { t: number; m: Point }[]>();
+    let spaceCache: { t: number; cells: { x: number; y: number; team: TeamKey }[] } | null = null;
 
     const resetTemporalState = (time: number, data: MatchDataFile | undefined) => {
       players.clear();
+      trails.clear();
+      spaceCache = null;
       ball = null;
       carrier = { id: null, stableSince: time, lastSeen: time, lanes: [] };
       lastTime = time;
@@ -377,6 +440,186 @@ export function MatchCanvas({
         cfg.mode === "video" ? (player.px ? map(player.px) : null) : metres(player.m);
       const teamColour = (key: TeamKey) => (key === "B" ? cfg.colours.B : cfg.colours.A);
       const visible = drawnPlayers.filter((player) => (cfg.team ? player.team === cfg.team : true));
+
+      const stroke = Math.max(1.5, rect.height / 400);
+      const label = (text: string, x: number, y: number, colour = "#ede6d6") => {
+        ctx.font = `600 ${Math.max(11, Math.round(rect.height / 55))}px Inter, sans-serif`;
+        ctx.textAlign = "center";
+        const w = ctx.measureText(text).width + 10;
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(x - w / 2, y - 14, w, 18);
+        ctx.fillStyle = colour;
+        ctx.fillText(text, x, y);
+      };
+      const segment = (a: Point, b: Point, colour: string, width: number, dash: number[] = []) => {
+        const pa = metres(a);
+        const pb = metres(b);
+        if (!pa || !pb) return null;
+        ctx.beginPath();
+        ctx.setLineDash(dash);
+        ctx.moveTo(pa[0], pa[1]);
+        ctx.lineTo(pb[0], pb[1]);
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = width;
+        ctx.stroke();
+        ctx.setLineDash([]);
+        return [pa, pb] as [Point, Point];
+      };
+      const teamsShown: TeamKey[] = cfg.team ? [cfg.team] : ["A", "B"];
+      const attacksRight = (key: TeamKey) => data.attack_right?.[key] ?? key === "A";
+      const outfield = (key: TeamKey) => drawnPlayers.filter((p) => p.team === key && !p.gk && !p.gapPredicted);
+
+      // trails: remember the last second of each player's position
+      if (cfg.layers.trails) {
+        for (const p of drawnPlayers) {
+          const list = trails.get(p.id) ?? [];
+          list.push({ t, m: p.m });
+          while (list.length && (list[0]?.t ?? t) < t - TRAIL_S) list.shift();
+          trails.set(p.id, list);
+        }
+      }
+
+      if (cfg.layers.space) {
+        if (!spaceCache || Math.abs(t - spaceCache.t) > 0.1) {
+          const pts = drawnPlayers.filter((p) => !p.gk);
+          const cells: { x: number; y: number; team: TeamKey }[] = [];
+          if (pts.length >= 6) {
+            for (let x = 0; x < length; x += SPACE_CELL_M) {
+              for (let y = 0; y < width; y += SPACE_CELL_M) {
+                const cx = x + SPACE_CELL_M / 2;
+                const cy = y + SPACE_CELL_M / 2;
+                let best: DrawnPlayer | null = null;
+                let bd = Infinity;
+                for (const p of pts) {
+                  const d = (p.m[0] - cx) ** 2 + (p.m[1] - cy) ** 2;
+                  if (d < bd) { bd = d; best = p; }
+                }
+                if (best) cells.push({ x, y, team: best.team });
+              }
+            }
+          }
+          spaceCache = { t, cells };
+        }
+        for (const cell of spaceCache.cells) {
+          const corners: Point[] = [
+            [cell.x, cell.y],
+            [Math.min(length, cell.x + SPACE_CELL_M), cell.y],
+            [Math.min(length, cell.x + SPACE_CELL_M), Math.min(width, cell.y + SPACE_CELL_M)],
+            [cell.x, Math.min(width, cell.y + SPACE_CELL_M)],
+          ];
+          const pts = corners.map(metres);
+          if (pts.some((q) => !q)) continue;
+          ctx.beginPath();
+          (pts as Point[]).forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+          ctx.closePath();
+          ctx.fillStyle = withAlpha(teamColour(cell.team), 0.18);
+          ctx.fill();
+        }
+        label("Approximate space control", rect.width / 2, rect.height - 10);
+      }
+
+      if (cfg.layers.block) {
+        for (const key of teamsShown) {
+          const ps = outfield(key);
+          if (ps.length < 5) continue;
+          const xs = ps.map((p) => p.m[0]);
+          const ys = ps.map((p) => p.m[1]);
+          const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+          const corners = ([[x0, y0], [x1, y0], [x1, y1], [x0, y1]] as Point[]).map(metres);
+          if (corners.some((q) => !q)) continue;
+          ctx.beginPath();
+          (corners as Point[]).forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+          ctx.closePath();
+          ctx.fillStyle = withAlpha(teamColour(key), 0.1);
+          ctx.fill();
+          ctx.strokeStyle = withAlpha(teamColour(key), 0.8);
+          ctx.lineWidth = stroke;
+          ctx.stroke();
+          const top = metres([(x0 + x1) / 2, y0]);
+          if (top) label(`Length ${Math.round(x1 - x0)} m · Width ${Math.round(y1 - y0)} m`, top[0], top[1] - 6);
+        }
+      }
+
+      if (cfg.layers.units) {
+        for (const key of teamsShown) {
+          const ps = outfield(key);
+          if (ps.length < 6) {
+            if (cfg.team) label("Not enough players in view for unit lines", rect.width / 2, 26);
+            continue;
+          }
+          const right = attacksRight(key);
+          const rel = (x: number) => (right ? x : length - x);
+          const groups = threeUnits(ps.map((p) => rel(p.m[0])));
+          const means: number[] = [];
+          for (const g of groups) {
+            const meanRel = g.reduce((a, b) => a + b, 0) / g.length;
+            means.push(meanRel);
+            const members = ps.filter((p) => g.includes(rel(p.m[0])));
+            const ys = members.map((p) => p.m[1]);
+            const x = right ? meanRel : length - meanRel;
+            segment([x, Math.min(...ys) - 1.5], [x, Math.max(...ys) + 1.5], withAlpha(teamColour(key), 0.9), stroke * 1.5);
+          }
+          for (let i = 1; i < means.length; i++) {
+            const a = means[i - 1] ?? 0, b = means[i] ?? 0;
+            const mid = (a + b) / 2;
+            const pos = metres([right ? mid : length - mid, width * 0.08]);
+            if (pos) label(`gap ${Math.round(b - a)} m`, pos[0], pos[1]);
+          }
+        }
+      }
+
+      if (cfg.layers.line) {
+        for (const key of teamsShown) {
+          const ps = outfield(key);
+          if (ps.length < 3) continue;
+          const right = attacksRight(key);
+          const xs = ps.map((p) => p.m[0]);
+          const lineX = right ? Math.min(...xs) : Math.max(...xs);
+          const opp: TeamKey = key === "A" ? "B" : "A";
+          const beyond = drawnPlayers.filter((p) => p.team === opp && !p.gk && (right ? p.m[0] < lineX : p.m[0] > lineX));
+          const colour = beyond.length ? "#E24B4A" : withAlpha(teamColour(key), 0.95);
+          const seg = segment([lineX, 0], [lineX, width], colour, stroke * 2);
+          const height = right ? lineX : length - lineX;
+          const near = metres([lineX, width * 0.94]);
+          if (near) label(`Line ${Math.round(height)} m`, near[0], near[1], beyond.length ? "#E24B4A" : "#ede6d6");
+          for (const p of beyond) {
+            const q = at(p);
+            if (!q) continue;
+            ctx.beginPath();
+            ctx.arc(q[0], q[1], Math.max(7, rect.height * 0.02), 0, Math.PI * 2);
+            ctx.strokeStyle = "#E24B4A";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+          void seg;
+        }
+      }
+
+      if (cfg.layers.trails) {
+        for (const p of visible) {
+          const list = trails.get(p.id);
+          if (!list || list.length < 3) continue;
+          const first = list[0];
+          const last = list[list.length - 1];
+          if (!first || !last) continue;
+          const dt = last.t - first.t;
+          if (dt <= 0.2) continue;
+          const speed = Math.hypot(last.m[0] - first.m[0], last.m[1] - first.m[1]) / dt;
+          if (speed < 1.0) continue;
+          const sprint = speed >= SPRINT_MS;
+          const pts = list.map((e) => metres(e.m));
+          for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1], b = pts[i];
+            if (!a || !b) continue;
+            ctx.beginPath();
+            ctx.moveTo(a[0], a[1]);
+            ctx.lineTo(b[0], b[1]);
+            ctx.strokeStyle = sprint ? withAlpha(teamColour(p.team), (0.7 * i) / pts.length) : `rgba(237,230,214,${(0.45 * i) / pts.length})`;
+            ctx.lineWidth = sprint ? stroke * 2 : stroke;
+            ctx.stroke();
+          }
+        }
+      }
 
       if (cfg.layers.shapes) {
         for (const key of ["A", "B"] as TeamKey[]) {
