@@ -7,12 +7,7 @@ import { StatsVisuals } from "@/components/ip/stats-visuals";
 import { StatsTeamSelector, type StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import { useAnalysis } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
-
-function shortCode(name: string) {
-  const words = name.replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(Boolean);
-  if (words.length <= 1) return (words[0] ?? name).slice(0, 3).toUpperCase();
-  return words.map((word) => word[0]).join("").slice(0, 3).toUpperCase();
-}
+import { shortTeamCode } from "@/components/team/TeamToken";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/stats")({
   head: () => ({
@@ -41,8 +36,8 @@ function Stats() {
   const active = sections.find((t) => t.key === tab);
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
-  const teamA: StatsTeamIdentity | null = match ? { name: match.teamA, code: shortCode(match.teamA), colour: colours.A, ...(crestA ? { crest: crestA } : {}) } : null;
-  const teamB: StatsTeamIdentity | null = match ? { name: match.teamB, code: shortCode(match.teamB), colour: colours.B, ...(crestB ? { crest: crestB } : {}) } : null;
+  const teamA: StatsTeamIdentity | null = match ? { name: match.teamA, shortCode: shortTeamCode(match.teamA), kitColour: colours.A, ...(crestA ? { crestUrl: crestA } : {}) } : null;
+  const teamB: StatsTeamIdentity | null = match ? { name: match.teamB, shortCode: shortTeamCode(match.teamB), kitColour: colours.B, ...(crestB ? { crestUrl: crestB } : {}) } : null;
 
   return (
     <MatchShell
