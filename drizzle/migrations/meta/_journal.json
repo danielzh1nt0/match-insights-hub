@@ -8,6 +8,13 @@
       "when": 1789830727875,
       "tag": "0000_create_event_reviews",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789978797695,
+      "tag": "0001_profile_avatar_column_and_avatar_policies",
+      "breakpoints": true
     }
   ]
 }
