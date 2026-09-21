@@ -1,10 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { UploadCloud } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
 import { Field, Input, PrimaryButton, Segmented } from "@/components/ip/primitives";
 import { useApp } from "@/store/app-store";
+import { useRegistration } from "@/store/registration-store";
+import { uploadMatch, type UploadProgress } from "@/lib/upload";
 
 export const Route = createFileRoute("/_authenticated/new")({
   head: () => ({
@@ -26,33 +28,57 @@ export const Route = createFileRoute("/_authenticated/new")({
 function NewAnalysis() {
   const navigate = useNavigate();
   const teams = useApp((s) => s.teams);
-  const addMatch = useApp((s) => s.addMatch);
-  const [team, setTeam] = useState(teams[0]?.name ?? "1. FC Köln");
-  const [opponent, setOpponent] = useState("Wolfsburg");
-  const [date, setDate] = useState("2026-09-12");
-  const [competition, setCompetition] = useState("Bundesliga sample");
+  const reg = useRegistration();
+  const [team, setTeam] = useState(reg.teamName || reg.clubName || teams[0]?.name || "");
+  const [opponent, setOpponent] = useState("");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [competition, setCompetition] = useState("");
   const [venue, setVenue] = useState<"home" | "away">("home");
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const fileName = file?.name ?? null;
+  const setFileName = (_: string | null) => undefined; // kept for the drop-zone markup below
+  void setFileName;
   const [dragging, setDragging] = useState(false);
+  const [progress, setProgress] = useState<UploadProgress | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  function start() {
-    const id = `${opponent.toLowerCase().replace(/\s+/g, "-")}-${date}`;
-    addMatch({
-      id,
-      teamA: team,
-      teamB: opponent,
-      label: competition,
-      date,
-      competition,
-      durationS: 47,
-      status: "processing",
-      scoreA: 0,
-      scoreB: 0,
-      tags: [teams[0]?.ageGroup ?? "P2009", venue],
-      summary: { possession: [0, 0], turnovers: [0, 0], shots: [0, 0] },
-    });
-    navigate({ to: "/processing", search: { id } });
+  useEffect(() => {
+    if (!uploading) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [uploading]);
+
+  async function start() {
+    setError(null);
+    if (!file) return setError("Choose the match video first.");
+    if (!team.trim() || !opponent.trim()) return setError("Add your team and the opponent.");
+    setUploading(true);
+    abortRef.current = new AbortController();
+    try {
+      const { match_id } = await uploadMatch(
+        file,
+        { team: team.trim(), opponent: opponent.trim(), date, competition: competition.trim(), venue, ageGroup: reg.ageGroup || teams[0]?.ageGroup, kitColour: reg.kitColour },
+        setProgress,
+        abortRef.current.signal,
+      );
+      navigate({ to: "/processing", search: { id: match_id } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "The upload stopped.");
+    } finally {
+      setUploading(false);
+    }
   }
+
+  const mb = (b: number) => (b / 1024 / 1024).toFixed(0);
+  const pct = progress ? Math.floor((progress.sentBytes / Math.max(progress.totalBytes, 1)) * 100) : 0;
+  const eta = progress && progress.bytesPerSec > 0 ? (progress.totalBytes - progress.sentBytes) / progress.bytesPerSec : null;
+  const etaText = eta === null ? "" : eta > 3600 ? ` · about ${Math.round(eta / 3600)} h left` : eta > 90 ? ` · about ${Math.round(eta / 60)} min left` : " · almost done";
 
   return (
     <div className="min-h-screen bg-bg">
@@ -115,7 +141,7 @@ function NewAnalysis() {
                   e.preventDefault();
                   setDragging(false);
                   const f = e.dataTransfer.files?.[0];
-                  if (f) setFileName(f.name);
+                  if (f) setFile(f);
                 }}
                 className={`flex min-h-[156px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[4px] border border-dashed px-4 py-6 text-center transition-colors duration-150 ease-out ${
                   dragging ? "border-cream bg-cream/5" : "border-wire bg-surface-2"
@@ -125,19 +151,31 @@ function NewAnalysis() {
                 <span className="text-[13px] font-semibold text-text">
                   {fileName ?? "Drop a video here"}
                 </span>
-                <span className="text-[11.5px] text-text-faint">MP4, MOV · up to 4 GB</span>
+                <span className="text-[11.5px] text-text-faint">{file ? `${(file.size / 1024 / 1024 / 1024).toFixed(2)} GB` : "MP4, MOV · full match, up to 12 GB"}</span>
                 <input
                   type="file"
                   accept="video/*"
                   className="hidden"
                   aria-label="Choose a video file"
-                  onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
               </label>
             </Field>
 
-            <PrimaryButton block className="h-12" onClick={start}>
-              Start analysis
+            {uploading || progress ? (
+              <div className="flex flex-col gap-2" role="status" aria-live="polite">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+                  <div className="h-full rounded-full bg-cream transition-[width] duration-300 ease-out" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="num text-[12px] text-text-dim">
+                  {progress ? `${pct}% · ${mb(progress.sentBytes)} of ${mb(progress.totalBytes)} MB · ${(progress.bytesPerSec / 1024 / 1024).toFixed(1)} MB/s${etaText}` : "Preparing upload…"}
+                </p>
+                {uploading && <p className="text-[11.5px] text-text-faint">Keep this page open until the upload finishes. If the connection drops, choose the same file again — it continues where it stopped.</p>}
+              </div>
+            ) : null}
+            {error && <p className="text-[12.5px] text-quality-bad" role="alert">{error}</p>}
+            <PrimaryButton block className="h-12" onClick={start} disabled={uploading}>
+              {uploading ? "Uploading…" : error && progress ? "Continue upload" : "Start analysis"}
             </PrimaryButton>
           </div>
         </motion.div>
