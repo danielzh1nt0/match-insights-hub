@@ -13,6 +13,7 @@
 - Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
+- [ ] Add the isolated three-step club/team registration flow and animated upload experience, including requested screenshot QA
 - [x] Complete approved Elite tactical workspace redesign across shared shell, front door, match workspace, and secondary destinations with full responsive QA
 - [x] Complete Stats rebuild: all 24 approved Ball, Pressing, Shape, Shooting, Players, and Passes slots, using Visualisation Library v16 patterns and full QA
 - [x] Pack 2 and 3: Match and Territory component integration with reviewed real data, preserved video/review behavior, mobile/desktop screenshots, interaction checks, no-overflow checks, and prohibited-pattern audit
