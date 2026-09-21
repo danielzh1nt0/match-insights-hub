@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
-import { InsightsScreen } from "@/components/ip/insights-screen";
+import { InsightsScreen } from "@/components/insights/InsightsScreen";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useAnalysis } from "@/hooks/use-match";
 

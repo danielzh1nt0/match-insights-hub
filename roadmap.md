@@ -23,5 +23,6 @@
 - [x] Correct Territory and Stats against Visualisation Library v16: exact card anatomy and six distinct visual families
 - [ ] Phase 3 remainder: settings screens, coach marks per screen, skeleton/empty/error/offline states
 - [x] Establish the approved screen sitemap and rebuild Insights with gated coaching findings
+- [x] Replace Insights with the Four Phases B+C hybrid and eight shared SVG visual components
 
 - [x] Name the Bundesliga sample match BVB vs FC Bayern and add both crests (BVB = uploaded yellow crest)
