@@ -346,11 +346,23 @@ export function MatchCanvas({
     let ball: DrawnBall | null = null;
     let carrier: CarrierMemory = { id: null, stableSince: 0, lastSeen: 0, lanes: [] };
     const trails = new Map<number, { t: number; m: Point }[]>();
+    // eased per-team overlay geometry, so lines glide instead of jumping when players enter or leave the shot
+    const eased = new Map<string, number>();
+    const ease = (key: string, target: number, t: number, rate = 3.0) => {
+      const prev = eased.get(key);
+      const lastT = eased.get(`${key}@t`) ?? t;
+      const dt = Math.max(0, Math.min(0.25, t - lastT));
+      const value = prev === undefined ? target : prev + (target - prev) * (1 - Math.exp(-rate * dt));
+      eased.set(key, value);
+      eased.set(`${key}@t`, t);
+      return value;
+    };
     let spaceCache: { t: number; cells: { x: number; y: number; team: TeamKey }[] } | null = null;
 
     const resetTemporalState = (time: number, data: MatchDataFile | undefined) => {
       players.clear();
       trails.clear();
+      eased.clear();
       spaceCache = null;
       ball = null;
       carrier = { id: null, stableSince: time, lastSeen: time, lanes: [] };
@@ -467,7 +479,7 @@ export function MatchCanvas({
       };
       const teamsShown: TeamKey[] = cfg.team ? [cfg.team] : ["A", "B"];
       const attacksRight = (key: TeamKey) => data.attack_right?.[key] ?? key === "A";
-      const outfield = (key: TeamKey) => drawnPlayers.filter((p) => p.team === key && !p.gk && !p.gapPredicted);
+      const outfield = (key: TeamKey) => drawnPlayers.filter((p) => p.team === key && !p.gk);
 
       // trails: remember the last second of each player's position
       if (cfg.layers.trails) {
@@ -524,7 +536,8 @@ export function MatchCanvas({
           if (ps.length < 5) continue;
           const xs = ps.map((p) => p.m[0]);
           const ys = ps.map((p) => p.m[1]);
-          const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+          const x0 = ease(`box${key}x0`, Math.min(...xs), t), x1 = ease(`box${key}x1`, Math.max(...xs), t);
+          const y0 = ease(`box${key}y0`, Math.min(...ys), t), y1 = ease(`box${key}y1`, Math.max(...ys), t);
           const corners = ([[x0, y0], [x1, y0], [x1, y1], [x0, y1]] as Point[]).map(metres);
           if (corners.some((q) => !q)) continue;
           ctx.beginPath();
@@ -550,15 +563,18 @@ export function MatchCanvas({
           const right = attacksRight(key);
           const rel = (x: number) => (right ? x : length - x);
           const groups = threeUnits(ps.map((p) => rel(p.m[0])));
+          if (groups.length < 3) continue;
           const means: number[] = [];
-          for (const g of groups) {
-            const meanRel = g.reduce((a, b) => a + b, 0) / g.length;
+          groups.forEach((g, gi) => {
+            const meanRel = ease(`unit${key}${gi}`, g.reduce((a, b) => a + b, 0) / g.length, t, 2.0);
             means.push(meanRel);
             const members = ps.filter((p) => g.includes(rel(p.m[0])));
             const ys = members.map((p) => p.m[1]);
+            const yA = ease(`unit${key}${gi}ya`, Math.min(...ys) - 1.5, t, 2.0);
+            const yB = ease(`unit${key}${gi}yb`, Math.max(...ys) + 1.5, t, 2.0);
             const x = right ? meanRel : length - meanRel;
-            segment([x, Math.min(...ys) - 1.5], [x, Math.max(...ys) + 1.5], withAlpha(teamColour(key), 0.9), stroke * 1.5);
-          }
+            segment([x, yA], [x, yB], withAlpha(teamColour(key), 0.9), stroke * 1.5);
+          });
           for (let i = 1; i < means.length; i++) {
             const a = means[i - 1] ?? 0, b = means[i] ?? 0;
             const mid = (a + b) / 2;
@@ -574,24 +590,27 @@ export function MatchCanvas({
           if (ps.length < 3) continue;
           const right = attacksRight(key);
           const xs = ps.map((p) => p.m[0]);
-          const lineX = right ? Math.min(...xs) : Math.max(...xs);
+          const lineX = ease(`line${key}`, right ? Math.min(...xs) : Math.max(...xs), t, 2.5);
           const opp: TeamKey = key === "A" ? "B" : "A";
-          const beyond = drawnPlayers.filter((p) => p.team === opp && !p.gk && (right ? p.m[0] < lineX : p.m[0] > lineX));
-          const colour = beyond.length ? "#E24B4A" : withAlpha(teamColour(key), 0.95);
-          const seg = segment([lineX, 0], [lineX, width], colour, stroke * 2);
+          // "in behind" only counts with a 1 m margin, and only when the team shown is the one defending
+          const beyond = cfg.team
+            ? drawnPlayers.filter((p) => p.team === opp && !p.gk && (right ? p.m[0] < lineX - 1 : p.m[0] > lineX + 1))
+            : [];
+          segment([lineX, 0], [lineX, width], withAlpha(teamColour(key), 0.95), stroke * 2);
           const height = right ? lineX : length - lineX;
           const near = metres([lineX, width * 0.94]);
-          if (near) label(`Line ${Math.round(height)} m`, near[0], near[1], beyond.length ? "#E24B4A" : "#ede6d6");
+          if (near) label(`Line ${Math.round(height)} m${beyond.length ? ` · ${beyond.length} in behind` : ""}`, near[0], near[1]);
           for (const p of beyond) {
             const q = at(p);
             if (!q) continue;
             ctx.beginPath();
+            ctx.setLineDash([3, 3]);
             ctx.arc(q[0], q[1], Math.max(7, rect.height * 0.02), 0, Math.PI * 2);
-            ctx.strokeStyle = "#E24B4A";
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(237,230,214,0.85)";
+            ctx.lineWidth = 1.5;
             ctx.stroke();
+            ctx.setLineDash([]);
           }
-          void seg;
         }
       }
 
@@ -650,11 +669,14 @@ export function MatchCanvas({
           const to = at(target);
           if (!to) continue;
           ctx.beginPath();
+          ctx.setLineDash(lane.open ? [] : [4, 4]);
           ctx.moveTo(carrierAt[0], carrierAt[1]);
           ctx.lineTo(to[0], to[1]);
-          ctx.strokeStyle = lane.open ? "rgba(52,211,153,0.85)" : "rgba(239,68,68,0.75)";
+          // open lanes in the semantic green; closed lanes dashed cream, never red (red can be a team colour)
+          ctx.strokeStyle = lane.open ? "rgba(29,158,117,0.9)" : "rgba(237,230,214,0.35)";
           ctx.lineWidth = lane.forward ? 3 : 1.5;
           ctx.stroke();
+          ctx.setLineDash([]);
         }
       }
 

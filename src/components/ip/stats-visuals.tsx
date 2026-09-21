@@ -25,6 +25,8 @@ type Props = {
   thresholds: Thresholds;
   teamA: StatsTeamIdentity;
   teamB: StatsTeamIdentity;
+  /** from matches.summary.ball_grade; missing on older matches (then phases are allowed) */
+  ballGrade?: { possession_ok?: boolean; events_ok?: boolean } | null;
 };
 
 type Point = { x: number; y: number };
@@ -298,6 +300,129 @@ function Interceptions({events,team,matchId,colour,file}:Props&{colour:string}){
 
 function PassLog({passes,matchId}:{passes:Pass[];matchId:string}){if(!passes.length)return null;return <Card question="Which passes should we review?" caption="A chronological log of player, direction, quality and outcome." honesty={`${passes.length} passes in this period`}><div className="divide-y divide-wire-2">{passes.slice(0,30).map((pass,index)=>{const t=passTime(pass)??0;const from=passPlayer(pass,"from"),to=passPlayer(pass,"to");const s=passPoint(pass,"start"),e=passPoint(pass,"end");const direction=s&&e?e.x-s.x>8?"Forward":e.x-s.x<-8?"Back":"Across":"Pass";return <Link key={index} to="/match/$matchId/match" params={{matchId}} search={{t}} className="grid min-h-11 grid-cols-[44px_1fr_auto] items-center gap-2 py-1.5"><span className="num text-[11px] text-text-faint">{fmt(t)}</span><span className="text-[12px]">{from??"—"} → {to??"—"} <small className="ml-1 text-text-faint">{direction}</small></span><span className={cn("text-[10px] font-bold uppercase",passCompleted(pass)?"text-quality-good":"text-quality-bad")}>{passCompleted(pass)?"Complete":"Lost"}</span></Link>})}</div></Card>}
 
+
+/* ---------- Shape by phase (real positions only) ---------- */
+type PhaseKey = "all" | "out" | "in" | "winning" | "losing";
+const PHASES: { key: PhaseKey; label: string; needs: null | "possession" | "events" }[] = [
+  { key: "out", label: "Out of possession", needs: "possession" },
+  { key: "in", label: "In possession", needs: "possession" },
+  { key: "winning", label: "Winning it", needs: "events" },
+  { key: "losing", label: "Losing it", needs: "events" },
+  { key: "all", label: "Whole period", needs: null },
+];
+const median = (values: number[]) => { const v = [...values].sort((a, b) => a - b); return v.length ? (v[Math.floor((v.length - 1) / 2)]! + v[Math.ceil((v.length - 1) / 2)]!) / 2 : 0; };
+function hullOf(points: { x: number; y: number }[]) {
+  const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  if (pts.length < 3) return pts;
+  const cross = (o: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lower: typeof pts = []; for (const p of pts) { while (lower.length >= 2 && cross(lower[lower.length - 2]!, lower[lower.length - 1]!, p) <= 0) lower.pop(); lower.push(p); }
+  const upper: typeof pts = []; for (const p of [...pts].reverse()) { while (upper.length >= 2 && cross(upper[upper.length - 2]!, upper[upper.length - 1]!, p) <= 0) upper.pop(); upper.push(p); }
+  upper.pop(); lower.pop(); return [...lower, ...upper];
+}
+function ShapeByPhase({ file, events, team, colour, identity, ballGrade, range }: { file: MatchDataFile | undefined; events: ReviewedEvent[]; team: TeamKey; colour: string; identity: StatsTeamIdentity; ballGrade: Props["ballGrade"]; range: number[] }) {
+  const allowed = (needs: null | "possession" | "events") => needs === null || !ballGrade ? true : Boolean(needs === "possession" ? ballGrade.possession_ok : ballGrade.events_ok);
+  const [phase, setPhase] = useState<PhaseKey>(allowed("possession") ? "out" : "all");
+  const active: PhaseKey = allowed(PHASES.find((x) => x.key === phase)?.needs ?? null) ? phase : "all";
+  const opp: TeamKey = team === "A" ? "B" : "A";
+  const windows = (type: string) => events.filter((e) => e.team === team && e.type === type).map((e) => [e.t, e.t + 5] as const);
+  const winW = windows("turnover_won"), loseW = windows("turnover_lost");
+  const inWin = (t: number, w: readonly (readonly [number, number])[]) => w.some(([a, b]) => t >= a && t <= b);
+  const right = PITCH.attackRight[team];
+  const measure = (players: Frame["players"], who: TeamKey) => {
+    const ps = players.filter((pl) => pl.team === who && !pl.gk && pl.state !== "stale");
+    if (ps.length < 6) return null;
+    const rel = ps.map((pl) => (PITCH.attackRight[who] ? pl.m[0] : PITCH.length - pl.m[0]));
+    const ys = ps.map((pl) => pl.m[1]);
+    return { length: Math.max(...rel) - Math.min(...rel), width: Math.max(...ys) - Math.min(...ys), line: Math.min(...rel), n: ps.length };
+  };
+  const samples: { frame: Frame; m: NonNullable<ReturnType<typeof measure>> }[] = []; const oppLengths: number[] = [];
+  let lastSecond = -1;
+  for (const frame of file?.frames ?? []) {
+    if (!inRange(frame.t, range)) continue;
+    const sec = Math.floor(frame.t); if (sec === lastSecond) continue; lastSecond = sec;
+    const ok = active === "all" ? true : active === "in" ? frame.possession === team : active === "out" ? frame.possession === opp : active === "winning" ? inWin(frame.t, winW) : inWin(frame.t, loseW);
+    if (!ok) continue;
+    const m = measure(frame.players, team); if (m) samples.push({ frame, m });
+    const o = measure(frame.players, opp); if (o) oppLengths.push(o.length);
+  }
+  const chips = <div className="flex flex-wrap gap-2" role="group" aria-label="Phase of play">{PHASES.map((ph) => { const ok = allowed(ph.needs); return <Button key={ph.key} variant="ghost" onClick={() => ok && setPhase(ph.key)} aria-pressed={active === ph.key} aria-disabled={!ok} title={ok ? undefined : "Needs reliable ball tracking"} className={cn("h-11 rounded-[8px] border px-3 text-[12px]", active === ph.key ? "border-cream bg-cream text-ink" : "border-wire text-text", !ok && "opacity-40")}>{ph.label}</Button>; })}</div>;
+  if (samples.length < 5) return <Card question="How did our shape look?" caption={`${PHASES.find((x) => x.key === active)?.label} · ${identity.name}`} footer="Evidence threshold not met">{chips}<p className="mt-3 text-[12.5px] text-text-dim">Fewer than five moments in this phase had at least six of our outfield players in view.</p></Card>;
+  const medLen = median(samples.map((x) => x.m.length)), medWid = median(samples.map((x) => x.m.width)), medLine = median(samples.map((x) => x.m.line));
+  const rep = samples.reduce((best, x) => { const score = Math.abs(x.m.length - medLen) / Math.max(medLen, 1) + Math.abs(x.m.width - medWid) / Math.max(medWid, 1) + Math.abs(x.m.line - medLine) / Math.max(medLine, 1); return score < best.score ? { x, score } : best; }, { x: samples[0]!, score: Infinity }).x;
+  const dots = rep.frame.players.filter((pl) => pl.team === team && pl.state !== "stale").map((pl) => { const q = metresToPct(pl.m, team); return q ? { id: pl.id, gk: pl.gk, x: q.y / 100 * 64, y: 100 - q.x } : null; }).filter((d): d is { id: number; gk: boolean; x: number; y: number } => d !== null);
+  const field = dots.filter((d) => !d.gk); const hull = hullOf(field);
+  const minX = Math.min(...field.map((d) => d.x)), maxX = Math.max(...field.map((d) => d.x)), minY = Math.min(...field.map((d) => d.y)), maxY = Math.max(...field.map((d) => d.y));
+  const cx = field.reduce((a, d) => a + d.x, 0) / field.length, cy = field.reduce((a, d) => a + d.y, 0) / field.length;
+  const visibleMed = Math.round(median(samples.map((x) => x.m.n)));
+  void right;
+  return <Card question="How did our shape look?" caption={`Median over ${samples.length} moments · dots show one representative moment (${fmt(rep.frame.t)})`} comparison={{ target: "—", opponent: oppLengths.length ? `${Math.round(median(oppLengths))} m long` : "—", last5: "—" }} honesty={`${samples.length} moments · median ${visibleMed} of 10 outfield in view`}>
+    {chips}
+    <div className="mt-3"><StatsPitch portrait attackLabel={identity.shortCode} ariaLabel={`${identity.name} shape, ${PHASES.find((x) => x.key === active)?.label}`}>
+      {hull.length >= 3 && <polygon points={hull.map((d) => `${d.x},${d.y}`).join(" ")} fill={colour} fillOpacity=".2" stroke={colour} strokeWidth=".6" />}
+      <g stroke="var(--cream)" strokeOpacity=".45" strokeWidth=".35"><line x1={minX} y1={minY - 3} x2={minX} y2={maxY + 3} /><line x1={maxX} y1={minY - 3} x2={maxX} y2={maxY + 3} /><line x1={minX - 3} y1={minY} x2={maxX + 3} y2={minY} /><line x1={minX - 3} y1={maxY} x2={maxX + 3} y2={maxY} /></g>
+      {dots.map((d) => <g key={d.id}><circle cx={d.x} cy={d.y} r="2.6" fill={colour} stroke={d.gk ? "var(--cream)" : "none"} strokeWidth=".5" /><text x={d.x} y={d.y + 5} textAnchor="middle" fontSize="2.6" fill="var(--cream)">P{d.id}</text></g>)}
+      <path d={`M${cx - 2},${cy}h4M${cx},${cy - 2}v4`} stroke="var(--cream)" strokeWidth=".7" />
+    </StatsPitch></div>
+    <div className="mt-3 grid grid-cols-3 divide-x divide-wire-2 border border-wire-2"><Metric value={`${medLen.toFixed(1)} m`} label="Length" /><Metric value={`${medWid.toFixed(1)} m`} label="Width" /><Metric value={`${Math.round(medLine)} m`} label="Line height" /></div>
+  </Card>;
+}
+
+/* ---------- Shape vs outcome as a table ---------- */
+function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) {
+  const tl = lineDefending.timeline; if (!lineDefending.states.length || tl.length < 2) return null;
+  const dt = median(tl.slice(1).map((p, i) => p.t - (tl[i]?.t ?? p.t)).filter((d) => d > 0)) || 1;
+  const stateOf = (h: number) => (h < 30 ? "low" : h <= 38 ? "mid" : "high");
+  const minutes = (key: string) => tl.filter((p) => stateOf(p.height) === key).length * dt / 60;
+  const rows = lineDefending.states.map((s) => ({ ...s, min: minutes(s.key) })).filter((r) => r.min > 0);
+  const rate = (r: { shots: number; min: number }) => r.shots / Math.max(r.min, 0.1);
+  const worst = rows.filter((r) => r.shots > 0).sort((a, b) => rate(b) - rate(a))[0];
+  const name = (k: string) => (k === "high" ? "High line" : k === "mid" ? "Mid line" : "Low line");
+  return <Card question="In which shape did we suffer?" caption="Defensive states, ranked by shots conceded per minute." honesty={`${lineDefending.shots.length} shots conceded · ${tl.length} line samples`}>
+    <div role="table" className="text-[12.5px]">
+      <div role="row" className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-2 border-b border-wire px-2 py-2 text-[10px] uppercase text-text-faint"><span>State</span><span>Time</span><span>Shots</span><span>Goals</span></div>
+      {rows.map((r) => <div role="row" key={r.key} className={cn("grid min-h-11 grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-2 px-2", worst?.key === r.key ? "border-l-2 border-reaction-bad bg-surface-2" : "border-l-2 border-transparent")}>
+        <span className="flex items-center gap-2 text-text">{worst?.key === r.key && <span className="h-1.5 w-1.5 rounded-full bg-reaction-bad" aria-hidden="true" />}{name(r.key)} <span className="num text-text-faint">({Math.round(r.height)} m)</span>{worst?.key === r.key && <span className="ml-auto rounded-full border border-reaction-bad px-1.5 text-[9px] uppercase text-reaction-bad">worst</span>}</span>
+        <span className="num">{r.min < 1 ? `${Math.round(r.min * 60)} s` : `${Math.round(r.min)} min`}</span><span className="num">{r.shots}</span><span className="num">{r.goals}</span></div>)}
+    </div>
+    <p className="mt-3 text-[12px] text-text-dim">{worst ? `We conceded most while defending in a ${name(worst.key).toLowerCase()} (${Math.round(worst.height)} m).` : "No shots conceded in any line state in this period."}</p>
+  </Card>;
+}
+
+/* ---------- Lanes: table first, map on demand ---------- */
+function LanesTable({ passes, colour, identity }: { passes: Pass[]; colour: string; identity: StatsTeamIdentity }) {
+  const [minN, setMinN] = useState(3); const [showMap, setShowMap] = useState(false); const [sel, setSel] = useState<string | null>(null);
+  const map = new Map<string, { key: string; from: number; to: number; total: number; complete: number; prog: number; start: Point | null; end: Point | null; ns: number }>();
+  for (const pass of passes) {
+    const from = passPlayer(pass, "from"), to = passPlayer(pass, "to"); if (from === null || to === null) continue;
+    const key = `${from}-${to}`; const item = map.get(key) ?? { key, from, to, total: 0, complete: 0, prog: 0, start: null, end: null, ns: 0 };
+    item.total += 1; if (passCompleted(pass)) item.complete += 1;
+    const gain = finite(pass["gain_m"]); if (gain !== null && gain > 0) item.prog += gain;
+    const a = passPoint(pass, "start"), b = passPoint(pass, "end");
+    if (a && b) { item.start = { x: (item.start?.x ?? 0) + a.x, y: (item.start?.y ?? 0) + a.y }; item.end = { x: (item.end?.x ?? 0) + b.x, y: (item.end?.y ?? 0) + b.y }; item.ns += 1; }
+    map.set(key, item);
+  }
+  const lanes = [...map.values()].filter((l) => l.total >= minN).map((l) => ({ ...l, start: l.start && l.ns ? { x: l.start.x / l.ns, y: l.start.y / l.ns } : null, end: l.end && l.ns ? { x: l.end.x / l.ns, y: l.end.y / l.ns } : null }));
+  const ratio = (l: { complete: number; total: number }) => l.complete / l.total;
+  const best = [...lanes].sort((a, b) => ratio(b) - ratio(a) || b.prog - a.prog || b.total - a.total).slice(0, 3);
+  const worst = [...lanes].filter((l) => !best.includes(l)).sort((a, b) => ratio(a) - ratio(b) || b.total - a.total).slice(0, 3);
+  const who = (id: number) => `P${id}`;
+  const row = (l: (typeof lanes)[number], kind: "best" | "worst") => <button type="button" key={l.key} onClick={() => { setSel(l.key === sel ? null : l.key); setShowMap(true); }} aria-pressed={sel === l.key} className={cn("grid min-h-11 w-full grid-cols-[28px_1fr_auto] items-center gap-3 px-2 text-left", sel === l.key ? "border-l-2 border-cream bg-surface-2" : "border-l-2 border-transparent")}>
+    <svg viewBox="0 0 24 10" className="h-3 w-6" aria-hidden="true"><path d="M1 5h18M15 1l5 4-5 4" fill="none" stroke={kind === "best" ? colour : "var(--reaction-bad)"} strokeOpacity={kind === "best" ? 1 : .6} strokeWidth="1.8" /></svg>
+    <span className="display text-[14px] text-cream">{who(l.from)} → {who(l.to)}</span>
+    <span className="text-right"><strong className={cn("display block text-[14px]", kind === "best" ? "text-reaction-good" : "text-reaction-bad")}>{l.complete}/{l.total}</strong><small className="block text-[11px] text-text-faint">+{Math.round(l.prog)} m progressive · <span title="Needs reliable ball tracking">—</span> shots against</small></span>
+  </button>;
+  const drawn = [...best.map((l, i) => ({ l, stroke: colour, op: [1, .7, .5][i] ?? .5 })), ...worst.map((l, i) => ({ l, stroke: "var(--reaction-bad)", op: [.8, .6, .4][i] ?? .4 }))];
+  return <Card question="Which lanes worked?" caption="Volume, completion and progression between players." comparison={{ target: "—", opponent: "—", last5: "—" }} honesty={`${passes.length} passes · players labelled by tracker id until a lineup is set`}>
+    <label className="flex min-h-11 items-center gap-3 text-[12px] text-text"><span className="shrink-0">Min passes · <strong className="num text-cream">{minN}</strong></span><input type="range" min={1} max={15} value={minN} onChange={(e) => setMinN(Number(e.target.value))} className="w-full accent-[var(--cream)]" aria-label="Minimum passes between players" /></label>
+    <button type="button" onClick={() => setShowMap((v) => !v)} className="mt-1 min-h-11 text-[12px] font-semibold text-cream">{showMap ? "Hide map" : "Show map →"}</button>
+    {showMap && <div className="mt-2"><StatsPitch portrait attackLabel={identity.shortCode} ariaLabel={`${identity.name} best and worst passing lanes`}>{drawn.map(({ l, stroke, op }) => l.start && l.end ? <g key={l.key} opacity={sel && sel !== l.key ? .2 : op}><line x1={l.start.y / 100 * 64} y1={100 - l.start.x} x2={l.end.y / 100 * 64} y2={100 - l.end.x} stroke={stroke} strokeWidth="1.6" /><circle cx={l.end.y / 100 * 64} cy={100 - l.end.x} r="1.6" fill={stroke} /></g> : null)}</StatsPitch></div>}
+    {lanes.length === 0 ? <p className="mt-3 text-[12.5px] text-text-dim">No lane has at least {minN} passes in this period.</p> : <>
+      <h3 className="section-kicker mt-3">Best lanes</h3><div className="mt-1 divide-y divide-wire-2">{best.map((l) => row(l, "best"))}</div>
+      {worst.length > 0 && <><h3 className="section-kicker mt-3 border-t border-wire pt-3">Worst lanes</h3><div className="mt-1 divide-y divide-wire-2">{worst.map((l) => row(l, "worst"))}</div></>}
+    </>}
+  </Card>;
+}
+
 export function StatsVisuals(props: Props) {
   setPitchContext(props.file);
   const range=periodRange(props.file,props.period);
@@ -311,9 +436,9 @@ export function StatsVisuals(props: Props) {
   let cards: React.ReactNode[]=[];
   if(props.tab==="ball")cards=[<Control key="control" {...p}/>,<Thirds key="thirds" frames={frames} team={props.team} colour={colour}/>,<SequenceLength key="sequence" {...p}/>,<Runs key="runs" frames={frames} team={props.team} colour={colour}/>,<Distance key="distance" players={props.players.filter(x=>x.team===props.team)} colour={colour}/>];
   if(props.tab==="pressing")cards=[<PressMap key="press" {...p} colour={colour}/>,<CounterPress key="counter" {...p}/>,props.lineDefending&&props.lineDefending.lineBreakCount!==0?<LineBreakHero key="breaks" data={props.lineDefending} matchId={props.matchId}/>:null];
-  if(props.tab==="shape"){const line=props.lineDefending;cards=[line&&line.medianM!==null&&line.usualM!==null?<DeepAnswer key="depth" data={line}/>:<EvidenceUnavailable key="depth-empty" question="Did we defend too deep?" caption="Our defensive line compared with its usual height."/>,props.territory?<ShapeMultiples key="multiples" territory={props.territory} colour={colour} identity={identity}/>:<EvidenceUnavailable key="multiples-empty" question="How did our shape change?" caption="Observed moments show how our block expanded and contracted."/>,line?<ShapeOutcome key="outcome" lineDefending={line} colour={colour}/>:<EvidenceUnavailable key="outcome-empty" question="In which shape did we suffer?" caption="Defensive states compared with opponent outcomes."/>,line&&line.timeline.length?<LineTimeline key="timeline" data={line} matchId={props.matchId}/>:<EvidenceUnavailable key="timeline-empty" question="Where was our line over time?" caption="Defensive line height across the selected period."/>];}
+  if(props.tab==="shape"){const line=props.lineDefending;cards=[line&&line.medianM!==null&&line.usualM!==null?<DeepAnswer key="depth" data={line}/>:<EvidenceUnavailable key="depth-empty" question="Did we defend too deep?" caption="Our defensive line compared with its usual height."/>,<ShapeByPhase key="multiples" file={props.file} events={props.events} team={props.team} colour={colour} identity={identity} ballGrade={props.ballGrade ?? null} range={range}/>,line?<ShapeOutcomeTable key="outcome" lineDefending={line}/>:<EvidenceUnavailable key="outcome-empty" question="In which shape did we suffer?" caption="Defensive states compared with opponent outcomes."/>,line&&line.timeline.length?<LineTimeline key="timeline" data={line} matchId={props.matchId}/>:<EvidenceUnavailable key="timeline-empty" question="Where was our line over time?" caption="Defensive line height across the selected period."/>];}
   if(props.tab==="shooting")cards=[<ShotMap key="map" {...p}/>,<ShotSummary key="summary" {...p}/>,<EntriesConceded key="entries" {...p}/>];
   if(props.tab==="players")cards=[<PlayerCards key="players" {...p}/>];
-  if(props.tab==="passes")cards=[<LaneEffectiveness key="lanes" passes={passes} colour={colour} identity={identity}/>,<BetterOption key="better" {...p} colour={colour}/>,<PassNetwork key="network" passes={passes} colour={colour} identity={identity} opponentPasses={opponentPasses}/>,<PassMap key="map" passes={passes} colour={colour} matchId={props.matchId}/>,<Interceptions key="interceptions" {...p} colour={colour}/>,<PassLog key="log" passes={passes} matchId={props.matchId}/>];
+  if(props.tab==="passes")cards=[<LanesTable key="lanes" passes={passes} colour={colour} identity={identity}/>,<BetterOption key="better" {...p} colour={colour}/>,<PassNetwork key="network" passes={passes} colour={colour} identity={identity} opponentPasses={opponentPasses}/>,<PassMap key="map" passes={passes} colour={colour} matchId={props.matchId}/>,<Interceptions key="interceptions" {...p} colour={colour}/>,<PassLog key="log" passes={passes} matchId={props.matchId}/>];
   const shown=cards.filter(Boolean); return <StatsCardContext.Provider value={{identity,other,both:props.scopeBoth}}><div className="flex flex-col gap-3">{shown.length?shown:<EmptyTab/>}</div></StatsCardContext.Provider>;
 }
