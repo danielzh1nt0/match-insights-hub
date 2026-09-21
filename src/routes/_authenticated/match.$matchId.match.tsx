@@ -23,6 +23,8 @@ import { countEvents, downloadReviews, type ReviewedEvent } from "@/lib/event-re
 import { feedLabel, videoSrc, type Frame } from "@/lib/match-source";
 import { teamRow } from "@/lib/match-analysis";
 import { cn } from "@/lib/utils";
+import { crestForTeam } from "@/lib/team-crests";
+import { shortTeamCode, type TeamIdentity } from "@/components/team/TeamToken";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/match")({
   validateSearch: (search: Record<string, unknown>): { t?: number } =>
@@ -171,6 +173,10 @@ function MatchScreen() {
   }, [events]);
   const playbackMarkers = useMemo(() => (team ? events.filter((event) => event.team === team) : events).flatMap((event) => event.team ? [{ t: event.t, team: event.team, kind: event.type === "goal" ? "goal" as const : "event" as const }] : []), [events, team]);
   const screenVars = { "--team-a": colours.A, "--team-b": colours.B } as CSSProperties;
+  const identities: Record<"A" | "B", TeamIdentity> | null = match ? {
+    A: { name: match.teamA, shortCode: shortTeamCode(match.teamA), kitColour: colours.A, ...(crestForTeam(match.teamA) ? { crestUrl: crestForTeam(match.teamA) } : {}) },
+    B: { name: match.teamB, shortCode: shortTeamCode(match.teamB), kitColour: colours.B, ...(crestForTeam(match.teamB) ? { crestUrl: crestForTeam(match.teamB) } : {}) },
+  } : null;
   const seek = useCallback((time: number) => {
     const next = Math.max(0, Math.min(total, time));
     setClock(next);
@@ -492,7 +498,7 @@ function MatchScreen() {
             <ul>
               {shown.map((e, i) => (
                 <li key={e.id}>
-                  <EventRow time={formatClock(e.t)} icon={EVENT_ICONS[e.type] ?? "sequence"} iconTint={e.type.includes("won") ? "good" : e.type.includes("lost") || e.type === "pass_bad" ? "bad" : "default"} team={e.team === "B" ? "B" : "A"} title={feedLabel(e.type)} subtitle={`${e.status === "confirmed" ? "confirmed" : "detected"}${e.corrected ? " · fixed" : ""} · ${e.subtitle || e.title}`} state={e.status === "confirmed" ? "confirmed" : "untouched"} focused={i === focusIndex} onPlay={() => { setFocusIndex(i); seek(e.t); }} onConfirm={() => e.status === "confirmed" ? setFixing(e) : review.setVerdict.mutate({ eventId: e.id, verdict: "confirmed" })} onHide={() => review.setVerdict.mutate({ eventId: e.id, verdict: "deleted" })} />
+                   {identities && <EventRow time={formatClock(e.t)} icon={EVENT_ICONS[e.type] ?? "sequence"} iconTint={e.type.includes("won") ? "good" : e.type.includes("lost") || e.type === "pass_bad" ? "bad" : "default"} team={e.team === "B" ? "B" : "A"} identity={identities[e.team === "B" ? "B" : "A"]} title={feedLabel(e.type)} subtitle={`${e.status === "confirmed" ? "confirmed" : "detected"}${e.corrected ? " · fixed" : ""} · ${e.subtitle || e.title}`} state={e.status === "confirmed" ? "confirmed" : "untouched"} focused={i === focusIndex} onPlay={() => { setFocusIndex(i); seek(e.t); }} onConfirm={() => e.status === "confirmed" ? setFixing(e) : review.setVerdict.mutate({ eventId: e.id, verdict: "confirmed" })} onHide={() => review.setVerdict.mutate({ eventId: e.id, verdict: "deleted" })} />}
                 </li>
               ))}
               {shown.length === 0 && (

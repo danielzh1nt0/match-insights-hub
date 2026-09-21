@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TeamToken, shortTeamCode } from "@/components/team/TeamToken";
 
 /** 3-4 letter cue under a team tile, e.g. FCK. */
 function tokens(name: string) {
@@ -146,6 +147,12 @@ export function MatchHeader({
           side="away"
           {...(onSelectTeamB ? { onSelect: onSelectTeamB } : {})}
         />
+      </div>
+
+      <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 pb-3 md:px-7" aria-label="Teams">
+        <TeamToken identity={{ name: teamA, shortCode: shortTeamCode(teamA), kitColour: colourA, ...(crestA ? { crestUrl: crestA } : {}) }} size="sm" state="compare" />
+        <span className="display text-[10px] text-text-faint">vs</span>
+        <TeamToken identity={{ name: teamB, shortCode: shortTeamCode(teamB), kitColour: colourB, ...(crestB ? { crestUrl: crestB } : {}) }} size="sm" state="compare" mirrored className="justify-self-end" />
       </div>
 
       {/* Row 2 — divider */}

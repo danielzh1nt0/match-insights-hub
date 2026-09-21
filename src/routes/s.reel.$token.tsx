@@ -4,6 +4,8 @@ import { PublicShell } from "@/components/ip/public-shell";
 import { ClipList } from "@/components/ip/clip-list";
 import { buildMatchData } from "@/lib/match-data";
 import { decodeShareToken } from "@/lib/share";
+import { TeamToken, shortTeamCode } from "@/components/team/TeamToken";
+import { colourForTeam, crestForTeam } from "@/lib/team-crests";
 
 export const Route = createFileRoute("/s/reel/$token")({
   head: () => ({
@@ -46,6 +48,7 @@ function SharedReel() {
     <PublicShell note={`Shared from ${payload.a} – ${payload.b}. Match analysis that ends in Tuesday's session.`}>
       <div className="flex flex-col gap-3">
         <div className="mt-1">
+          <div className="mb-3 flex items-center gap-3"><TeamToken identity={{ name: payload.a, shortCode: shortTeamCode(payload.a), kitColour: colourForTeam(payload.a, "var(--team-a)"), ...(crestForTeam(payload.a) ? { crestUrl: crestForTeam(payload.a) } : {}) }} size="lg" state="compare" /><span className="display text-[10px] text-text-faint">vs</span><TeamToken identity={{ name: payload.b, shortCode: shortTeamCode(payload.b), kitColour: colourForTeam(payload.b, "var(--team-b)"), ...(crestForTeam(payload.b) ? { crestUrl: crestForTeam(payload.b) } : {}) }} size="lg" state="compare" /></div>
           <h1 className="display text-[26px] uppercase text-text">Clip reel</h1>
           <p className="mt-1 text-[12.5px] text-text-dim">
             {payload.a} – {payload.b} · {payload.sa} : {payload.sb} · {data.clips.length} moments
