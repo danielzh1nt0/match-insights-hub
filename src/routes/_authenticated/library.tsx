@@ -82,7 +82,7 @@ function LibraryPage() {
       <Screen className="pb-16 pt-7">
         <div className="flex flex-col gap-4 border-b border-wire-2 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div><p className="section-kicker">Analysis workspace</p><h1 className="display-i mt-1 text-[38px] leading-none text-cream md:text-[48px]">Match library</h1><p className="mt-2 text-[13px] text-text-dim">Choose a match to open its coaching review.</p></div>
-          <Link to="/new"><PrimaryButton className="h-12"><Plus size={16}/>New analysis</PrimaryButton></Link>
+          <Link to="/upload"><PrimaryButton className="h-12"><Plus size={16}/>New analysis</PrimaryButton></Link>
         </div>
 
         {isPending && (
@@ -165,7 +165,7 @@ function EmptyState() {
       <p className="max-w-[320px] text-[13px] text-text-dim">
         Upload a video to get your first analysis. About 30 minutes for a 45-minute half.
       </p>
-      <Link to="/new">
+      <Link to="/upload">
         <PrimaryButton className="mt-2 h-12">+ New analysis</PrimaryButton>
       </Link>
     </Card>
