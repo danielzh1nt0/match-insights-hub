@@ -312,3 +312,51 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Isolated registration and upload theme. */
+.registration-theme {
+  --bg: #0e0f0c;
+  --surface: #151714;
+  --surface-2: #1c1e1a;
+  --surface-3: #24261f;
+  --wire: #2a2d28;
+  --wire-2: #1e201c;
+  --text: #ede6d6;
+  --text-dim: #a29b8a;
+  --text-faint: #6b6656;
+  --cream: #ede6d6;
+  --graphite: #3a3d38;
+  --reaction-good: #1d9e75;
+  --reaction-warn: #ba7517;
+  --reaction-bad: #e24b4a;
+}
+@keyframes monogram-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes field-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes breathe-ring { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+@keyframes stage-pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+@keyframes tracker-scan { from { transform: translateX(-32px); } to { transform: translateX(192px); } }
+@keyframes tracker-dot-in { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes tracker-ball { 0% { transform: translate(0,0); } 25% { transform: translate(30px,-10px); } 50% { transform: translate(60px,5px); } 75% { transform: translate(90px,-5px); } 100% { transform: translate(120px,0); } }
+@keyframes tracker-heat { 0%,100% { transform: scale(.6); opacity: .4; } 50% { transform: scale(1.2); opacity: .8; } }
+@keyframes tracker-outline { 0%,100% { stroke-opacity: 0; } 50% { stroke-opacity: .6; } }
+.animate-monogram { animation: monogram-fade 120ms ease-out; }
+.animate-field-in { animation: field-in 200ms ease-out; }
+.animate-sheet { animation: sheet-in 250ms ease-out; }
+.processing-ring { animation: breathe-ring 2s ease-in-out infinite; }
+.progress-stroke { transition: stroke-dashoffset 400ms ease-out; }
+.stage-pulse { animation: stage-pulse 1.5s ease-in-out infinite; }
+.tracker-scan,.tracker-players,.tracker-ball,.tracker-heat,.tracker-outline { opacity: 0; transform-origin: center; }
+.tracker-stage-0 .tracker-scan { opacity: 1; animation: tracker-scan 2s linear infinite; }
+.tracker-stage-1 .tracker-scan { transform: translateX(192px); opacity: .1; }
+.tracker-stage-1 .tracker-players circle { opacity: 1; transform-origin: center; animation: tracker-dot-in 300ms ease-out both; }
+.tracker-stage-2 .tracker-players,.tracker-stage-3 .tracker-players,.tracker-stage-4 .tracker-players { opacity: 1; }
+.tracker-stage-2 .tracker-ball { opacity: 1; animation: tracker-ball 2s ease-in-out infinite; }
+.tracker-stage-3 .tracker-ball,.tracker-stage-4 .tracker-ball { opacity: 1; transform: translate(120px,0); }
+.tracker-stage-3 .tracker-heat { opacity: 1; animation: tracker-heat 2s ease-in-out infinite; }
+.tracker-stage-4 .tracker-heat { opacity: .55; }
+.tracker-stage-4 .tracker-outline { opacity: 1; animation: tracker-outline 1.2s ease-out 1; }
+@media (prefers-reduced-motion: reduce) {
+  .processing-ring,.stage-pulse,.tracker-stage-0 .tracker-scan,.tracker-stage-1 .tracker-players circle,.tracker-stage-2 .tracker-ball,.tracker-stage-3 .tracker-heat,.tracker-stage-4 .tracker-outline { animation: none !important; }
+  .tracker-stage-0 .tracker-scan { transform: translateX(192px); }
+}

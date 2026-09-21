@@ -16,11 +16,13 @@ import { Route as ResetRouteImport } from './routes/reset'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as UploadRouteImport } from './routes/upload'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
 import { Route as SignupClubRouteImport } from './routes/signup.club'
+import { Route as SignupReadyRouteImport } from './routes/signup.ready'
 import { Route as SignupTeamRouteImport } from './routes/signup.team'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings.account'
 import { Route as AuthenticatedSettingsClubRouteImport } from './routes/_authenticated/settings.club'
@@ -69,6 +71,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UploadRoute = UploadRouteImport.update({
+  id: '/upload',
+  path: '/upload',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
   id: '/library',
   path: '/library',
@@ -92,6 +99,11 @@ const AuthenticatedProcessingRoute = AuthenticatedProcessingRouteImport.update({
 const SignupClubRoute = SignupClubRouteImport.update({
   id: '/club',
   path: '/club',
+  getParentRoute: () => SignupRoute,
+} as any)
+const SignupReadyRoute = SignupReadyRouteImport.update({
+  id: '/ready',
+  path: '/ready',
   getParentRoute: () => SignupRoute,
 } as any)
 const SignupTeamRoute = SignupTeamRouteImport.update({
@@ -177,11 +189,13 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
+  '/upload': typeof UploadRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
   '/signup/club': typeof SignupClubRoute
+  '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
@@ -203,11 +217,13 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
+  '/upload': typeof UploadRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
   '/signup/club': typeof SignupClubRoute
+  '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
@@ -231,11 +247,13 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
+  '/upload': typeof UploadRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/processing': typeof AuthenticatedProcessingRoute
   '/signup/club': typeof SignupClubRoute
+  '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/club': typeof AuthenticatedSettingsClubRoute
@@ -259,11 +277,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signin'
     | '/signup'
+    | '/upload'
     | '/library'
     | '/new'
     | '/onboarding'
     | '/processing'
     | '/signup/club'
+    | '/signup/ready'
     | '/signup/team'
     | '/settings/account'
     | '/settings/club'
@@ -285,11 +305,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signin'
     | '/signup'
+    | '/upload'
     | '/library'
     | '/new'
     | '/onboarding'
     | '/processing'
     | '/signup/club'
+    | '/signup/ready'
     | '/signup/team'
     | '/settings/account'
     | '/settings/club'
@@ -312,11 +334,13 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signin'
     | '/signup'
+    | '/upload'
     | '/_authenticated/library'
     | '/_authenticated/new'
     | '/_authenticated/onboarding'
     | '/_authenticated/processing'
     | '/signup/club'
+    | '/signup/ready'
     | '/signup/team'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/club'
@@ -340,6 +364,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRouteWithChildren
+  UploadRoute: typeof UploadRoute
   SPlayerTokenRoute: typeof SPlayerTokenRoute
   SReelTokenRoute: typeof SReelTokenRoute
 }
@@ -395,6 +420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upload': {
+      id: '/upload'
+      path: '/upload'
+      fullPath: '/upload'
+      preLoaderRoute: typeof UploadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/library': {
       id: '/_authenticated/library'
       path: '/library'
@@ -428,6 +460,13 @@ declare module '@tanstack/react-router' {
       path: '/club'
       fullPath: '/signup/club'
       preLoaderRoute: typeof SignupClubRouteImport
+      parentRoute: typeof SignupRoute
+    }
+    '/signup/ready': {
+      id: '/signup/ready'
+      path: '/ready'
+      fullPath: '/signup/ready'
+      preLoaderRoute: typeof SignupReadyRouteImport
       parentRoute: typeof SignupRoute
     }
     '/signup/team': {
@@ -566,11 +605,13 @@ const AuthenticatedRouteRouteWithChildren =
 
 interface SignupRouteChildren {
   SignupClubRoute: typeof SignupClubRoute
+  SignupReadyRoute: typeof SignupReadyRoute
   SignupTeamRoute: typeof SignupTeamRoute
 }
 
 const SignupRouteChildren: SignupRouteChildren = {
   SignupClubRoute: SignupClubRoute,
+  SignupReadyRoute: SignupReadyRoute,
   SignupTeamRoute: SignupTeamRoute,
 }
 
@@ -585,6 +626,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRouteWithChildren,
+  UploadRoute: UploadRoute,
   SPlayerTokenRoute: SPlayerTokenRoute,
   SReelTokenRoute: SReelTokenRoute,
 }
