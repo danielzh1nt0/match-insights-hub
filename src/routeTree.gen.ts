@@ -24,6 +24,7 @@ import { Route as AuthenticatedProcessingRouteImport } from './routes/_authentic
 import { Route as SignupClubRouteImport } from './routes/signup.club'
 import { Route as SignupReadyRouteImport } from './routes/signup.ready'
 import { Route as SignupTeamRouteImport } from './routes/signup.team'
+import { Route as UploadProcessingRouteImport } from './routes/upload.processing'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings.account'
 import { Route as AuthenticatedSettingsClubRouteImport } from './routes/_authenticated/settings.club'
 import { Route as SPlayerTokenRouteImport } from './routes/s.player.$token'
@@ -111,6 +112,11 @@ const SignupTeamRoute = SignupTeamRouteImport.update({
   path: '/team',
   getParentRoute: () => SignupRoute,
 } as any)
+const UploadProcessingRoute = UploadProcessingRouteImport.update({
+  id: '/processing',
+  path: '/processing',
+  getParentRoute: () => UploadRoute,
+} as any)
 const AuthenticatedSettingsAccountRoute =
   AuthenticatedSettingsAccountRouteImport.update({
     id: '/settings/account',
@@ -189,7 +195,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
-  '/upload': typeof UploadRoute
+  '/upload': typeof UploadRouteWithChildren
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/signup/club': typeof SignupClubRoute
   '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
+  '/upload/processing': typeof UploadProcessingRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/s/player/$token': typeof SPlayerTokenRoute
@@ -217,7 +224,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
-  '/upload': typeof UploadRoute
+  '/upload': typeof UploadRouteWithChildren
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/signup/club': typeof SignupClubRoute
   '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
+  '/upload/processing': typeof UploadProcessingRoute
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/s/player/$token': typeof SPlayerTokenRoute
@@ -247,7 +255,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRouteWithChildren
-  '/upload': typeof UploadRoute
+  '/upload': typeof UploadRouteWithChildren
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -255,6 +263,7 @@ export interface FileRoutesById {
   '/signup/club': typeof SignupClubRoute
   '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
+  '/upload/processing': typeof UploadProcessingRoute
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/club': typeof AuthenticatedSettingsClubRoute
   '/s/player/$token': typeof SPlayerTokenRoute
@@ -285,6 +294,7 @@ export interface FileRouteTypes {
     | '/signup/club'
     | '/signup/ready'
     | '/signup/team'
+    | '/upload/processing'
     | '/settings/account'
     | '/settings/club'
     | '/s/player/$token'
@@ -313,6 +323,7 @@ export interface FileRouteTypes {
     | '/signup/club'
     | '/signup/ready'
     | '/signup/team'
+    | '/upload/processing'
     | '/settings/account'
     | '/settings/club'
     | '/s/player/$token'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/signup/club'
     | '/signup/ready'
     | '/signup/team'
+    | '/upload/processing'
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/club'
     | '/s/player/$token'
@@ -364,7 +376,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
   SignupRoute: typeof SignupRouteWithChildren
-  UploadRoute: typeof UploadRoute
+  UploadRoute: typeof UploadRouteWithChildren
   SPlayerTokenRoute: typeof SPlayerTokenRoute
   SReelTokenRoute: typeof SReelTokenRoute
 }
@@ -475,6 +487,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/signup/team'
       preLoaderRoute: typeof SignupTeamRouteImport
       parentRoute: typeof SignupRoute
+    }
+    '/upload/processing': {
+      id: '/upload/processing'
+      path: '/processing'
+      fullPath: '/upload/processing'
+      preLoaderRoute: typeof UploadProcessingRouteImport
+      parentRoute: typeof UploadRoute
     }
     '/_authenticated/settings/account': {
       id: '/_authenticated/settings/account'
@@ -618,6 +637,17 @@ const SignupRouteChildren: SignupRouteChildren = {
 const SignupRouteWithChildren =
   SignupRoute._addFileChildren(SignupRouteChildren)
 
+interface UploadRouteChildren {
+  UploadProcessingRoute: typeof UploadProcessingRoute
+}
+
+const UploadRouteChildren: UploadRouteChildren = {
+  UploadProcessingRoute: UploadProcessingRoute,
+}
+
+const UploadRouteWithChildren =
+  UploadRoute._addFileChildren(UploadRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
@@ -626,7 +656,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
   SignupRoute: SignupRouteWithChildren,
-  UploadRoute: UploadRoute,
+  UploadRoute: UploadRouteWithChildren,
   SPlayerTokenRoute: SPlayerTokenRoute,
   SReelTokenRoute: SReelTokenRoute,
 }
