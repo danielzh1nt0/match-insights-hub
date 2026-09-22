@@ -300,7 +300,9 @@ export function projectCylinder(cam: CylCamera, x0: number, y0: number): [number
     x = ((M[0]?.[0] ?? 1) * x0 + (M[0]?.[1] ?? 0) * y0 + (M[0]?.[2] ?? 0)) / w;
     y = ((M[1]?.[0] ?? 0) * x0 + (M[1]?.[1] ?? 1) * y0 + (M[1]?.[2] ?? 0)) / w;
   }
-  const p = cam.params; const cx = p.cx ?? 0, cy = p.cy ?? 0, h = p.h ?? 1, yaw = p.yaw ?? 0, fu = p.fu ?? 1, fv = p.fv ?? 1, u0 = p.u0 ?? 0, v0 = p.v0 ?? 0, tilt = p.tilt ?? 0, roll = p.roll ?? 0;
+  const p = cam.params;
+  const cx = p["cx"] ?? 0, cy = p["cy"] ?? 0, h = p["h"] ?? 1, yaw = p["yaw"] ?? 0, fu = p["fu"] ?? 1, fv = p["fv"] ?? 1;
+  const u0 = p["u0"] ?? 0, v0 = p["v0"] ?? 0, tilt = p["tilt"] ?? 0, roll = p["roll"] ?? 0;
   const dx = x - cx, dy = y - cy, dz = h;
   const ct = Math.cos(tilt), st = Math.sin(tilt), cr = Math.cos(roll), sr = Math.sin(roll);
   const t1 = ct * dy - st * dz, t2 = st * dy + ct * dz;                 // tilt about x
