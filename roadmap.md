@@ -1,6 +1,7 @@
 # Roadmap
 
 ## Done
+- Added transparent, crest-first identity assets and aliases for AIK, Brommapojkarna, Sollentuna FK, Djursholms Fotboll, Vasalund, Hammarby, and Täby Fotboll
 - Prompt A: Territory line-height presentation replaced by four coach-first `<LineBreakCards>` cards
 - Stop video overlay flicker: interpolated and smoothed players/ball, dropout persistence, stable shapes and lanes
 - Session screen rebuild: animated tactical drill pitches, setup/instructions/cues/progressions, regeneration, and responsive QA
