@@ -4,7 +4,7 @@ export type TeamIdentity = {
   name: string;
   shortCode: string;
   kitColour: string;
-  crestUrl?: string;
+  crestUrl?: string | undefined;
   monogram?: string;
 };
 
@@ -18,7 +18,7 @@ export function TeamToken({ identity, size = "sm", state = "active", suffix, mir
   identity: TeamIdentity;
   size?: "sm" | "md" | "lg";
   state?: "active" | "inactive" | "compare";
-  suffix?: string;
+  suffix?: string | undefined;
   mirrored?: boolean;
   className?: string;
 }) {
