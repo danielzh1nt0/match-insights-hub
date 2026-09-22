@@ -289,6 +289,27 @@ function threeUnits(xs: number[]): number[][] {
   return groups.filter((g) => g.length > 0);
 }
 
+
+/** Veo panorama: a fixed curved (cylindrical) camera, sent once per match. Mirrors ipanema/cylcam.py `project`. */
+type CylCamera = { camera: string; params: Record<string, number>; pitch_transform?: number[][] | null };
+export function projectCylinder(cam: CylCamera, x0: number, y0: number): [number, number] | null {
+  const M = cam.pitch_transform;
+  let x = x0, y = y0;
+  if (M && M.length === 3) {
+    const w = (M[2]?.[0] ?? 0) * x0 + (M[2]?.[1] ?? 0) * y0 + (M[2]?.[2] ?? 1);
+    x = ((M[0]?.[0] ?? 1) * x0 + (M[0]?.[1] ?? 0) * y0 + (M[0]?.[2] ?? 0)) / w;
+    y = ((M[1]?.[0] ?? 0) * x0 + (M[1]?.[1] ?? 1) * y0 + (M[1]?.[2] ?? 0)) / w;
+  }
+  const p = cam.params; const cx = p.cx ?? 0, cy = p.cy ?? 0, h = p.h ?? 1, yaw = p.yaw ?? 0, fu = p.fu ?? 1, fv = p.fv ?? 1, u0 = p.u0 ?? 0, v0 = p.v0 ?? 0, tilt = p.tilt ?? 0, roll = p.roll ?? 0;
+  const dx = x - cx, dy = y - cy, dz = h;
+  const ct = Math.cos(tilt), st = Math.sin(tilt), cr = Math.cos(roll), sr = Math.sin(roll);
+  const t1 = ct * dy - st * dz, t2 = st * dy + ct * dz;                 // tilt about x
+  const ex = cr * dx - sr * t1, ey = sr * dx + cr * t1, ez = t2;        // then roll about z
+  let az = Math.atan2(ey, ex) - yaw; az = ((az + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+  const rho = Math.hypot(ex, ey); if (rho < 1e-9) return null;
+  return [u0 + fu * az, v0 + fv * (ez / rho)];
+}
+
 /** Project metres to pixels with the frame's 3x3 homography (row-major). */
 function project(H: number[] | null | undefined, x: number, y: number) {
   if (!H || H.length < 9) return null;
@@ -467,10 +488,22 @@ export function MatchCanvas({
         const sx = dw / (data.width || vw);
         const sy = dh / (data.height || vh);
         map = (point) => [ox + point[0] * sx, oy + point[1] * sy];
-        metres = (point) => {
-          const px = project(bracket.before.pitch_lines, point[0], point[1]);
-          return px ? map(px) : null;
-        };
+        const cam = (data as unknown as { camera?: CylCamera | null }).camera;
+        if (cam && cam.camera === "cylindrical") {
+          // the pipeline flips pitch coordinates in later halves; the per-frame matrices carried that flip, the curved camera is sent once
+          const periods = ((data as unknown as { periods?: { t_start: number; t_end: number; mirrored?: boolean }[] }).periods) ?? [];
+          const tt = bracket.before.t;
+          const flipped = periods.some((pd) => pd.mirrored && tt >= pd.t_start && tt <= pd.t_end);
+          metres = (point) => {
+            const px = flipped ? projectCylinder(cam, length - point[0], width - point[1]) : projectCylinder(cam, point[0], point[1]);
+            return px ? map(px) : null;
+          };
+        } else {
+          metres = (point) => {
+            const px = project(bracket.before.pitch_lines, point[0], point[1]);
+            return px ? map(px) : null;
+          };
+        }
       } else {
         map = (point) => point;
         metres = (point) => [
