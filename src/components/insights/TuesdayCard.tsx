@@ -19,7 +19,7 @@ export function TuesdayCard({ headline, target, today, isPositive, onAction, act
           {today && <div><span style={{ color: 'var(--text-faint)', fontWeight: 600, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '0.06em', display: 'block', marginBottom: '2px' }}>Today</span><span style={{ fontFamily: 'Barlow Condensed, sans-serif', fontWeight: 800, fontStyle: 'italic', fontSize: '20px', color: isPositive ? 'var(--cream)' : 'var(--reaction-bad)' }}>{today}</span></div>}
         </div>
       )}
-      <button type="button" onClick={onAction} style={{ display: 'block', width: '100%', minHeight: '44px', padding: '14px', borderRadius: '12px', background: 'var(--cream)', color: '#111', fontFamily: 'Inter, sans-serif', fontSize: '13.5px', fontWeight: 700, border: 'none', cursor: 'pointer' }}>{actionLabel}</button>
+      <button type="button" onClick={onAction} style={{ display: 'block', width: '100%', minHeight: '44px', padding: '14px', borderRadius: '12px', background: 'var(--cream)', color: '#111', fontFamily: 'var(--font-body)', fontSize: '13.5px', fontWeight: 700, border: 'none', cursor: 'pointer' }}>{actionLabel}</button>
     </div>
   );
 }
