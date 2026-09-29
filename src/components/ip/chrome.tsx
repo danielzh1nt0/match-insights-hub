@@ -290,7 +290,7 @@ export function FloatingNav({ matchId }: { matchId: string }) {
   return (
     <nav
       aria-label="Match sections"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-wire bg-bg/95 px-4 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:sticky md:top-16 md:bottom-auto md:border-b md:border-t-0 md:py-0"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-wire bg-bg/95 px-4 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:sticky md:top-[85px] md:bottom-auto md:border-b md:border-t-0 md:py-0"
     >
       <div className="mx-auto grid max-w-[620px] grid-cols-4 gap-1 md:mx-0 md:flex md:max-w-none md:h-12 md:gap-7">
         {navItems.map((item) => {
