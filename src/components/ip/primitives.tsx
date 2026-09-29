@@ -293,7 +293,7 @@ export function Segmented<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "tap flex items-center justify-center gap-1.5 rounded-[5px] px-2 text-xs font-semibold transition-colors duration-150 ease-out",
+              "tap flex items-center justify-center gap-1.5 rounded-[6px] px-2 text-xs font-semibold transition-colors duration-150 ease-out",
               active ? "bg-cream text-ink" : "text-text-dim hover:bg-surface-2 hover:text-text",
             )}
           >
@@ -304,6 +304,61 @@ export function Segmented<T extends string>({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * The head of a screen: what it is, what it answers, and the actions for it.
+ *
+ * Every screen had its own arrangement of title and subtitle, and the stats
+ * screen had none at all. One component so they line up.
+ */
+export function PageHead({
+  kicker,
+  title,
+  sub,
+  actions,
+  className,
+}: {
+  kicker?: string;
+  title: string;
+  sub?: string;
+  actions?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <header className={cn("flex flex-wrap items-end justify-between gap-3 pb-1", className)}>
+      <div className="min-w-0">
+        {kicker && <p className="section-kicker">{kicker}</p>}
+        <h1 className="display-i mt-1 text-[clamp(26px,6vw,34px)] uppercase leading-none text-cream">{title}</h1>
+        {sub && <p className="mt-2 max-w-[62ch] text-[13px] leading-normal text-text-dim">{sub}</p>}
+      </div>
+      {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+    </header>
+  );
+}
+
+export type StatTile = { label: string; value: string; detail?: string | undefined; tone?: "good" | "warn" | "bad" | undefined };
+
+/**
+ * A row of headline numbers. Two columns on a phone, four from 760px, as in
+ * the prototype. The value carries the weight; the label explains it.
+ */
+export function StatTiles({ tiles, className }: { tiles: StatTile[]; className?: string }) {
+  if (tiles.length === 0) return null;
+  const toneClass = { good: "text-reaction-good", warn: "text-reaction-warn", bad: "text-reaction-bad" } as const;
+  return (
+    <div className={cn("grid grid-cols-2 gap-2.5 md:grid-cols-4", className)}>
+      {tiles.map((tile) => (
+        <div key={tile.label} className="rounded-[8px] border border-wire bg-surface px-3.5 py-3">
+          <div className={cn("display-i text-[clamp(22px,5vw,30px)] leading-none", tile.tone ? toneClass[tile.tone] : "text-cream")}>
+            {tile.value}
+          </div>
+          <div className="mt-1.5 text-[11.5px] font-semibold leading-snug text-text">{tile.label}</div>
+          {tile.detail && <div className="mt-0.5 text-[11px] leading-snug text-text-faint">{tile.detail}</div>}
+        </div>
+      ))}
     </div>
   );
 }

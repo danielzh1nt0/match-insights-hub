@@ -43,7 +43,7 @@ const toneClasses = { good: "text-reaction-good", warn: "text-reaction-warn", ba
 
 export function MomentSection(props: MomentProps) {
   const { id, name, state, timeSample, value, valueColour, sample, claim, sub, comparisons, visual, whereVisual, consequence, cause, clips, allClipCount, onTrain, trainLabel, onClip, expanded, onToggle, priority, whenSegments, whenMarkers, durationSeconds } = props;
-  return <article id={id} className={cn("overflow-hidden rounded-[14px] border border-l-[3px] border-wire bg-surface", borderClasses[state], priority && "shadow-priority")}>
+  return <article id={id} className={cn("overflow-hidden rounded-[12px] border border-l-[3px] border-wire bg-surface", borderClasses[state], priority && "shadow-priority")}>
     <Button type="button" variant="ghost" aria-expanded={expanded} aria-controls={`${id}-details`} onClick={onToggle} className="h-auto min-h-11 w-full justify-between rounded-none px-4 pb-2 pt-3.5 text-left hover:bg-surface-2">
       <span className="flex min-w-0 flex-col items-start gap-1.5"><span className="display text-[13px] text-text-dim">{name}</span><span className={cn("inline-flex items-center gap-1.5 rounded-[6px] px-[9px] py-1 text-[10px] font-bold uppercase", stateClasses[state])}><span className="h-1.5 w-1.5 rounded-full bg-current" />{stateLabel[state]}</span></span>
       <span className="display shrink-0 self-start pt-0.5 text-[11px] text-text-faint">{timeSample}</span>
@@ -69,7 +69,7 @@ export function MomentSection(props: MomentProps) {
         <p className="px-4 pb-2 text-[9.5px] font-bold uppercase text-text-faint">Three clearest clips</p>
       </>}
 
-      <div className="grid grid-cols-3 gap-1.5 px-4 pb-3">{clips.map((clip) => <Button key={`${id}-${clip.seconds}`} type="button" variant="ghost" aria-label={`Play clip at ${clip.t}`} onClick={() => onClip(clip.seconds)} className="relative aspect-[16/10] h-auto min-h-11 rounded-[8px] border border-wire bg-pitch-insight p-0 hover:bg-pitch-insight"><span className="absolute bottom-1 left-1 rounded-[3px] bg-ink/80 px-1 font-display text-[9px] font-bold text-cream">{clip.t}</span><span className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cream/40" /></Button>)}</div>
+      <div className="grid grid-cols-3 gap-1.5 px-4 pb-3">{clips.map((clip) => <Button key={`${id}-${clip.seconds}`} type="button" variant="ghost" aria-label={`Play clip at ${clip.t}`} onClick={() => onClip(clip.seconds)} className="relative aspect-[16/10] h-auto min-h-11 rounded-[8px] border border-wire bg-pitch-insight p-0 hover:bg-pitch-insight"><span className="absolute bottom-1 left-1 rounded-[6px] bg-ink/80 px-1 font-display text-[9px] font-bold text-cream">{clip.t}</span><span className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cream/40" /></Button>)}</div>
       {expanded && allClipCount && <div className="px-4 pb-3"><Button type="button" variant="ghost" onClick={() => clips[0] && onClip(clips[0].seconds)} className="w-full rounded-[8px] border border-dashed border-wire text-[11.5px] font-semibold text-text-dim">Show all {allClipCount} →</Button></div>}
       {state === "fix" && onTrain && <div className="px-4 pb-4 pt-1"><Button type="button" onClick={onTrain} className="w-full">{trainLabel ? `Train it · ${trainLabel} →` : "Build this into Tuesday →"}</Button></div>}
     </div>

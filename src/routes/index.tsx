@@ -34,7 +34,7 @@ function TacticalPreview() {
           <p className="section-kicker text-cream">Coach summary</p>
           <div className="mt-4 space-y-2">
             {["Insights", "Match", "Territory", "Stats"].map((item, index) => (
-              <div key={item} className={`flex min-h-10 items-center gap-3 rounded-[5px] px-3 text-[11px] font-bold uppercase ${index === 0 ? "bg-surface-2 text-cream" : "text-text-faint"}`}>
+              <div key={item} className={`flex min-h-10 items-center gap-3 rounded-[6px] px-3 text-[11px] font-bold uppercase ${index === 0 ? "bg-surface-2 text-cream" : "text-text-faint"}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${index === 0 ? "bg-cream" : "bg-wire"}`} />{item}
               </div>
             ))}

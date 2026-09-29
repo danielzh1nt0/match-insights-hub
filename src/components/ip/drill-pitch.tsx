@@ -99,7 +99,7 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
   const finalBall = template.ball[template.ball.length - 1] ?? { x: 50, y: 31 };
 
   return (
-    <div className="relative aspect-[16/10] overflow-hidden rounded-[4px] border border-wire bg-pitch-bottom">
+    <div className="relative aspect-[16/10] overflow-hidden rounded-[6px] border border-wire bg-pitch-bottom">
       <svg viewBox="0 0 100 62.5" className="h-full w-full" role="img" aria-label={template.label}>
         <defs>
           <marker id={`arrow-${templateId}`} markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="var(--cream)" /></marker>

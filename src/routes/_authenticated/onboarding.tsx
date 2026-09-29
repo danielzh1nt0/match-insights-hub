@@ -131,9 +131,9 @@ function Onboarding() {
               <Field label="Crest">
                 <button
                   type="button"
-                  className="tap flex w-full items-center gap-3 rounded-[4px] border border-dashed border-wire bg-surface-2 px-3 py-3 text-left"
+                  className="tap flex w-full items-center gap-3 rounded-[6px] border border-dashed border-wire bg-surface-2 px-3 py-3 text-left"
                 >
-                  <span className="display flex h-11 w-11 items-center justify-center rounded-[3px] border border-wire bg-surface-3 text-[18px] text-cream">
+                  <span className="display flex h-11 w-11 items-center justify-center rounded-[6px] border border-wire bg-surface-3 text-[18px] text-cream">
                     {club.crestInitial || "K"}
                   </span>
                   <span className="text-[12.5px] text-text-dim">Tap to upload</span>

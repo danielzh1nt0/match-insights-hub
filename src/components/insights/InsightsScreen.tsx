@@ -1,7 +1,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactElement } from "react";
 import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ip/primitives";
+import { Button, StatTiles } from "@/components/ip/primitives";
 import { MomentSection, type Clip } from "@/components/insights/MomentSection";
 import { CounterPressStrip } from "@/components/visuals/CounterPressStrip";
 import { BlockArt, PressureArt } from "@/components/visuals/PitchArt";
@@ -145,17 +145,15 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
         </section>
 
         {/* 2. The numbers behind it. */}
-        <section className="mt-3.5 grid grid-cols-3 gap-2 px-4 md:mt-5 md:px-0" aria-label="Match numbers">
-          {[
-            { label: "Possession", value: shown(possession, "%") },
-            { label: "Shots", value: `${shotCount}` },
-            { label: "Balls lost", value: `${lossEvents.length}` },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-[10px] border border-wire bg-surface px-3 py-2.5">
-              <div className="display-i text-[22px] leading-none text-cream">{stat.value}</div>
-              <div className="mt-1 text-[10.5px] leading-snug text-text-faint">{stat.label}</div>
-            </div>
-          ))}
+        <section className="mt-3.5 px-4 md:mt-5 md:px-0" aria-label="Match numbers">
+          <StatTiles
+            className="md:grid-cols-3"
+            tiles={[
+              { label: "Possession", value: shown(possession, "%") },
+              { label: "Shots", value: `${shotCount}` },
+              { label: "Balls lost", value: `${lossEvents.length}` },
+            ]}
+          />
         </section>
 
         {model.top && (
@@ -176,7 +174,7 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
           <TwoTeamBar label="Possession" valueA={possession ?? 0} valueB={otherPossession ?? 0} unit="%" />
           <Button onClick={trainTop} className="mt-6 w-full">Build Tuesday&apos;s session →</Button>
         </div>
-        <div className="mx-4 mt-5 hidden rounded-[14px] border border-wire bg-surface p-5 md:block md:mx-0">
+        <div className="mx-4 mt-5 hidden rounded-[12px] border border-wire bg-surface p-5 md:block md:mx-0">
           <h2 className="display text-[11px] text-text-faint">Players to talk to</h2>
           <div className="mt-3 flex flex-wrap gap-1.5">{playerTalks.length ? playerTalks.map((player) => <PlayerChip key={`${player.team}-${player.shirtNumber}`} {...player} />) : <span className="text-[11.5px] italic text-text-faint">Shirt numbers are not supplied for these moments.</span>}</div>
         </div>

@@ -1,3 +1,6 @@
+import { Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
+
 type Team = {
   id: "A" | "B";
   name: string;
@@ -5,6 +8,27 @@ type Team = {
   colour: string;
   crestUrl?: string | null;
 };
+
+function TeamTile({ team }: { team: Team }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div
+        className={cn(
+          "display-i grid h-12 w-12 place-items-center rounded-[8px] border-[1.5px] border-white/10 text-[22px] text-white",
+          team.crestUrl && "bg-surface-2",
+        )}
+        style={team.crestUrl ? undefined : { background: team.colour }}
+      >
+        {team.crestUrl ? (
+          <img src={team.crestUrl} alt="" className="h-[42px] w-[42px] object-contain" />
+        ) : (
+          team.id
+        )}
+      </div>
+      <div className="text-[9px] font-bold uppercase tracking-[0.08em] text-text-faint">{team.shortName}</div>
+    </div>
+  );
+}
 
 export function MatchHeader({ home, away, scoreHome, scoreAway, periodLabel, attackDirection, attackTeam, durationSeconds, onSettingsTap }: {
   home: Team;
@@ -18,9 +42,32 @@ export function MatchHeader({ home, away, scoreHome, scoreAway, periodLabel, att
   onSettingsTap: () => void;
 }) {
   const duration = `${Math.floor(durationSeconds / 60)}:${Math.floor(durationSeconds % 60).toString().padStart(2, "0")}`;
-  const tile = (team: Team) => <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}><div style={{ width: "48px", height: "48px", display: "grid", placeItems: "center", background: team.crestUrl ? "var(--surface-2)" : team.colour, border: "1.5px solid rgba(255,255,255,0.12)", fontFamily: "Barlow Condensed, sans-serif", fontWeight: 800, fontStyle: "italic", fontSize: "22px", color: "#fff" }}>{team.crestUrl ? <img src={team.crestUrl} alt="" style={{ width: "42px", height: "42px", objectFit: "contain" }} /> : team.id}</div><div style={{ fontSize: "9px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-faint)" }}>{team.shortName}</div></div>;
-  return <div style={{ padding: "16px 20px 12px", background: "var(--surface)", borderBottom: "1px solid var(--wire-2)" }}>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px" }}>{tile(home)}<div style={{ fontFamily: "Barlow Condensed, sans-serif", fontWeight: 800, fontStyle: "italic", fontSize: "44px", letterSpacing: "0.02em", color: "var(--cream)", fontVariantNumeric: "tabular-nums" }}>{scoreHome} : {scoreAway}</div>{tile(away)}</div>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", marginTop: "10px", fontSize: "11.5px", color: "var(--text-dim)", fontWeight: 500 }}><strong style={{ fontWeight: 600 }}>{periodLabel}</strong><span style={{ opacity: .5 }}>·</span><span>{attackTeam} attack {attackDirection}</span><span style={{ opacity: .5 }}>·</span><span style={{ fontVariantNumeric: "tabular-nums" }}>{duration}</span><button type="button" onClick={onSettingsTap} aria-label="Match setup" style={{ marginLeft: "6px", width: "44px", height: "44px", borderRadius: "50%", background: "var(--surface)", border: "1.5px solid var(--wire)", display: "grid", placeItems: "center", cursor: "pointer", color: "var(--text-faint)" }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1-2.9 2.9-.1-.1a1.7 1.7 0 0 0-2.8 1.2v.1h-4v-.1a1.7 1.7 0 0 0-2.8-1.2l-.1.1-2.9-2.9.1-.1a1.7 1.7 0 0 0-1.2-2.8H3v-4h.1A1.7 1.7 0 0 0 4.3 7.2l-.1-.1 2.9-2.9.1.1A1.7 1.7 0 0 0 10 3.1V3h4v.1a1.7 1.7 0 0 0 2.8 1.2l.1-.1 2.9 2.9-.1.1a1.7 1.7 0 0 0 1.2 2.8h.1v4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button></div>
-  </div>;
+
+  return (
+    <div className="border-b border-wire-2 bg-surface px-5 pb-3 pt-4">
+      <div className="flex items-center justify-between gap-2.5">
+        <TeamTile team={home} />
+        <div className="display-i num text-[44px] leading-none tracking-[0.02em] text-cream">
+          {scoreHome} : {scoreAway}
+        </div>
+        <TeamTile team={away} />
+      </div>
+
+      <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[11.5px] text-text-dim">
+        <strong className="font-semibold">{periodLabel}</strong>
+        <span className="opacity-50" aria-hidden="true">·</span>
+        <span>{attackTeam} attack {attackDirection}</span>
+        <span className="opacity-50" aria-hidden="true">·</span>
+        <span className="num">{duration}</span>
+        <button
+          type="button"
+          onClick={onSettingsTap}
+          aria-label="Match setup"
+          className="ml-1.5 grid h-11 w-11 place-items-center rounded-full border-[1.5px] border-wire bg-surface text-text-faint transition-colors hover:text-cream"
+        >
+          <Settings size={13} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
 }

@@ -366,7 +366,7 @@ export function MomentumStrip({ values, className }: { values: number[]; classNa
       {values.map((v, i) => (
         <div key={i} className="relative h-full flex-1">
           <div
-            className="absolute left-0 w-full rounded-[2px]"
+            className="absolute left-0 w-full rounded-[6px]"
             style={{
               background: v >= 0 ? "var(--team-a)" : "var(--team-b)",
               opacity: 0.25 + Math.abs(v) * 0.6,

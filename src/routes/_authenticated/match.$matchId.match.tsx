@@ -640,7 +640,7 @@ function MatchScreen() {
                         </span>
                         <span
                           className={cn(
-                            "h-4 w-4 rounded-[5px] border",
+                            "h-4 w-4 rounded-[6px] border",
                             layers[l.key] ? "border-cream bg-cream" : "border-wire",
                           )}
                           aria-hidden="true"

@@ -41,7 +41,7 @@ function Glossary() {
           <a
             key={t.id}
             href={`#${t.id}`}
-            className="inline-flex min-h-11 items-center rounded-[3px] border border-wire px-3 text-xs font-semibold text-text-dim transition-colors duration-150 ease-out hover:border-cream/40 hover:text-text"
+            className="inline-flex min-h-11 items-center rounded-[6px] border border-wire px-3 text-xs font-semibold text-text-dim transition-colors duration-150 ease-out hover:border-cream/40 hover:text-text"
           >
             {t.term}
           </a>

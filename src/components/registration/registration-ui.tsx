@@ -20,7 +20,7 @@ export function FormLabel({ children, optional }: { children: ReactNode; optiona
 }
 
 export function CrestTile({ monogram, colour, image, empty, size = "large", onClick }: { monogram: string; colour: string; image?: string | null; empty?: boolean; size?: "large" | "small"; onClick?: () => void }) {
-  const classes = size === "large" ? "h-28 w-28 rounded-[28px]" : "h-11 w-11 rounded-xl";
+  const classes = size === "large" ? "h-28 w-28 rounded-[22px]" : "h-11 w-11 rounded-xl";
   const content = empty ? <><Camera size={22}/><span className="text-[11px] font-semibold uppercase">Add crest</span></> : image ? <img src={image} alt="Club crest" className="h-full w-full rounded-[inherit] object-cover"/> : <span key={monogram} className={cn("display-i animate-monogram text-cream", size === "large" ? "text-[44px]" : "text-[20px]")}>{monogram || "CL"}</span>;
   return <button type="button" onClick={onClick} aria-label={empty ? "Add club crest" : "Edit club crest"} className={cn("tap flex shrink-0 flex-col items-center justify-center gap-1.5 overflow-hidden border", classes, empty ? "border-dashed border-wire bg-transparent text-text-dim" : "border-wire text-cream")} style={empty ? undefined : { backgroundColor: colour }}>{content}</button>;
 }
