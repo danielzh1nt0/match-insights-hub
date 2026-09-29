@@ -361,3 +361,45 @@
   .processing-ring,.stage-pulse,.tracker-stage-0 .tracker-scan,.tracker-stage-1 .tracker-players circle,.tracker-stage-2 .tracker-ball,.tracker-stage-3 .tracker-heat,.tracker-stage-4 .tracker-outline { animation: none !important; }
   .tracker-stage-0 .tracker-scan { transform: translateX(192px); }
 }
+
+/* ---------------------------------------------------------------
+   Printing a session
+   The coach takes Tuesday's plan to the pitch. Printing the dark
+   theme wastes a cartridge and reads badly, so the sheet flips to
+   ink on paper and every drill is kept whole on its page.
+   --------------------------------------------------------------- */
+@media print {
+  @page { margin: 14mm; }
+
+  html, body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  /* App chrome has no business on paper. */
+  header:not(.session-sheet header),
+  nav,
+  [role="tablist"],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .session-sheet,
+  .session-sheet * {
+    background: transparent !important;
+    color: #111 !important;
+    border-color: #bbb !important;
+    box-shadow: none !important;
+  }
+
+  .session-sheet article {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #bbb !important;
+    margin-bottom: 10mm;
+  }
+
+  /* The pitch diagrams are the point of the sheet — keep them legible. */
+  .session-sheet svg { max-height: 78mm; }
+  .session-sheet a[href^="#"] { text-decoration: none; }
+}

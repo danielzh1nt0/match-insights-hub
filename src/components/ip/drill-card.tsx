@@ -18,7 +18,7 @@ function BulletList({ items, cream = false }: { items: string[]; cream?: boolean
 
 export function DrillCard({ drill, defaultExpanded = false }: { drill: DrillPlan; defaultExpanded?: boolean }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const detailsId = `${drill.id}-progressions`;
+  const detailsId = `${drill.id}-detail`;
   const setupItems = [
     ["Players", drill.players], ["Space", drill.space], ["Duration", drill.duration], ["Equipment", drill.equipment],
   ];
@@ -35,37 +35,45 @@ export function DrillCard({ drill, defaultExpanded = false }: { drill: DrillPlan
 
       <div className="mx-auto mt-4 w-full max-w-[880px]"><DrillPitch templateId={drill.template} drillName={drill.title} /></div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        {setupItems.map(([label, value]) => (
-          <div key={label} className="min-w-0 rounded-[3px] border border-wire-2 bg-surface-2 p-3">
-            <dt className="text-[11px] font-bold uppercase text-text-faint">{label}</dt>
-            <dd className="mt-1 break-words text-[13px] font-semibold leading-snug text-text">{value || "—"}</dd>
-          </div>
-        ))}
-      </dl>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={detailsId}
+        onClick={() => setExpanded((value) => !value)}
+        className="tap mt-4 flex w-full items-center justify-between rounded-[3px] border border-wire bg-surface-2 px-3 text-left text-[12.5px] font-semibold text-text hover:text-cream print:hidden"
+      >
+        {expanded ? "Hide the detail" : "Setup, rules and what to look for"}
+        <ChevronDown size={16} className={cn("text-text-faint transition-transform duration-150", expanded && "rotate-180")} />
+      </button>
 
-      <div className="mt-5 space-y-3.5">
-        <section><h3 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Setup</h3><p className="text-[12.5px] leading-[1.6] text-text-dim">{drill.setup || "—"}</p></section>
-        <section><h3 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Rules</h3><BulletList items={drill.rules} /></section>
-        <section className="rounded-[3px] border border-wire-2 border-l-2 border-l-cream bg-surface-2 p-3"><h3 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Why this works</h3><p className="text-[12.5px] leading-[1.6] text-text-dim">{drill.why || "—"}</p></section>
+      {/* Hidden with CSS rather than unmounted, so printing gives the whole session. */}
+      <div id={detailsId} className={cn(expanded ? "block" : "hidden", "print:block")}>
+        <dl className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {setupItems.map(([label, value]) => (
+            <div key={label} className="min-w-0 rounded-[3px] border border-wire-2 bg-surface-2 p-3">
+              <dt className="text-[11px] font-bold uppercase text-text-faint">{label}</dt>
+              <dd className="mt-1 break-words text-[13px] font-semibold leading-snug text-text">{value || "—"}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="mt-5 space-y-3.5">
+          <section><h3 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Setup</h3><p className="text-[12.5px] leading-[1.6] text-text-dim">{drill.setup || "—"}</p></section>
+          <section><h3 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Rules</h3><BulletList items={drill.rules} /></section>
+          <section className="rounded-[3px] border border-wire-2 border-l-2 border-l-cream bg-surface-2 p-3"><h3 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Why this works</h3><p className="text-[12.5px] leading-[1.6] text-text-dim">{drill.why || "—"}</p></section>
+        </div>
+
+        <section className="mt-5">
+          <div className="flex items-center gap-3"><h3 className="display shrink-0 text-[14px] text-text-dim">What to look for</h3><span className="h-px flex-1 bg-wire-2" /></div>
+          <div className="mt-2"><BulletList items={drill.cues.slice(0, 3)} cream /></div>
+        </section>
+
+        <section className="mt-5 grid gap-4 rounded-[3px] border border-wire bg-surface-2 p-3 md:grid-cols-2">
+          <div><h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Make it harder</h4><BulletList items={drill.harder} /></div>
+          <div><h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Make it easier</h4><BulletList items={drill.easier} /></div>
+        </section>
       </div>
 
-      <section className="mt-5">
-        <div className="flex items-center gap-3"><h3 className="display shrink-0 text-[14px] text-text-dim">What to look for</h3><span className="h-px flex-1 bg-wire-2" /></div>
-        <div className="mt-2"><BulletList items={drill.cues.slice(0, 3)} cream /></div>
-      </section>
-
-      <section className="mt-5 overflow-hidden rounded-[3px] border border-wire bg-surface-2">
-        <button type="button" aria-expanded={expanded} aria-controls={detailsId} onClick={() => setExpanded((value) => !value)} className="tap flex w-full items-center justify-between px-3 text-left text-[12.5px] font-semibold text-text hover:text-cream">
-          Progressions <ChevronDown size={16} className={cn("text-text-faint transition-transform duration-150", expanded && "rotate-180")} />
-        </button>
-        {expanded && (
-          <div id={detailsId} className="grid gap-4 border-t border-wire px-3 pb-4 pt-3 md:grid-cols-2">
-            <div><h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Make it harder</h4><BulletList items={drill.harder} /></div>
-            <div><h4 className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint">Make it easier</h4><BulletList items={drill.easier} /></div>
-          </div>
-        )}
-      </section>
     </article>
   );
 }
