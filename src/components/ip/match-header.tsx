@@ -21,11 +21,6 @@ function abbreviate(name: string) {
 }
 
 /** Glyph inside the colour tile: the club's name letter, e.g. K for 1. FC Köln. */
-function initialOf(name: string) {
-  const words = tokens(name);
-  const main = [...words].reverse().find((w) => w.length > 2) ?? words[0] ?? name;
-  return (main[0] ?? "?").toUpperCase();
-}
 
 function TeamTile({
   name,
@@ -47,7 +42,7 @@ function TeamTile({
       type="button"
       onClick={onSelect}
       aria-label={`Filter to ${name}`}
-      className="tap flex flex-col items-center gap-1.5 rounded-[6px]"
+      className="tap flex max-w-[132px] flex-col items-center gap-1.5 rounded-[6px]"
     >
       <span
         className="relative grid h-11 w-11 place-items-center md:h-[52px] md:w-[52px]"
@@ -62,14 +57,14 @@ function TeamTile({
               className="absolute inset-0 rounded-[6px]"
               style={{ boxShadow: "inset 0 0 0 1.5px rgba(255,255,255,0.12)" }}
             />
-            <span className="display-i text-[22px] leading-none text-text">
-              {initialOf(name)}
+            <span className="display-i text-[18px] leading-none text-white md:text-[20px]">
+              {abbreviate(name)}
             </span>
           </>
         )}
       </span>
-      <span className="text-[9px] font-bold uppercase leading-none tracking-[0.08em] text-text-faint">
-        {sublabel || (side === "home" ? "HOME" : "AWAY")}
+      <span className="w-full truncate text-center text-[11px] font-semibold leading-tight text-text-dim">
+        {sublabel || (side === "home" ? "Home" : "Away")}
       </span>
     </button>
   );
@@ -93,6 +88,7 @@ export function MatchHeader({
   onSelectTeamA,
   onSelectTeamB,
   onSetup,
+  result,
   className,
 }: {
   teamA: string;
@@ -111,22 +107,31 @@ export function MatchHeader({
   onSelectTeamA?: () => void;
   onSelectTeamB?: () => void;
   onSetup?: () => void;
+  /** Win / Draw / Loss from the coach's own side, when the labels say which side that is. */
+  result?: "W" | "D" | "L" | null;
   className?: string;
 }) {
   const played = scoreA !== null && scoreB !== null;
+  const resultLabel = result === "W" ? "Won" : result === "D" ? "Drew" : result === "L" ? "Lost" : null;
 
   return (
     <section
       aria-label={`${teamA} against ${teamB}`}
-      className={cn("tactical-grid relative overflow-hidden rounded-[14px] border border-wire bg-workspace", className)}
+      className={cn("relative overflow-hidden rounded-[14px] border border-wire bg-surface", className)}
     >
+      <span
+        className="absolute inset-x-0 top-0 h-[3px]"
+        style={{ background: `linear-gradient(90deg, ${colourA} 0%, ${colourA} 45%, ${colourB} 55%, ${colourB} 100%)` }}
+        aria-hidden="true"
+      />
+
       {/* Row 1 — score */}
       <div className="relative flex min-h-14 items-center justify-between px-5 py-4 md:px-7 md:py-5">
         <TeamTile
           name={teamA}
           colour={colourA}
           {...(crestA ? { crestUrl: crestA } : {})}
-          sublabel={abbreviate(teamA)}
+          sublabel={teamA}
           side="home"
           {...(onSelectTeamA ? { onSelect: onSelectTeamA } : {})}
         />
@@ -143,16 +148,10 @@ export function MatchHeader({
           name={teamB}
           colour={colourB}
           {...(crestB ? { crestUrl: crestB } : {})}
-          sublabel={abbreviate(teamB)}
+          sublabel={teamB}
           side="away"
           {...(onSelectTeamB ? { onSelect: onSelectTeamB } : {})}
         />
-      </div>
-
-      <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 pb-3 md:px-7" aria-label="Teams">
-        <TeamToken identity={{ name: teamA, shortCode: shortTeamCode(teamA), kitColour: colourA, ...(crestA ? { crestUrl: crestA } : {}) }} size="sm" state="compare" />
-        <span className="display text-[10px] text-text-faint">vs</span>
-        <TeamToken identity={{ name: teamB, shortCode: shortTeamCode(teamB), kitColour: colourB, ...(crestB ? { crestUrl: crestB } : {}) }} size="sm" state="compare" mirrored className="justify-self-end" />
       </div>
 
       {/* Row 2 — divider */}
@@ -160,8 +159,16 @@ export function MatchHeader({
 
       {/* Row 3 — meta */}
       <div className="relative flex items-center justify-between gap-3 px-5 pb-3.5 pt-3 md:px-7">
-        <p className="truncate text-[11.5px] font-medium tracking-[0.01em] text-text-dim [font-variant-numeric:tabular-nums]">
-          {periodLine ?? metaLine ?? ""}
+        <p className="flex min-w-0 items-center gap-2 truncate text-[11.5px] font-medium tracking-[0.01em] text-text-dim [font-variant-numeric:tabular-nums]">
+          <span className="truncate">{periodLine ?? metaLine ?? ""}</span>
+          {resultLabel && (
+            <>
+              <span className="text-text-faint" aria-hidden="true">·</span>
+              <span className={cn("shrink-0 font-bold uppercase", result === "W" ? "text-reaction-good" : result === "L" ? "text-reaction-bad" : "text-text-dim")}>
+                {resultLabel}
+              </span>
+            </>
+          )}
         </p>
         <button
           type="button"

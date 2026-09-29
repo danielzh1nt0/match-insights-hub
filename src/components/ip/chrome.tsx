@@ -199,7 +199,7 @@ export function FloatingNav({ matchId }: { matchId: string }) {
       aria-label="Match sections"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-wire bg-bg/95 px-4 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:sticky md:top-16 md:bottom-auto md:border-b md:border-t-0 md:py-0"
     >
-      <div className="mx-auto grid max-w-[620px] grid-cols-4 gap-1 md:h-12">
+      <div className="mx-auto grid max-w-[620px] grid-cols-4 gap-1 md:mx-0 md:flex md:max-w-none md:h-12 md:gap-7">
         {navItems.map((item) => {
           const active = pathname === item.to.replace("$matchId", matchId);
           const Icon = item.icon;
@@ -211,7 +211,7 @@ export function FloatingNav({ matchId }: { matchId: string }) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "tap relative flex flex-col items-center justify-center gap-1 rounded-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] md:flex-row md:gap-2",
+                "tap relative flex flex-col items-center justify-center gap-1 rounded-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] md:flex-row md:justify-start md:gap-2 md:text-[12px]",
                 active ? "text-cream after:absolute after:inset-x-2 after:-bottom-2 after:h-0.5 after:bg-cream md:after:bottom-0" : "text-text-faint hover:text-text-dim",
               )}
             >

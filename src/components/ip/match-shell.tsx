@@ -13,6 +13,14 @@ import { useMatchRecord } from "@/hooks/use-match";
 import { colourForTeam, crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
 
+/** Win, draw or loss from the coach's own side; null when the labels do not say which side that is. */
+function matchResult(match: LibraryMatch): "W" | "D" | "L" | null {
+  if (match.status !== "ready" || !match.clubTeam) return null;
+  const ours = match.clubTeam === "A" ? match.scoreA : match.scoreB;
+  const theirs = match.clubTeam === "A" ? match.scoreB : match.scoreA;
+  return ours === theirs ? "D" : ours > theirs ? "W" : "L";
+}
+
 export function MatchShell({
   matchId,
   match,
@@ -70,7 +78,7 @@ export function MatchShell({
                {...(crestB ? { crestB } : {})}
               {...(match.status === "ready"
                 ? {
-                    periodLine: `${period === "2nd" ? "2nd half" : "1st half"} · ${match.teamA} attack ${
+                    periodLine: `${match.competition} · ${match.date} · ${period === "2nd" ? "2nd half" : "1st half"} · ${match.teamA} attack ${
                       attacksRight(
                         record?.row.attack_right,
                         record?.label?.attack_right_override,
@@ -82,6 +90,7 @@ export function MatchShell({
                   }
                 : { metaLine: `${match.date} · ${match.competition}` })}
               {...(setScope ? { onSelectTeamA: () => setScope("a"), onSelectTeamB: () => setScope("b") } : {})}
+              result={matchResult(match)}
               onSetup={() => setSetupOpen((v) => !v)}
             />
             {selectorsVisible && (
