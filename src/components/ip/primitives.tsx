@@ -45,7 +45,8 @@ export function Card({
     <div
       className={cn(
         "border border-wire bg-surface",
-        small ? "rounded-[6px] p-3" : "rounded-[8px] p-4",
+        // --r-md / --pad from the prototype's spacing system
+        small ? "rounded-[10px] p-3.5" : "rounded-[14px] p-5",
         className,
       )}
       {...rest}
@@ -281,7 +282,7 @@ export function Segmented<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className="grid w-full gap-1 rounded-[8px] border border-wire bg-surface p-1"
+      className="grid w-full gap-1 rounded-[14px] border border-wire bg-surface p-1"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((o) => {
@@ -351,7 +352,7 @@ export function StatTiles({ tiles, className }: { tiles: StatTile[]; className?:
   return (
     <div className={cn("grid grid-cols-2 gap-2.5 md:grid-cols-4", className)}>
       {tiles.map((tile) => (
-        <div key={tile.label} className="rounded-[8px] border border-wire bg-surface px-3.5 py-3">
+        <div key={tile.label} className="rounded-[14px] border border-wire bg-surface px-3.5 py-3">
           <div className={cn("display-i text-[clamp(22px,5vw,30px)] leading-none", tile.tone ? toneClass[tile.tone] : "text-cream")}>
             {tile.value}
           </div>

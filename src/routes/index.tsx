@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 
 function TacticalPreview() {
   return (
-    <div className="overflow-hidden rounded-[8px] border border-wire bg-workspace">
+    <div className="overflow-hidden rounded-[14px] border border-wire bg-workspace">
       <div className="flex min-h-14 items-center justify-between border-b border-wire-2 px-4">
         <span className="section-kicker">Match review · Full time</span>
         <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">

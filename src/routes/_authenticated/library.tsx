@@ -159,7 +159,7 @@ function LibraryPage() {
 function EmptyState() {
   return (
     <Card className="mt-6 flex flex-col items-center gap-3 py-12 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-[12px] border border-wire bg-surface-2 text-text-faint">
+      <span className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-wire bg-surface-2 text-text-faint">
         <Video size={20} aria-hidden="true" />
       </span>
       <h2 className="display text-[19px] text-text">No matches yet</h2>

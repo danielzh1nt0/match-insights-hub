@@ -17,7 +17,7 @@ export function StatsTeamSelector({
   teamB: StatsTeamIdentity;
 }) {
   return (
-    <div role="group" aria-label="Team" className="grid w-full grid-cols-[1fr_auto_1fr] gap-2 rounded-[8px] border border-wire bg-surface p-2">
+    <div role="group" aria-label="Team" className="grid w-full grid-cols-[1fr_auto_1fr] gap-2 rounded-[14px] border border-wire bg-surface p-2">
       <Button
         variant="ghost"
         aria-pressed={value === "a"}

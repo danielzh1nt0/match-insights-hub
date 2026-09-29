@@ -157,7 +157,7 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
         </section>
 
         {model.top && (
-          <Button type="button" variant="ghost" onClick={() => openPhase(model.phases[0]!.key)} className="mx-4 mt-4 flex h-auto min-h-11 w-[calc(100%-32px)] justify-start gap-2.5 rounded-[12px] border border-reaction-bad/40 bg-priority px-4 py-3 text-left hover:bg-priority md:mx-0 md:mt-6 md:w-full">
+          <Button type="button" variant="ghost" onClick={() => openPhase(model.phases[0]!.key)} className="mx-4 mt-4 flex h-auto min-h-11 w-[calc(100%-32px)] justify-start gap-2.5 rounded-[14px] border border-reaction-bad/40 bg-priority px-4 py-3 text-left hover:bg-priority md:mx-0 md:mt-6 md:w-full">
             <span className="text-[10px] font-extrabold uppercase text-reaction-bad">The evidence</span>
             <span className="flex-1 text-[13px] font-bold text-cream">{model.phases[0]!.name}</span>
             <ArrowRight size={16} className="text-reaction-bad" />
@@ -174,7 +174,7 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
           <TwoTeamBar label="Possession" valueA={possession ?? 0} valueB={otherPossession ?? 0} unit="%" />
           <Button onClick={trainTop} className="mt-6 w-full">Build Tuesday&apos;s session →</Button>
         </div>
-        <div className="mx-4 mt-5 hidden rounded-[12px] border border-wire bg-surface p-5 md:block md:mx-0">
+        <div className="mx-4 mt-5 hidden rounded-[14px] border border-wire bg-surface p-5 md:block md:mx-0">
           <h2 className="display text-[11px] text-text-faint">Players to talk to</h2>
           <div className="mt-3 flex flex-wrap gap-1.5">{playerTalks.length ? playerTalks.map((player) => <PlayerChip key={`${player.team}-${player.shirtNumber}`} {...player} />) : <span className="text-[11.5px] italic text-text-faint">Shirt numbers are not supplied for these moments.</span>}</div>
         </div>

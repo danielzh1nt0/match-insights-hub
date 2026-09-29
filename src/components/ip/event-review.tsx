@@ -91,7 +91,7 @@ export function EventFixSheet({
       <div
         role="dialog"
         aria-label="Fix this moment"
-        className="relative w-full rounded-t-[16px] border border-wire bg-surface p-5 sm:max-w-[420px] sm:rounded-[16px]"
+        className="relative w-full rounded-t-[16px] border border-wire bg-surface p-5 sm:max-w-[420px] sm:rounded-[18px]"
       >
         <h2 className="display text-[18px] uppercase text-cream">Fix this moment</h2>
         <p className="mt-1 text-[12px] text-text-dim">{event.title}</p>

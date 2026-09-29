@@ -49,7 +49,7 @@ export function PlayerReport({
   return (
     <>
       <Card className="flex items-center gap-4">
-        <span className="num flex h-14 w-14 shrink-0 items-center justify-center rounded-[12px] bg-surface-3 text-[24px] text-cream">
+        <span className="num flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] bg-surface-3 text-[24px] text-cream">
           {player.id}
         </span>
         <div className="min-w-0">

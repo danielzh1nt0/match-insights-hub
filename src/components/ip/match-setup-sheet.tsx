@@ -98,7 +98,7 @@ export function MatchSetupSheet({
       <div
         role="dialog"
         aria-label="Match setup"
-        className="relative max-h-[88vh] w-full overflow-y-auto rounded-t-[16px] border border-wire bg-surface p-4 sm:max-w-[520px] sm:rounded-[16px] sm:p-6"
+        className="relative max-h-[88vh] w-full overflow-y-auto rounded-t-[16px] border border-wire bg-surface p-4 sm:max-w-[520px] sm:rounded-[18px] sm:p-6"
       >
         <div className="flex items-start justify-between gap-3">
           <div>

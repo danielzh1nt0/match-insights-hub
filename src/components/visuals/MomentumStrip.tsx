@@ -7,7 +7,7 @@ type Props = { segments: MomentumSegment[]; markers: MomentumMarker[]; durationS
 
 export function MomentumStrip({ segments, markers, durationSeconds, currentTime, onSeek }: Props) {
   const duration = Math.max(durationSeconds, 1);
-  return <div className="relative h-[34px] overflow-hidden rounded-[8px] bg-wire" role="img" aria-label="Match momentum by phase" onClick={(event) => {
+  return <div className="relative h-[34px] overflow-hidden rounded-[14px] bg-wire" role="img" aria-label="Match momentum by phase" onClick={(event) => {
     const rect = event.currentTarget.getBoundingClientRect();
     onSeek(Math.max(0, Math.min(duration, ((event.clientX - rect.left) / rect.width) * duration)));
   }}>

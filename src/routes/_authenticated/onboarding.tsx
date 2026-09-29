@@ -229,7 +229,7 @@ function Onboarding() {
                         aria-label={t.name}
                         value={targets[t.key]}
                         onChange={(e) => setTargets({ [t.key]: Number(e.target.value) })}
-                        className="num w-20 rounded-[8px] border border-wire bg-surface-3 px-2 py-1 text-right text-[16px] text-cream"
+                        className="num w-20 rounded-[14px] border border-wire bg-surface-3 px-2 py-1 text-right text-[16px] text-cream"
                       />
                     ) : (
                       <span className="num text-[20px] text-cream">

@@ -225,7 +225,7 @@ export function EventFilter({ value, onChange, events, teamNames }: {
               </section>
             </div>
 
-            <button type="button" onClick={() => { onChange(draft); setOpen(false); }} className="tap mt-auto w-full rounded-[12px] bg-cream px-5 text-sm font-bold text-primary-foreground hover:bg-cream-dim">Apply</button>
+            <button type="button" onClick={() => { onChange(draft); setOpen(false); }} className="tap mt-auto w-full rounded-[14px] bg-cream px-5 text-sm font-bold text-primary-foreground hover:bg-cream-dim">Apply</button>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

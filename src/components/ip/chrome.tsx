@@ -85,7 +85,7 @@ export function MatchBar({
   periodLine: string;
 }) {
   return (
-    <div className="rounded-[16px] border border-wire bg-surface p-4">
+    <div className="rounded-[18px] border border-wire bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <TeamBadge name={teamA} color="var(--team-a)" />
         <div className="num text-center text-[32px] leading-none text-cream">
@@ -118,7 +118,7 @@ function TeamBadge({
 }) {
   return (
     <div className={cn("flex min-w-0 items-center gap-2", align === "right" && "flex-row-reverse")}>
-      <span className="h-7 w-7 shrink-0 rounded-[8px]" style={{ background: color }} aria-hidden="true" />
+      <span className="h-7 w-7 shrink-0 rounded-[14px]" style={{ background: color }} aria-hidden="true" />
       <span className="display truncate text-[13px] text-text">{name}</span>
     </div>
   );

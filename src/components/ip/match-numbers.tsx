@@ -195,8 +195,8 @@ function MetricSheet({ metric, events, colours, teamNames, onClose, onSeeEvents 
           </div>
         )}
         <div className="mt-6 flex gap-2">
-          {onSeeEvents && <button type="button" onClick={onSeeEvents} className="tap flex-1 rounded-[12px] bg-cream px-4 text-sm font-semibold text-primary-foreground">See events</button>}
-          <Link to="/glossary" hash={metric.glossaryId} className="tap inline-flex flex-1 items-center justify-center gap-2 rounded-[12px] border border-cream/60 px-4 text-sm font-semibold text-cream"><Info size={15} aria-hidden="true" /> Glossary</Link>
+          {onSeeEvents && <button type="button" onClick={onSeeEvents} className="tap flex-1 rounded-[14px] bg-cream px-4 text-sm font-semibold text-primary-foreground">See events</button>}
+          <Link to="/glossary" hash={metric.glossaryId} className="tap inline-flex flex-1 items-center justify-center gap-2 rounded-[14px] border border-cream/60 px-4 text-sm font-semibold text-cream"><Info size={15} aria-hidden="true" /> Glossary</Link>
         </div>
       </aside>
     </div>

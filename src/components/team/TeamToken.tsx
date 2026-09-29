@@ -22,7 +22,7 @@ export function TeamToken({ identity, size = "sm", state = "active", suffix, mir
   mirrored?: boolean;
   className?: string;
 }) {
-  const tile = size === "lg" ? "h-11 w-11 rounded-[12px]" : size === "md" ? "h-7 w-7 rounded-[6px]" : "h-[22px] w-[22px] rounded-[6px]";
+  const tile = size === "lg" ? "h-11 w-11 rounded-[14px]" : size === "md" ? "h-7 w-7 rounded-[6px]" : "h-[22px] w-[22px] rounded-[6px]";
   const code = identity.shortCode || shortTeamCode(identity.name);
   return <span className={cn("inline-flex min-w-0 items-center gap-2", mirrored && "flex-row-reverse text-right", state === "inactive" && "opacity-60", className)}>
     <span className={cn("relative grid shrink-0 place-items-center overflow-hidden border border-cream/15", tile, state === "active" && "ring-2 ring-cream ring-offset-2 ring-offset-surface")} style={{ background: identity.kitColour }} aria-hidden="true">

@@ -29,7 +29,7 @@ export function StoryLauncher({
       aria-label={label}
       className={cn(
         "flex items-center text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
-        small ? "min-h-11 gap-2 rounded-[10px] px-3 py-2" : "gap-3 rounded-[12px] px-3.5 py-3",
+        small ? "min-h-11 gap-2 rounded-[10px] px-3 py-2" : "gap-3 rounded-[14px] px-3.5 py-3",
         className,
       )}
       style={{ background: "linear-gradient(135deg, var(--cream) 0%, #d9d0bb 100%)" }}

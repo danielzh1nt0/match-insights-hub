@@ -356,7 +356,7 @@ function MatchScreen() {
                 "relative mx-auto w-full overflow-hidden bg-surface-2",
                 fullscreen
                   ? "h-dvh w-dvw max-w-none rounded-none bg-bg"
-                  : "aspect-[16/10] max-w-[880px] rounded-[12px]",
+                  : "aspect-[16/10] max-w-[880px] rounded-[14px]",
               )}
             >
               <video
@@ -566,7 +566,7 @@ function MatchScreen() {
                         <button
                           type="button"
                           onClick={() => review.clear.mutate([e.id])}
-                          className="tap shrink-0 rounded-[8px] border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
+                          className="tap shrink-0 rounded-[14px] border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
                         >
                           Put back
                         </button>
@@ -598,7 +598,7 @@ function MatchScreen() {
                 onClick={() => setLayerSheet(false)}
                 className="absolute inset-0"
               />
-              <div className="relative w-full max-w-[420px] rounded-t-[16px] border border-wire bg-surface p-5 md:rounded-[16px]">
+              <div className="relative w-full max-w-[420px] rounded-t-[16px] border border-wire bg-surface p-5 md:rounded-[18px]">
                 <h2 className="display text-[17px] uppercase text-cream">Layers</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {PRESETS.map((p) => {

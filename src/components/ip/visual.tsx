@@ -136,7 +136,7 @@ export function Visual({
   const inferred = info.rows.find((row) => row.cream)?.value ?? "—";
   const shownTakeaway = takeaway ?? { value: inferred };
   return (
-    <section className={cn("overflow-hidden rounded-[8px] border border-wire bg-surface", className)}>
+    <section className={cn("overflow-hidden rounded-[14px] border border-wire bg-surface", className)}>
       <div className="flex items-start justify-between gap-3 px-4 pb-1.5 pt-3.5">
         <h2 className="display text-[17px] uppercase leading-tight text-cream">{question}</h2>
         <button
@@ -388,7 +388,7 @@ export function PossessionRibbon({
   total: number;
 }) {
   return (
-    <div className="flex h-6 w-full overflow-hidden rounded-[8px]" aria-hidden="true">
+    <div className="flex h-6 w-full overflow-hidden rounded-[14px]" aria-hidden="true">
       {segments.map((s, i) => (
         <div
           key={i}
@@ -425,7 +425,7 @@ export function CoachMark({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-3 rounded-[12px] border border-cream/40 bg-cream/10 p-3",
+        "flex items-start justify-between gap-3 rounded-[14px] border border-cream/40 bg-cream/10 p-3",
         className,
       )}
     >

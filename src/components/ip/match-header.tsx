@@ -118,7 +118,7 @@ export function MatchHeader({
   return (
     <section
       aria-label={`${teamA} against ${teamB}`}
-      className={cn("tactical-grid relative overflow-hidden rounded-[8px] border border-wire bg-workspace", className)}
+      className={cn("tactical-grid relative overflow-hidden rounded-[14px] border border-wire bg-workspace", className)}
     >
       {/* Row 1 — score */}
       <div className="relative flex min-h-14 items-center justify-between px-5 py-4 md:px-7 md:py-5">

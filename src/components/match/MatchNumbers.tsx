@@ -37,7 +37,7 @@ export function MatchNumbers({ tiles, onTileTap }: {
               type="button"
               onClick={() => onTileTap(tile.label)}
               aria-label={`Open ${tile.label.toLowerCase()} details`}
-              className="min-h-[132px] rounded-[12px] border border-wire bg-surface px-2.5 py-3.5 text-left transition-colors hover:border-cream/30"
+              className="min-h-[132px] rounded-[14px] border border-wire bg-surface px-2.5 py-3.5 text-left transition-colors hover:border-cream/30"
             >
               <div className={cn("mb-2.5", inactive && "opacity-35")}>
                 <StatIcon name={tile.icon} size={24} />
