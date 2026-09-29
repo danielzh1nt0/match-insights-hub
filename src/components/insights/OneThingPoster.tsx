@@ -44,15 +44,25 @@ export function OneThingPoster({
       className="relative overflow-hidden rounded-[18px] border border-wire bg-surface p-5 md:p-6"
       aria-labelledby="insights-verdict"
     >
-      <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-team-a via-cream to-team-b opacity-70" aria-hidden="true" />
+      <span
+        className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-team-a via-cream to-team-b opacity-70"
+        aria-hidden="true"
+      />
 
       <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(200px,280px)] md:gap-8">
         <div className="min-w-0">
           <p className="text-[11.5px] font-bold text-text-faint">{kicker}</p>
-          <h1 id="insights-verdict" className="display-i mt-3 max-w-[16ch] text-[clamp(30px,6.4vw,52px)] uppercase leading-[0.95] text-cream">
+          <h1
+            id="insights-verdict"
+            className="display-i mt-3 max-w-[16ch] text-[clamp(30px,6.4vw,52px)] uppercase leading-[0.95] text-cream"
+          >
             {headline}
           </h1>
-          {body && <p className="mt-4 max-w-[52ch] text-[13.5px] leading-relaxed text-text-dim md:text-[14.5px]">{body}</p>}
+          {body && (
+            <p className="mt-4 max-w-[52ch] text-[13.5px] leading-relaxed text-text-dim md:text-[14.5px]">
+              {body}
+            </p>
+          )}
 
           <div className="mt-5 flex flex-wrap gap-2.5">
             <Link
@@ -78,7 +88,12 @@ export function OneThingPoster({
           <dl className="w-full self-start justify-self-end overflow-hidden rounded-[14px] bg-surface-2">
             {figures.map((f, i) => (
               <div key={f.label} className={cn("px-5 py-4", i > 0 && "border-t border-wire-2")}>
-                <dd className={cn("display-i text-[30px] leading-none", f.tone === "bad" ? "text-reaction-bad" : "text-cream")}>
+                <dd
+                  className={cn(
+                    "display-i text-[30px] leading-none",
+                    f.tone === "bad" ? "text-reaction-bad" : "text-cream",
+                  )}
+                >
                   {f.value}
                 </dd>
                 <dt className="mt-1 text-[12px] text-text-dim">{f.label}</dt>
@@ -102,7 +117,12 @@ function Momentum({ values }: { values: number[] }) {
   if (values.length === 0) return <span />;
   const step = 100 / values.length;
   return (
-    <svg viewBox="0 0 100 34" className="h-[34px] w-full md:w-[320px]" role="img" aria-label="Momentum through the match">
+    <svg
+      viewBox="0 0 100 34"
+      className="h-[34px] w-full md:w-[320px]"
+      role="img"
+      aria-label="Momentum through the match"
+    >
       <line x1="0" y1="17" x2="100" y2="17" stroke="var(--wire)" strokeWidth=".4" />
       {values.map((v, i) => {
         const h = Math.max(Math.abs(v) * 15, 0.6);

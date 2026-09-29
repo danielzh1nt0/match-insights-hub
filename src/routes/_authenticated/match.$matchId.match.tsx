@@ -5,8 +5,14 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useFrameChunks } from "@/hooks/use-frame-chunks";
 import { ballVerdict } from "@/lib/ball-verdict";
-import { MatchCanvas, LAYERS, PRESETS, presetLayers, type LayerKey, type PresetKey } from "@/components/ip/match-canvas";
-import { Card, Segmented } from "@/components/ip/primitives";
+import {
+  MatchCanvas,
+  LAYERS,
+  PRESETS,
+  presetLayers,
+  type LayerKey,
+  type PresetKey,
+} from "@/components/ip/match-canvas";
 import { EventFixSheet } from "@/components/ip/event-review";
 import {
   DEFAULT_EVENT_FILTER,
@@ -14,12 +20,14 @@ import {
   eventMatchesFilter,
   type EventFilterValue,
 } from "@/components/ip/event-filter";
+import { ControlBar } from "@/components/match/ControlBar";
 import { EventRow } from "@/components/match/EventRow";
-import { MatchNumbers, type MatchNumberTile } from "@/components/match/MatchNumbers";
+import { MatchSide, FeedHeading, type SideTab } from "@/components/match/MatchSide";
 import { MomentumStrip } from "@/components/match/MomentumStrip";
 import { PlaybackBar } from "@/components/match/PlaybackBar";
 import type { StatIconName } from "@/components/match/StatIcon";
 import { useAnalysis } from "@/hooks/use-match";
+import { buildClips } from "@/lib/clips";
 import { formatClock } from "@/lib/sample-data";
 import { countEvents, downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
 import { feedLabel, videoSrc, type Frame } from "@/lib/match-source";
@@ -65,7 +73,9 @@ function readLayers(): Record<LayerKey, boolean> {
   if (typeof window === "undefined") return DEFAULT_LAYERS;
   try {
     const raw = window.localStorage.getItem(LAYER_STORE);
-    return raw ? { ...DEFAULT_LAYERS, ...(JSON.parse(raw) as Record<LayerKey, boolean>) } : DEFAULT_LAYERS;
+    return raw
+      ? { ...DEFAULT_LAYERS, ...(JSON.parse(raw) as Record<LayerKey, boolean>) }
+      : DEFAULT_LAYERS;
   } catch {
     return DEFAULT_LAYERS;
   }
@@ -78,19 +88,33 @@ const PHASE_WORD: Record<string, string> = {
 };
 
 const EVENT_ICONS: Record<string, StatIconName> = {
-  goal: "goal", shot: "shot", shot_blocked: "attempt", turnover_won: "turnover-won",
-  turnover_lost: "turnover-lost", high_turnover: "high-turnover", set_piece: "free-kick",
-  pass_bad: "pass", pass_risky: "pass", better_option: "better-option", sequence_end: "sequence",
+  goal: "goal",
+  shot: "shot",
+  shot_blocked: "attempt",
+  turnover_won: "turnover-won",
+  turnover_lost: "turnover-lost",
+  high_turnover: "high-turnover",
+  set_piece: "free-kick",
+  pass_bad: "pass",
+  pass_risky: "pass",
+  better_option: "better-option",
+  sequence_end: "sequence",
 };
 
-function eventMetric(events: ReviewedEvent[], team: "A" | "B", test: (event: ReviewedEvent) => boolean) {
+function eventMetric(
+  events: ReviewedEvent[],
+  team: "A" | "B",
+  test: (event: ReviewedEvent) => boolean,
+) {
   const count = countEvents(events, (event) => event.team === team && test(event));
   return count.confirmed > 0 ? count.confirmed : count.detected;
 }
 
 function kindIs(event: ReviewedEvent, kind: string) {
   const payload = event.payload ?? {};
-  return String(payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "").toLowerCase().includes(kind);
+  return String(payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "")
+    .toLowerCase()
+    .includes(kind);
 }
 
 function MatchScreen() {
@@ -98,24 +122,15 @@ function MatchScreen() {
   const { t: startT } = Route.useSearch();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const {
-    match,
-    row,
-    label,
-    file,
-    stats,
-    team,
-    colours,
-    loading,
-    events,
-    hiddenEvents,
-    review,
-  } = useAnalysis(matchId, scope);
+  const { match, row, label, file, stats, team, colours, loading, events, hiddenEvents, review } =
+    useAnalysis(matchId, scope);
   const [typesOverride, setTypesOverride] = useState<string[] | null>(null);
   const [focusIndex, setFocusIndex] = useState(0);
   const [showHidden, setShowHidden] = useState(false);
   const [fixing, setFixing] = useState<ReviewedEvent | null>(null);
   const [mode, setMode] = useState<Mode>("video");
+  const [speed, setSpeed] = useState(1);
+  const [sideTab, setSideTab] = useState<SideTab>("feed");
   const [filter, setFilter] = useState<EventFilterValue>(DEFAULT_EVENT_FILTER);
   const [clock, setClock] = useState<number>(startT ?? 0);
   const liveFile = useFrameChunks(row?.files, file, clock);
@@ -169,53 +184,80 @@ function MatchScreen() {
   });
 
   const total = row?.duration_s ?? match?.durationS ?? 1;
-  const teamAStats = teamRow(stats, "A");
-  const teamBStats = teamRow(stats, "B");
   const verdict = ballVerdict(row?.summary);
-  const reliableBall = verdict.possession;
-  const layerAllowed = (needs: null | "possession" | "events") => (needs === null ? true : needs === "possession" ? verdict.possession : verdict.events);
+  const layerAllowed = (needs: null | "possession" | "events") =>
+    needs === null ? true : needs === "possession" ? verdict.possession : verdict.events;
   const shownLayers = Object.fromEntries(
     LAYERS.map((l) => [l.key, layers[l.key] && layerAllowed(l.needs)]),
   ) as Record<LayerKey, boolean>;
-  const tiles = useMemo<MatchNumberTile[]>(() => [
-    { icon: "goal", label: "Goals", valueA: eventMetric(events, "A", (e) => e.type === "goal"), valueB: eventMetric(events, "B", (e) => e.type === "goal") },
-    { icon: "shot", label: "Shots", valueA: eventMetric(events, "A", (e) => e.type === "shot"), valueB: eventMetric(events, "B", (e) => e.type === "shot") },
-    { icon: "corner", label: "Corners", valueA: eventMetric(events, "A", (e) => e.type === "set_piece" && kindIs(e, "corner")), valueB: eventMetric(events, "B", (e) => e.type === "set_piece" && kindIs(e, "corner")) },
-    { icon: "free-kick", label: "Free kicks", valueA: eventMetric(events, "A", (e) => e.type === "set_piece" && kindIs(e, "free")), valueB: eventMetric(events, "B", (e) => e.type === "set_piece" && kindIs(e, "free")) },
-    { icon: "attempt", label: "Attempts", valueA: eventMetric(events, "A", (e) => e.type === "shot" || e.type === "shot_blocked"), valueB: eventMetric(events, "B", (e) => e.type === "shot" || e.type === "shot_blocked") },
-    { icon: "possession", label: "Possession", valueA: Math.round(teamAStats?.possession_pct ?? 0), valueB: Math.round(teamBStats?.possession_pct ?? 0), unit: "%", unreliable: !reliableBall },
-  ], [events, teamAStats?.possession_pct, teamBStats?.possession_pct, reliableBall]);
+  const clips = useMemo(() => buildClips(events, team ?? "A"), [events, team]);
   const momentumWindows = useMemo(() => {
     const frames = file?.frames ?? [];
     const windows: { t: number; tiltA: number }[] = [];
     for (let start = 0; start < total; start += 15) {
-      const sample = frames.filter((candidate) => candidate.t >= start && candidate.t < start + 15 && candidate.possession);
+      const sample = frames.filter(
+        (candidate) => candidate.t >= start && candidate.t < start + 15 && candidate.possession,
+      );
       if (sample.length === 0) continue;
-      windows.push({ t: start, tiltA: sample.filter((candidate) => candidate.possession === "A").length / sample.length });
+      windows.push({
+        t: start,
+        tiltA: sample.filter((candidate) => candidate.possession === "A").length / sample.length,
+      });
     }
     return windows;
   }, [file?.frames, total]);
-  const momentumEvents = useMemo<{ t: number; type: "goal" | "turnover"; team: "A" | "B" }[]>(() => {
+  const momentumEvents = useMemo<
+    { t: number; type: "goal" | "turnover"; team: "A" | "B" }[]
+  >(() => {
     const markers: { t: number; type: "goal" | "turnover"; team: "A" | "B" }[] = [];
     for (const event of events) {
       if (!event.team) continue;
       if (event.type === "goal") markers.push({ t: event.t, type: "goal", team: event.team });
-      else if (["turnover_lost", "turnover_won", "high_turnover"].includes(event.type)) markers.push({ t: event.t, type: "turnover", team: event.team });
+      else if (["turnover_lost", "turnover_won", "high_turnover"].includes(event.type))
+        markers.push({ t: event.t, type: "turnover", team: event.team });
     }
     return markers;
   }, [events]);
-  const playbackMarkers = useMemo(() => (team ? events.filter((event) => event.team === team) : events).flatMap((event) => event.team ? [{ t: event.t, team: event.team, kind: event.type === "goal" ? "goal" as const : "event" as const }] : []), [events, team]);
+  const playbackMarkers = useMemo(
+    () =>
+      (team ? events.filter((event) => event.team === team) : events).flatMap((event) =>
+        event.team
+          ? [
+              {
+                t: event.t,
+                team: event.team,
+                kind: event.type === "goal" ? ("goal" as const) : ("event" as const),
+              },
+            ]
+          : [],
+      ),
+    [events, team],
+  );
   const screenVars = { "--team-a": colours.A, "--team-b": colours.B } as CSSProperties;
-  const identities: Record<"A" | "B", TeamIdentity> | null = match ? {
-    A: { name: match.teamA, shortCode: shortTeamCode(match.teamA), kitColour: colours.A, ...(crestForTeam(match.teamA) ? { crestUrl: crestForTeam(match.teamA) } : {}) },
-    B: { name: match.teamB, shortCode: shortTeamCode(match.teamB), kitColour: colours.B, ...(crestForTeam(match.teamB) ? { crestUrl: crestForTeam(match.teamB) } : {}) },
-  } : null;
-  const seek = useCallback((time: number) => {
-    const next = Math.max(0, Math.min(total, time));
-    setClock(next);
-    if (videoRef.current) videoRef.current.currentTime = next;
-  }, [total]);
-
+  const identities: Record<"A" | "B", TeamIdentity> | null = match
+    ? {
+        A: {
+          name: match.teamA,
+          shortCode: shortTeamCode(match.teamA),
+          kitColour: colours.A,
+          ...(crestForTeam(match.teamA) ? { crestUrl: crestForTeam(match.teamA) } : {}),
+        },
+        B: {
+          name: match.teamB,
+          shortCode: shortTeamCode(match.teamB),
+          kitColour: colours.B,
+          ...(crestForTeam(match.teamB) ? { crestUrl: crestForTeam(match.teamB) } : {}),
+        },
+      }
+    : null;
+  const seek = useCallback(
+    (time: number) => {
+      const next = Math.max(0, Math.min(total, time));
+      setClock(next);
+      if (videoRef.current) videoRef.current.currentTime = next;
+    },
+    [total],
+  );
 
   // The video clock is the only source of visibility: read it every frame.
   useEffect(() => {
@@ -260,9 +302,12 @@ function MatchScreen() {
       void document.exitFullscreen();
       return;
     }
-    void node.requestFullscreen?.().then(() => {
-      void window.screen.orientation?.lock?.("landscape").catch(() => undefined);
-    }).catch(() => undefined);
+    void node
+      .requestFullscreen?.()
+      .then(() => {
+        void window.screen.orientation?.lock?.("landscape").catch(() => undefined);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -280,12 +325,63 @@ function MatchScreen() {
     return filtered.slice().reverse();
   }, [events, visibleCount, typesOverride, filter, team]);
 
-  // Desktop keyboard: C confirms, X deletes, arrows move through the feed.
+  const ticks = useMemo(
+    () => (team ? events.filter((e) => e.team === team) : events),
+    [events, team],
+  );
+
+  /** The feed, split at the half so the coach can see which half they are in. */
+  const halves = useMemo(() => {
+    const mid = total / 2;
+    const first = shown.filter((e) => e.t < mid);
+    const second = shown.filter((e) => e.t >= mid);
+    return [
+      ...(first.length ? [{ label: "1st half", rows: first }] : []),
+      ...(second.length ? [{ label: "2nd half", rows: second }] : []),
+    ];
+  }, [shown, total]);
+
+  /** Step to the moment before or after the playhead. */
+  const jumpEvent = useCallback(
+    (direction: -1 | 1) => {
+      if (ticks.length === 0) return;
+      const next =
+        direction === 1
+          ? ticks.find((e) => e.t > clock + 0.25)
+          : [...ticks].reverse().find((e) => e.t < clock - 0.25);
+      if (next) seek(next.t);
+    },
+    [ticks, clock, seek],
+  );
+
+  const cycleSpeed = useCallback(() => {
+    const rates = [1, 1.5, 2, 0.5];
+    const next = rates[(rates.indexOf(speed) + 1) % rates.length] ?? 1;
+    setSpeed(next);
+    if (videoRef.current) videoRef.current.playbackRate = next;
+  }, [speed]);
+
+  // Desktop keyboard, as the hint under the player promises.
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => {
       const target = ev.target as HTMLElement | null;
       if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return;
       const key = ev.key.toLowerCase();
+      if (key === " " || key === "spacebar") {
+        ev.preventDefault();
+        togglePlay();
+        return;
+      }
+      if (key === "arrowleft" || key === "arrowright") {
+        ev.preventDefault();
+        seek(clock + (key === "arrowright" ? 5 : -5));
+        return;
+      }
+      if (key === "n" || key === "p") {
+        ev.preventDefault();
+        jumpEvent(key === "n" ? 1 : -1);
+        return;
+      }
       if (key === "arrowdown" || key === "arrowup") {
         ev.preventDefault();
         setFocusIndex((i) => {
@@ -306,9 +402,7 @@ function MatchScreen() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shown, focusIndex, review.setVerdict]);
-
-  const ticks = useMemo(() => (team ? events.filter((e) => e.team === team) : events), [events, team]);
+  }, [shown, focusIndex, review.setVerdict, togglePlay, seek, clock, jumpEvent]);
 
   const possessionTeam = frame?.possession;
   const possessionName =
@@ -329,11 +423,11 @@ function MatchScreen() {
       setPeriod={setPeriod}
     >
       {staleSchema && (
-        <Card className="border-quality-risky/60">
+        <div className="rounded-[14px] border border-quality-risky/60 bg-surface p-5">
           <p className="text-[12.5px] text-text-dim">
             This match was processed with an older pipeline — re-run it. We're showing what we can.
           </p>
-        </Card>
+        </div>
       )}
 
       {loading && (
@@ -347,16 +441,18 @@ function MatchScreen() {
       )}
 
       {match && (
-        <div style={screenVars}>
-          <Card className="p-3">
-            <div className="flex flex-col bg-surface">
+        <div
+          style={screenVars}
+          className="grid gap-3.5 min-[1060px]:grid-cols-[minmax(0,1fr)_380px] min-[1060px]:items-start"
+        >
+          <div className="min-w-0">
             <div
               ref={mediaRef}
               className={cn(
-                "relative mx-auto w-full overflow-hidden bg-surface-2",
+                "relative w-full select-none overflow-hidden border border-wire bg-surface-2",
                 fullscreen
-                  ? "h-dvh w-dvw max-w-none rounded-none bg-bg"
-                  : "aspect-[16/10] max-w-[880px] rounded-[14px]",
+                  ? "h-dvh w-dvw max-w-none rounded-none border-0 bg-bg"
+                  : "aspect-[16/9] rounded-[10px]",
               )}
             >
               <video
@@ -372,10 +468,13 @@ function MatchScreen() {
                   mode === "2d" && "invisible",
                 )}
               />
+
               {mode === "2d" ? (
                 <div
                   className="absolute inset-0"
-                  style={{ background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))" }}
+                  style={{
+                    background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))",
+                  }}
                 >
                   <MatchCanvas
                     file={liveFile}
@@ -399,32 +498,45 @@ function MatchScreen() {
                 />
               )}
 
-              <div className="absolute right-3 top-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLayerSheet(true)}
-                  aria-label="Choose layers"
-                  className={cn(
-                    "tap h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md",
-                    fullscreen ? "hidden" : "grid",
-                  )}
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleFullscreen}
-                  aria-label={fullscreen ? "Leave fullscreen" : "Fullscreen"}
-                  className="tap grid h-8 w-8 place-items-center rounded-full bg-[rgba(0,0,0,0.5)] text-cream backdrop-blur-md"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={fullscreen ? "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" : "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"}/></svg>
-                </button>
+              {/* Clock and score, top left, as in the prototype. */}
+              <div className="pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1.5">
+                <span className="display num rounded-[6px] bg-black/55 px-2 py-0.5 text-[16px] font-bold text-white">
+                  {formatClock(clock)}
+                </span>
+                {match.status === "ready" && (
+                  <span className="display-i rounded-[6px] bg-black/55 px-2 py-0.5 text-[16px] font-extrabold text-white">
+                    {match.scoreA}–{match.scoreB}
+                  </span>
+                )}
+              </div>
+
+              {/* Who has it, as a banner over the picture rather than a bar under it. */}
+              <div
+                className="pointer-events-none absolute bottom-2.5 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-black/70 py-1.5 pl-2 pr-3 text-[12px] font-semibold text-white md:bottom-auto md:top-3"
+                role="status"
+                aria-live="polite"
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{
+                    background:
+                      possessionTeam === "A"
+                        ? colours.A
+                        : possessionTeam === "B"
+                          ? colours.B
+                          : "var(--text-faint)",
+                  }}
+                  aria-hidden="true"
+                />
+                {possessionLine}
               </div>
 
               {mode === "both" && (
                 <div
-                  className="absolute bottom-3 right-3 w-[38%] overflow-hidden rounded-[10px] border border-wire"
-                  style={{ background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))" }}
+                  className="absolute bottom-2.5 right-2.5 w-[34%] overflow-hidden rounded-[10px] border border-wire"
+                  style={{
+                    background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))",
+                  }}
                 >
                   <div className="relative aspect-[16/10] w-full">
                     <MatchCanvas
@@ -440,143 +552,216 @@ function MatchScreen() {
               )}
             </div>
 
-            <div
-              className="flex min-h-11 w-full items-center border-l-4 border-wire bg-cream px-4 py-2 text-[#111315]"
-              style={{
-                borderLeftColor:
-                  possessionTeam === "A"
-                    ? colours.A
-                    : possessionTeam === "B"
-                      ? colours.B
-                      : "var(--wire)",
-              }}
-              role="status"
-              aria-live="polite"
-            >
-              <span className="display text-[16px] font-bold uppercase">{possessionLine}</span>
-            </div>
+            <ControlBar
+              playing={playing}
+              onPlayPause={togglePlay}
+              onStep={(seconds) => seek(clock + seconds)}
+              onEvent={jumpEvent}
+              speed={speed}
+              onSpeed={cycleSpeed}
+              mode={mode}
+              onMode={setMode}
+              onOverlays={() => setLayerSheet(true)}
+              onFullscreen={toggleFullscreen}
+              hasEvents={ticks.length > 0}
+            />
 
-            <div className="mt-3">
-              <Segmented
-                ariaLabel="View mode"
-                value={mode}
-                onChange={setMode}
-                options={[
-                  { value: "video", label: "Video" },
-                  { value: "2d", label: "2D" },
-                  { value: "both", label: "Both" },
-                ]}
+            <div className="mt-3 overflow-hidden rounded-[10px] border border-wire bg-surface">
+              <PlaybackBar
+                playing={playing}
+                currentTime={clock}
+                duration={total}
+                markers={playbackMarkers}
+                onPlayPause={togglePlay}
+                onSeek={seek}
+                onFullscreen={toggleFullscreen}
+              />
+              <MomentumStrip
+                windows={momentumWindows}
+                events={momentumEvents}
+                durationSeconds={total}
+                currentTime={clock}
+                onSeek={seek}
               />
             </div>
 
-            </div>
-          </Card>
-
-          <PlaybackBar playing={playing} currentTime={clock} duration={total} markers={playbackMarkers} onPlayPause={togglePlay} onSeek={seek} onFullscreen={toggleFullscreen} />
-          <MomentumStrip windows={momentumWindows} events={momentumEvents} durationSeconds={total} currentTime={clock} onSeek={seek} />
-          <MatchNumbers tiles={tiles} onTileTap={(label) => {
-            const tile = tiles.find((candidate) => candidate.label === label);
-            if (!tile) return;
-            const types = label === "Goals" ? ["goal"] : label === "Shots" ? ["shot"] : label === "Corners" || label === "Free kicks" ? ["set_piece"] : label === "Attempts" ? ["shot", "shot_blocked"] : [];
-            setTypesOverride(types.length ? types : null);
-          }} />
-
-          <div className="flex items-center gap-3 py-1" role="separator" aria-label="Every event">
-            <span className="h-px flex-1 bg-wire" />
-            <h2 className="display text-[14px] uppercase text-text-dim">Every event</h2>
-            <span className="h-px flex-1 bg-wire" />
-          </div>
-
-          <EventFilter
-            value={filter}
-            onChange={(next) => {
-              setTypesOverride(null);
-              setFilter(next);
-            }}
-            events={events}
-            teamNames={{ A: match.teamA, B: match.teamB }}
-          />
-
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11.5px] font-medium text-text-faint">
-              <strong className="font-semibold text-text">{events.length} events</strong>
-              <span className="mx-1.5">·</span>
-              Tap a moment to confirm
+            <p className="mt-3 hidden text-[11px] leading-[1.7] text-text-faint md:block">
+              Shortcuts: <Key>Space</Key> play/pause <Key>←</Key>
+              <Key>→</Key> 5 s <Key>N</Key>
+              <Key>P</Key> next/previous moment <Key>C</Key> confirm <Key>X</Key> hide
             </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  review.confirmMany.mutate(
-                    shown.filter((e) => e.status !== "confirmed").map((e) => e.id),
-                  )
-                }
-                disabled={shown.every((e) => e.status === "confirmed")}
-                className="tap rounded-[10px] border border-cream/60 px-3 text-[11.5px] font-semibold text-cream hover:bg-cream/10 disabled:opacity-40"
-              >
-                Confirm all visible
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadReviews(matchId, review.rows)}
-                disabled={review.rows.length === 0}
-                className="tap rounded-[10px] border border-wire px-3 text-[11.5px] text-text-dim hover:border-cream/50 hover:text-cream disabled:opacity-40"
-              >
-                Export reviews
-              </button>
-            </div>
           </div>
 
-          <div style={{ padding: "8px 16px 0" }}>
-            <ul>
-              {shown.map((e, i) => (
-                <li key={e.id}>
-                   {identities && <EventRow time={formatClock(e.t)} icon={EVENT_ICONS[e.type] ?? "sequence"} iconTint={e.type.includes("won") ? "good" : e.type.includes("lost") || e.type === "pass_bad" ? "bad" : "default"} team={e.team === "B" ? "B" : "A"} identity={identities[e.team === "B" ? "B" : "A"]} title={feedLabel(e.type)} subtitle={`${e.status === "confirmed" ? "confirmed" : "detected"}${e.corrected ? " · fixed" : ""} · ${e.subtitle || e.title}`} state={e.status === "confirmed" ? "confirmed" : "untouched"} focused={i === focusIndex} onPlay={() => { setFocusIndex(i); seek(e.t); }} onConfirm={() => e.status === "confirmed" ? setFixing(e) : review.setVerdict.mutate({ eventId: e.id, verdict: "confirmed" })} onHide={() => review.setVerdict.mutate({ eventId: e.id, verdict: "deleted" })} />}
-                </li>
-              ))}
-              {shown.length === 0 && (
-                <li className="px-3.5 py-6 text-center text-[12.5px] text-text-faint">
-                  {visibleCount === 0
-                    ? "Press play — moments appear as the match reaches them."
-                    : "Nothing of that kind yet."}
-                </li>
-              )}
-            </ul>
+          <MatchSide tab={sideTab} onTab={setSideTab} clipCount={clips.length}>
+            {sideTab === "feed" ? (
+              <>
+                <EventFilter
+                  value={filter}
+                  onChange={(next) => {
+                    setTypesOverride(null);
+                    setFilter(next);
+                  }}
+                  events={events}
+                  teamNames={{ A: match.teamA, B: match.teamB }}
+                />
 
-            {hiddenEvents.length > 0 && (
-              <div className="border-t border-wire px-3.5 py-2.5">
-                <button
-                  type="button"
-                  onClick={() => setShowHidden((v) => !v)}
-                  aria-expanded={showHidden}
-                  className="tap text-[11.5px] uppercase tracking-[0.08em] text-text-faint hover:text-cream"
-                >
-                  Hidden ({hiddenEvents.length})
-                </button>
-                {showHidden && (
-                  <ul className="mt-2 flex flex-col gap-1">
-                    {hiddenEvents.map((e) => (
-                      <li key={e.id} className="flex items-center gap-2 text-[12px]">
-                        <span className="num w-11 shrink-0 text-text-faint line-through">
-                          {formatClock(e.t)}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-text-faint line-through">
-                          {feedLabel(e.type)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => review.clear.mutate([e.id])}
-                          className="tap shrink-0 rounded-[14px] border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
-                        >
-                          Put back
-                        </button>
-                      </li>
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11.5px] font-medium text-text-faint">
+                    <strong className="font-semibold text-text">{shown.length}</strong> shown · tap
+                    a moment to confirm
+                  </p>
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        review.confirmMany.mutate(
+                          shown.filter((e) => e.status !== "confirmed").map((e) => e.id),
+                        )
+                      }
+                      disabled={shown.every((e) => e.status === "confirmed")}
+                      className="tap rounded-[10px] border border-cream/60 px-2.5 text-[11.5px] font-semibold text-cream hover:bg-cream/10 disabled:opacity-40"
+                    >
+                      Confirm all
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadReviews(matchId, review.rows)}
+                      disabled={review.rows.length === 0}
+                      className="tap rounded-[10px] border border-wire px-2.5 text-[11.5px] text-text-dim hover:border-cream/50 hover:text-cream disabled:opacity-40"
+                    >
+                      Export
+                    </button>
+                  </div>
+                </div>
+
+                {halves.map((half) => (
+                  <div key={half.label}>
+                    <FeedHeading label={half.label} trailing={half.rows.length} />
+                    {half.rows.map((e) => (
+                      <div key={e.id}>
+                        {identities && (
+                          <EventRow
+                            time={formatClock(e.t)}
+                            icon={EVENT_ICONS[e.type] ?? "sequence"}
+                            iconTint={
+                              e.type.includes("won")
+                                ? "good"
+                                : e.type.includes("lost") || e.type === "pass_bad"
+                                  ? "bad"
+                                  : "default"
+                            }
+                            team={e.team === "B" ? "B" : "A"}
+                            identity={identities[e.team === "B" ? "B" : "A"]}
+                            title={feedLabel(e.type)}
+                            subtitle={`${e.status === "confirmed" ? "confirmed" : "detected"}${e.corrected ? " · fixed" : ""} · ${e.subtitle || e.title}`}
+                            state={e.status === "confirmed" ? "confirmed" : "untouched"}
+                            focused={shown.indexOf(e) === focusIndex}
+                            onPlay={() => {
+                              setFocusIndex(shown.indexOf(e));
+                              seek(e.t);
+                            }}
+                            onConfirm={() =>
+                              e.status === "confirmed"
+                                ? setFixing(e)
+                                : review.setVerdict.mutate({ eventId: e.id, verdict: "confirmed" })
+                            }
+                            onHide={() =>
+                              review.setVerdict.mutate({ eventId: e.id, verdict: "deleted" })
+                            }
+                          />
+                        )}
+                      </div>
                     ))}
-                  </ul>
+                  </div>
+                ))}
+
+                {shown.length === 0 && (
+                  <p className="px-3.5 py-6 text-center text-[12.5px] text-text-faint">
+                    {visibleCount === 0
+                      ? "Press play — moments appear as the match reaches them."
+                      : "Nothing of that kind yet."}
+                  </p>
                 )}
-              </div>
+
+                {hiddenEvents.length > 0 && (
+                  <div className="mt-2 border-t border-wire py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowHidden((v) => !v)}
+                      aria-expanded={showHidden}
+                      className="tap text-[11.5px] uppercase tracking-[0.08em] text-text-faint hover:text-cream"
+                    >
+                      Hidden ({hiddenEvents.length})
+                    </button>
+                    {showHidden && (
+                      <ul className="mt-2 flex flex-col gap-1">
+                        {hiddenEvents.map((e) => (
+                          <li key={e.id} className="flex items-center gap-2 text-[12px]">
+                            <span className="num w-11 shrink-0 text-text-faint line-through">
+                              {formatClock(e.t)}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-text-faint line-through">
+                              {feedLabel(e.type)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => review.clear.mutate([e.id])}
+                              className="tap shrink-0 rounded-[10px] border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
+                            >
+                              Put back
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="mb-2.5 text-[12px] text-text-dim">
+                  Every clip is a moment in the match file, at the time the file gives it. Nothing
+                  is made up.
+                </p>
+                {clips.length === 0 ? (
+                  <p className="rounded-[10px] border border-wire px-3.5 py-6 text-center text-[12.5px] text-text-faint">
+                    No moment in this match is worth a clip yet.
+                  </p>
+                ) : (
+                  clips.map((clip) => (
+                    <button
+                      key={clip.id}
+                      type="button"
+                      onClick={() => seek(clip.t)}
+                      className="mb-1.5 flex w-full items-center gap-2.5 rounded-[10px] border border-wire px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+                    >
+                      <span className="display num shrink-0 text-[15px] text-text-dim">
+                        {formatClock(clip.t)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[12.5px] font-semibold text-text">
+                          {clip.title}
+                        </span>
+                        <span className="block truncate text-[11px] text-text-faint">
+                          {clip.reason}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "shrink-0 rounded-full px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.06em]",
+                          clip.confirmed
+                            ? "bg-reaction-good/15 text-reaction-good"
+                            : "border border-wire text-text-faint",
+                        )}
+                      >
+                        {clip.confirmed ? "Confirmed" : "Detected"}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </>
             )}
-          </div>
+          </MatchSide>
 
           {fixing && (
             <EventFixSheet
@@ -594,15 +779,17 @@ function MatchScreen() {
             <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(0,0,0,0.6)] p-0 md:items-center md:p-6">
               <button
                 type="button"
-                aria-label="Close layers"
+                aria-label="Close overlays"
                 onClick={() => setLayerSheet(false)}
                 className="absolute inset-0"
               />
-              <div className="relative w-full max-w-[420px] rounded-t-[16px] border border-wire bg-surface p-5 md:rounded-[18px]">
-                <h2 className="display text-[17px] uppercase text-cream">Layers</h2>
+              <div className="relative w-full max-w-[420px] rounded-t-[18px] border border-wire bg-surface p-5 md:rounded-[18px]">
+                <h2 className="display text-[17px] uppercase text-cream">Overlays</h2>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {PRESETS.map((p) => {
-                    const active = (Object.keys(layers) as LayerKey[]).every((k) => layers[k] === presetLayers(p.key)[k]);
+                    const active = (Object.keys(layers) as LayerKey[]).every(
+                      (k) => layers[k] === presetLayers(p.key)[k],
+                    );
                     return (
                       <button
                         key={p.key}
@@ -611,7 +798,9 @@ function MatchScreen() {
                         aria-pressed={active}
                         className={cn(
                           "tap h-10 rounded-[10px] border text-[13px] font-semibold",
-                          active ? "border-cream bg-cream text-[#111315]" : "border-wire text-text hover:bg-surface-2",
+                          active
+                            ? "border-cream bg-cream text-ink"
+                            : "border-wire text-text hover:bg-surface-2",
                         )}
                       >
                         {p.label}
@@ -619,7 +808,9 @@ function MatchScreen() {
                     );
                   })}
                 </div>
-                <p className="mt-4 text-[11px] uppercase tracking-wide text-text-dim">Custom · up to 3 besides players</p>
+                <p className="mt-4 text-[11px] uppercase tracking-wide text-text-dim">
+                  Custom · up to 3 besides players
+                </p>
                 <ul className="mt-2 flex flex-col gap-1">
                   {LAYERS.map((l) => (
                     <li key={l.key}>
@@ -636,7 +827,11 @@ function MatchScreen() {
                       >
                         <span>
                           {l.label}
-                          {!layerAllowed(l.needs) && <span className="ml-2 text-[11px] text-text-dim">needs reliable ball</span>}
+                          {!layerAllowed(l.needs) && (
+                            <span className="ml-2 text-[11px] text-text-dim">
+                              needs reliable ball
+                            </span>
+                          )}
                         </span>
                         <span
                           className={cn(
@@ -655,5 +850,13 @@ function MatchScreen() {
         </div>
       )}
     </MatchShell>
+  );
+}
+
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="rounded-[4px] border border-b-2 border-wire px-1.5 text-[10.5px] text-text-dim">
+      {children}
+    </kbd>
   );
 }

@@ -16,9 +16,14 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
   const [openId, setOpenId] = useState<string | null>(findings[0]?.id ?? null);
 
   return (
-    <section aria-labelledby="all-findings" className="rounded-[14px] border border-wire bg-surface">
+    <section
+      aria-labelledby="all-findings"
+      className="rounded-[14px] border border-wire bg-surface"
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pb-2 pt-4">
-        <h2 id="all-findings" className="display text-[20px] text-text">All findings</h2>
+        <h2 id="all-findings" className="display text-[20px] text-text">
+          All findings
+        </h2>
         <span className="text-[11.5px] text-text-faint">
           {findings.length === 0
             ? "Nothing crossed a threshold"
@@ -28,8 +33,8 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
 
       {findings.length === 0 ? (
         <p className="border-t border-wire-2 px-5 py-5 text-[13px] leading-relaxed text-text-dim">
-          Every target you set was met in this match. Nothing here is hidden — the analysis simply found
-          nothing that crossed one of your thresholds.
+          Every target you set was met in this match. Nothing here is hidden — the analysis simply
+          found nothing that crossed one of your thresholds.
         </p>
       ) : (
         <div className="border-t border-wire-2">
@@ -39,7 +44,13 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
             return (
               <div key={finding.id}>
                 <FindingRow
-                  icon={index === 0 ? <AlertTriangle size={16} className="text-reaction-bad" /> : <Target size={15} className="text-text-faint" />}
+                  icon={
+                    index === 0 ? (
+                      <AlertTriangle size={16} className="text-reaction-bad" />
+                    ) : (
+                      <Target size={15} className="text-text-faint" />
+                    )
+                  }
                   headline={finding.headline}
                   result={index === 0 ? "critical" : "off"}
                   expanded={open}
@@ -47,12 +58,22 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
                 />
                 {open && (
                   <div className="border-b border-wire-2 px-5 pb-5">
-                    <p className="max-w-[70ch] text-[13px] leading-relaxed text-text-dim">{finding.interpretation}</p>
+                    <p className="max-w-[70ch] text-[13px] leading-relaxed text-text-dim">
+                      {finding.interpretation}
+                    </p>
                     <div className="mt-4 flex flex-wrap items-end gap-6">
                       <Figure label="Today" value={`${finding.value}${unit}`} tone="bad" />
                       <Figure label="Target" value={`${finding.target}${unit}`} />
-                      <Figure label={finding.events === 1 ? "Moment" : "Moments"} value={`${finding.events}`} />
-                      {finding.basis && <Figure label="Basis" value={finding.basis === "confirmed" ? "Confirmed" : "Detected"} />}
+                      <Figure
+                        label={finding.events === 1 ? "Moment" : "Moments"}
+                        value={`${finding.events}`}
+                      />
+                      {finding.basis && (
+                        <Figure
+                          label="Basis"
+                          value={finding.basis === "confirmed" ? "Confirmed" : "Detected"}
+                        />
+                      )}
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2.5">
                       <Link
@@ -88,8 +109,16 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
 function Figure({ label, value, tone }: { label: string; value: string; tone?: "bad" }) {
   return (
     <div>
-      <div className="text-[10px] font-bold uppercase tracking-[0.06em] text-text-faint">{label}</div>
-      <div className={tone === "bad" ? "display-i text-[24px] leading-none text-reaction-bad" : "display-i text-[24px] leading-none text-cream"}>
+      <div className="text-[10px] font-bold uppercase tracking-[0.06em] text-text-faint">
+        {label}
+      </div>
+      <div
+        className={
+          tone === "bad"
+            ? "display-i text-[24px] leading-none text-reaction-bad"
+            : "display-i text-[24px] leading-none text-cream"
+        }
+      >
         {value}
       </div>
     </div>

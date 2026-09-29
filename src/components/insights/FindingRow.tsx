@@ -4,12 +4,26 @@ import { cn } from "@/lib/utils";
 
 type Result = "on" | "off" | "critical";
 
-type Props = { icon: ReactNode; headline: string; result: Result; expanded: boolean; onToggle: () => void };
+type Props = {
+  icon: ReactNode;
+  headline: string;
+  result: Result;
+  expanded: boolean;
+  onToggle: () => void;
+};
 
 const RESULT = {
   on: { label: "On track", icon: Check, classes: "bg-cream text-ink" },
-  off: { label: "Off target", icon: AlertCircle, classes: "border border-reaction-warn/50 bg-reaction-warn/15 text-reaction-warn" },
-  critical: { label: "Critical", icon: X, classes: "border border-wire bg-surface-3 text-text-faint" },
+  off: {
+    label: "Off target",
+    icon: AlertCircle,
+    classes: "border border-reaction-warn/50 bg-reaction-warn/15 text-reaction-warn",
+  },
+  critical: {
+    label: "Critical",
+    icon: X,
+    classes: "border border-wire bg-surface-3 text-text-faint",
+  },
 } as const;
 
 export function FindingRow({ icon, headline, result, expanded, onToggle }: Props) {
@@ -25,16 +39,26 @@ export function FindingRow({ icon, headline, result, expanded, onToggle }: Props
         !expanded && "border-b border-wire-2",
       )}
     >
-      <span className="grid h-10 w-10 place-items-center rounded-full border-[1.5px] border-wire bg-surface">{icon}</span>
+      <span className="grid h-10 w-10 place-items-center rounded-full border-[1.5px] border-wire bg-surface">
+        {icon}
+      </span>
       <span className="text-[13.5px] font-semibold leading-snug text-text">{headline}</span>
-      <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[5px] text-[11px] font-bold", classes)}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[5px] text-[11px] font-bold",
+          classes,
+        )}
+      >
         <ResultIcon size={11} strokeWidth={2.4} aria-hidden="true" />
         {label}
       </span>
       <ChevronDown
         size={12}
         aria-hidden="true"
-        className={cn("text-text-faint transition-transform duration-200", expanded && "rotate-180")}
+        className={cn(
+          "text-text-faint transition-transform duration-200",
+          expanded && "rotate-180",
+        )}
       />
     </button>
   );

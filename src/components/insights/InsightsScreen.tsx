@@ -27,7 +27,15 @@ function shown(value: number | null, suffix = "") {
  * evidence. The four-phase cards that used to sit here came from a different
  * design and have been replaced.
  */
-export function InsightsScreen({ matchId, match, findings, events, stats, team, thresholds }: {
+export function InsightsScreen({
+  matchId,
+  match,
+  findings,
+  events,
+  stats,
+  team,
+  thresholds,
+}: {
   matchId: string;
   match: LibraryMatch;
   findings: Finding[];
@@ -37,7 +45,12 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
   team: TeamKey | null;
   thresholds: Thresholds;
   iconColour: string;
-  onReview: (input: { eventId: string; verdict: "confirmed" | "deleted" | "retimed"; tCorrected?: number | null; teamCorrected?: string | null }) => void;
+  onReview: (input: {
+    eventId: string;
+    verdict: "confirmed" | "deleted" | "retimed";
+    tCorrected?: number | null;
+    teamCorrected?: string | null;
+  }) => void;
 }) {
   const navigate = useNavigate();
   const duration = Math.max(match.durationS, 1);
@@ -53,9 +66,13 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
   const pressPct = numeric(row, "pressed_within_2s_pct");
 
   const moments = useMemo(() => events.filter((event) => event.status !== "deleted"), [events]);
-  const lossEvents = moments.filter((event) => event.team === ownTeam && event.type === "turnover_lost");
+  const lossEvents = moments.filter(
+    (event) => event.team === ownTeam && event.type === "turnover_lost",
+  );
   const shots = moments.filter((event) => event.team === ownTeam && event.type === "shot").length;
-  const otherShots = moments.filter((event) => event.team === otherTeam && event.type === "shot").length;
+  const otherShots = moments.filter(
+    (event) => event.team === otherTeam && event.type === "shot",
+  ).length;
   const setPieces = moments.filter((event) => event.type === "set_piece").length;
   const confirmed = moments.filter((event) => event.status === "confirmed").length;
 
@@ -77,11 +94,19 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
   const playerTalks = useMemo(() => {
     const unique = new Map<string, { shirtNumber: number; team: "A" | "B"; descriptor: string }>();
     for (const event of moments) {
-      const raw = event.payload?.["shirt"] ?? event.payload?.["shirt_number"] ?? event.payload?.["player_shirt"];
+      const raw =
+        event.payload?.["shirt"] ??
+        event.payload?.["shirt_number"] ??
+        event.payload?.["player_shirt"];
       const shirtNumber = typeof raw === "number" ? raw : Number(raw);
       if (!Number.isFinite(shirtNumber) || !event.team) continue;
       const key = `${event.team}-${shirtNumber}`;
-      if (!unique.has(key)) unique.set(key, { shirtNumber, team: event.team, descriptor: event.type === "turnover_lost" ? "nearest loss" : "review moment" });
+      if (!unique.has(key))
+        unique.set(key, {
+          shirtNumber,
+          team: event.team,
+          descriptor: event.type === "turnover_lost" ? "nearest loss" : "review moment",
+        });
       if (unique.size === 3) break;
     }
     return [...unique.values()];
@@ -96,7 +121,8 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
     {
       label: "Possession",
       // A possession share needs enough tracked ball to mean anything.
-      value: possession === null ? null : `${shown(possession, "%")}–${shown(otherPossession, "%")}`,
+      value:
+        possession === null ? null : `${shown(possession, "%")}–${shown(otherPossession, "%")}`,
       withheldNote: `The ball was not tracked well enough. ${confirmed} of ${moments.length} moments confirmed.`,
     },
     {
@@ -111,7 +137,9 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
       label: "Block, back to front",
       value: blockLength === null ? null : `${shown(blockLength)} m`,
       sub: `Your ceiling is ${thresholds.blockCeilingM} m`,
-      ...(blockLength !== null && blockLength > thresholds.blockCeilingM ? { tone: "warn" as const } : {}),
+      ...(blockLength !== null && blockLength > thresholds.blockCeilingM
+        ? { tone: "warn" as const }
+        : {}),
       withheldNote: "Shape is not tracked for this match.",
     },
   ];
@@ -134,8 +162,13 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
       <FindingsList findings={findings} matchId={matchId} />
 
       {playerTalks.length > 0 && (
-        <section className="rounded-[14px] border border-wire bg-surface p-5" aria-labelledby="players-to-talk-to">
-          <h2 id="players-to-talk-to" className="display text-[20px] text-text">Players to talk to</h2>
+        <section
+          className="rounded-[14px] border border-wire bg-surface p-5"
+          aria-labelledby="players-to-talk-to"
+        >
+          <h2 id="players-to-talk-to" className="display text-[20px] text-text">
+            Players to talk to
+          </h2>
           <p className="mt-1 text-[11.5px] text-text-faint">
             Shirt numbers from the tracking file. Match them to your own team sheet.
           </p>
@@ -150,7 +183,11 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
       <span className="sr-only">
         {match.teamA} versus {match.teamB}. {findings.length} coaching findings.
       </span>
-      <button type="button" className="sr-only" onClick={() => void navigate({ to: "/match/$matchId/stats", params: { matchId } })}>
+      <button
+        type="button"
+        className="sr-only"
+        onClick={() => void navigate({ to: "/match/$matchId/stats", params: { matchId } })}
+      >
         Open all match stats
       </button>
     </div>
