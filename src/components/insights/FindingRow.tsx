@@ -1,24 +1,41 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from "react";
+import { AlertCircle, Check, ChevronDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type Result = 'on' | 'off' | 'critical';
+type Result = "on" | "off" | "critical";
 
 type Props = { icon: ReactNode; headline: string; result: Result; expanded: boolean; onToggle: () => void };
 
+const RESULT = {
+  on: { label: "On track", icon: Check, classes: "bg-cream text-ink" },
+  off: { label: "Off target", icon: AlertCircle, classes: "border border-reaction-warn/50 bg-reaction-warn/15 text-reaction-warn" },
+  critical: { label: "Critical", icon: X, classes: "border border-wire bg-surface-3 text-text-faint" },
+} as const;
+
 export function FindingRow({ icon, headline, result, expanded, onToggle }: Props) {
-  const pillStyle: CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, whiteSpace: 'nowrap' };
-  const resultLabel = result === 'on' ? 'On track' : result === 'off' ? 'Off target' : 'Critical';
-  const resultIcon = result === 'on' ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M20 6L9 17l-5-5" /></svg> : result === 'off' ? <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M12 9v4M12 17h.01" /><circle cx="12" cy="12" r="9" /></svg> : <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M6 6l12 12M18 6L6 18" /></svg>;
-  const pillStyles: Record<Result, CSSProperties> = {
-    on: { background: 'var(--cream)', color: '#111' },
-    off: { background: 'rgba(186,117,23,0.15)', border: '1px solid rgba(186,117,23,0.5)', color: '#fcd34d' },
-    critical: { background: 'var(--surface-3)', border: '1px solid var(--wire)', color: 'var(--text-faint)' },
-  };
+  const { label, icon: ResultIcon, classes } = RESULT[result];
+
   return (
-    <button type="button" aria-expanded={expanded} onClick={onToggle} style={{ width: '100%', minHeight: '68px', display: 'grid', gridTemplateColumns: '40px minmax(0,1fr) auto auto', gap: '12px', alignItems: 'center', padding: '14px 16px', border: 0, borderBottom: expanded ? 'none' : '1px solid var(--wire-2)', cursor: 'pointer', background: 'transparent', textAlign: 'left' }}>
-      <span style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1.5px solid var(--wire)', display: 'grid', placeItems: 'center', background: 'var(--surface)' }}>{icon}</span>
-      <span style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)', lineHeight: 1.35 }}>{headline}</span>
-      <span style={{ ...pillStyle, ...pillStyles[result] }}>{resultIcon}{resultLabel}</span>
-      <span aria-hidden="true" style={{ color: 'var(--text-faint)', fontSize: '10px', transform: expanded ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 200ms ease-out' }}>▼</span>
+    <button
+      type="button"
+      aria-expanded={expanded}
+      onClick={onToggle}
+      className={cn(
+        "grid min-h-[68px] w-full grid-cols-[40px_minmax(0,1fr)_auto_auto] items-center gap-3 px-4 py-3.5 text-left",
+        !expanded && "border-b border-wire-2",
+      )}
+    >
+      <span className="grid h-10 w-10 place-items-center rounded-full border-[1.5px] border-wire bg-surface">{icon}</span>
+      <span className="text-[13.5px] font-semibold leading-snug text-text">{headline}</span>
+      <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-[5px] text-[11px] font-bold", classes)}>
+        <ResultIcon size={11} strokeWidth={2.4} aria-hidden="true" />
+        {label}
+      </span>
+      <ChevronDown
+        size={12}
+        aria-hidden="true"
+        className={cn("text-text-faint transition-transform duration-200", expanded && "rotate-180")}
+      />
     </button>
   );
 }
