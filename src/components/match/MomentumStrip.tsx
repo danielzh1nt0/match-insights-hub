@@ -1,14 +1,13 @@
-
-import React from 'react';
+import React from "react";
 
 type Window = {
-  t: number;              // seconds from kick-off
-  tiltA: number;         // 0–1, share of possession in A's attacking half
+  t: number; // seconds from kick-off
+  tiltA: number; // 0–1, share of possession in A's attacking half
 };
 
 type Props = {
-  windows: Window[];       // one per 15-second window
-  events: { t: number; type: 'goal' | 'turnover'; team: 'A' | 'B' }[];
+  windows: Window[]; // one per 15-second window
+  events: { t: number; type: "goal" | "turnover"; team: "A" | "B" }[];
   durationSeconds: number;
   currentTime: number;
   onSeek: (t: number) => void;
@@ -16,62 +15,57 @@ type Props = {
 
 export function MomentumStrip({ windows, events, durationSeconds, currentTime, onSeek }: Props) {
   const trackRef = React.useRef<HTMLDivElement>(null);
+  const at = (t: number) => (durationSeconds > 0 ? (t / durationSeconds) * 100 : 0);
 
   const handleTap = (e: React.MouseEvent) => {
     if (!trackRef.current) return;
     const rect = trackRef.current.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    onSeek(Math.max(0, Math.min(durationSeconds, pct * durationSeconds)));
+    const ratio = (e.clientX - rect.left) / rect.width;
+    onSeek(Math.max(0, Math.min(durationSeconds, ratio * durationSeconds)));
   };
 
   return (
-    <div style={{ margin: '12px 16px 0', border: '1px solid var(--wire)', borderRadius: '14px', background: 'var(--surface)', padding: '12px' }}>
-      <div style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-dim)', marginBottom: '8px' }}>
-        Field tilt over time
-      </div>
+    <div className="mx-4 mt-3 rounded-[14px] border border-wire bg-surface p-3">
+      <h2 className="display mb-2 text-[11px] uppercase tracking-[0.08em] text-text-dim">Field tilt over time</h2>
 
       <div
         ref={trackRef}
         onClick={handleTap}
-        style={{ height: '32px', borderRadius: '6px', overflow: 'hidden', display: 'flex', position: 'relative', background: 'var(--wire)', cursor: 'pointer' }}
+        className="relative flex h-8 cursor-pointer overflow-hidden rounded-[6px] bg-wire"
       >
         {windows.map((w, i) => {
           const nextT = windows[i + 1]?.t ?? durationSeconds;
-          const widthPct = ((nextT - w.t) / durationSeconds) * 100;
           return (
-            <div
-              key={i}
-              style={{
-                width: `${widthPct}%`,
-                height: '100%',
-                position: 'relative',
-              }}
-            >
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: `${w.tiltA * 50}%`, background: 'var(--team-a)' }} />
-              <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: `${(1 - w.tiltA) * 50}%`, background: 'var(--team-b)' }} />
+            <div key={`${w.t}-${i}`} className="relative h-full" style={{ width: `${at(nextT - w.t)}%` }}>
+              <div className="absolute inset-x-0 top-0 bg-team-a" style={{ height: `${w.tiltA * 50}%` }} />
+              <div className="absolute inset-x-0 bottom-0 bg-team-b" style={{ height: `${(1 - w.tiltA) * 50}%` }} />
             </div>
           );
         })}
 
-        {events.map((e, i) => {
-          const left = (e.t / durationSeconds) * 100;
-          if (e.type === 'goal') {
-            return (
-              <div
-                key={i}
-                style={{ position: 'absolute', top: '50%', left: `${left}%`, width: '10px', height: '10px', background: 'var(--cream)', border: '1.5px solid #111', borderRadius: '2px', transform: 'translate(-50%, -50%) rotate(45deg)' }}
-              />
-            );
-          }
-          return (
-            <div
-              key={i}
-              style={{ position: 'absolute', top: '4px', bottom: '4px', left: `${left}%`, width: '2px', background: 'rgba(0,0,0,0.5)' }}
+        {events.map((event, i) =>
+          event.type === "goal" ? (
+            <span
+              key={`${event.t}-${i}`}
+              className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 border-[1.5px] border-ink bg-cream"
+              style={{ left: `${at(event.t)}%` }}
+              aria-hidden="true"
             />
-          );
-        })}
+          ) : (
+            <span
+              key={`${event.t}-${i}`}
+              className="absolute inset-y-1 w-0.5 bg-ink/50"
+              style={{ left: `${at(event.t)}%` }}
+              aria-hidden="true"
+            />
+          ),
+        )}
 
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${(currentTime / durationSeconds) * 100}%`, width: '2px', background: 'var(--cream)', pointerEvents: 'none' }} />
+        <span
+          className="pointer-events-none absolute inset-y-0 w-0.5 bg-cream"
+          style={{ left: `${at(currentTime)}%` }}
+          aria-hidden="true"
+        />
       </div>
     </div>
   );

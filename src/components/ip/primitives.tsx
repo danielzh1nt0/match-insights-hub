@@ -135,7 +135,7 @@ export function Chip({
       type="button"
       aria-pressed={active}
       className={cn(
-        "inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[6px] border px-3 text-xs font-semibold transition-colors duration-150 ease-out",
+        "inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] border px-3 text-xs font-semibold transition-colors duration-150 ease-out",
         active
           ? "border-cream bg-cream text-ink"
           : "border-wire text-text-dim hover:border-cream/40 hover:text-text",

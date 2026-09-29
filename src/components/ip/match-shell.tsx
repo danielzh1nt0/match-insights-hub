@@ -106,7 +106,8 @@ export function MatchShell({
               />
             )}
 
-            <div className="mt-4 flex flex-col gap-3 md:mt-5">{children}</div>
+            {/* gap-4 is the prototype's --gap: the rhythm between sections on every match screen. */}
+            <div className="mt-4 flex flex-col gap-4 md:mt-5">{children}</div>
           </>
         ) : (
           <Card className="mt-2">

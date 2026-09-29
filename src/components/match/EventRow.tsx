@@ -1,8 +1,10 @@
+import { Check, Play, X } from "lucide-react";
 import type { StatIconName } from "./StatIcon";
 import { StatIcon } from "./StatIcon";
 import { TeamToken, type TeamIdentity } from "@/components/team/TeamToken";
+import { cn } from "@/lib/utils";
 
-export function EventRow({ time, icon, iconTint = "default", team, identity, title, subtitle, state, focused, onPlay, onConfirm, onHide }: {
+export function EventRow({ time, icon, iconTint = "default", identity, title, subtitle, state, focused, onPlay, onConfirm, onHide }: {
   time: string;
   icon: StatIconName;
   iconTint?: "default" | "good" | "warn" | "bad";
@@ -16,13 +18,67 @@ export function EventRow({ time, icon, iconTint = "default", team, identity, tit
   onConfirm: () => void;
   onHide: () => void;
 }) {
-  const tint = iconTint === "good" ? "var(--reaction-good)" : iconTint === "warn" ? "var(--reaction-warn)" : iconTint === "bad" ? "var(--reaction-bad)" : "var(--cream)";
+  const tint =
+    iconTint === "good" ? "var(--reaction-good)"
+    : iconTint === "warn" ? "var(--reaction-warn)"
+    : iconTint === "bad" ? "var(--reaction-bad)"
+    : "var(--cream)";
+
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "44px 32px minmax(0,1fr) auto", gap: "10px", alignItems: "center", padding: "10px 12px", border: "1px solid var(--wire)", borderRadius: "10px", background: state === "confirmed" || focused ? "var(--surface-2)" : "none", borderLeft: state === "confirmed" ? "3px solid var(--reaction-good)" : "1px solid var(--wire)", marginBottom: "8px", opacity: state === "hidden" ? 0.4 : 1 }}>
-      <button type="button" onClick={onPlay} aria-label={`Play at ${time}`} style={{ minWidth: "44px", minHeight: "44px", background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", color: "var(--text-dim)", fontFamily: "Barlow Condensed, sans-serif", fontSize: "15px", fontWeight: 700 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="var(--cream)" aria-hidden="true"><polygon points="8,5 19,12 8,19" /></svg>{time}</button>
-      <div style={{ width: "28px", height: "28px", borderRadius: "8px", display: "grid", placeItems: "center", background: "var(--surface)", border: "1px solid var(--wire)" }}><StatIcon name={icon} size={14} color={tint} /></div>
-       <div style={{ minWidth: 0 }}><div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: "7px", flexWrap: "wrap" }}><TeamToken identity={identity} size="sm" state="compare" />{title}</div>{subtitle && <div style={{ fontSize: "11px", color: "var(--text-faint)", marginTop: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subtitle}</div>}</div>
-      <div style={{ display: "flex", gap: "4px" }}><button type="button" onClick={onConfirm} aria-label="Confirm" aria-pressed={state === "confirmed"} style={{ width: "44px", height: "44px", borderRadius: "6px", border: state === "confirmed" ? "none" : "1px solid var(--wire)", background: state === "confirmed" ? "var(--reaction-good)" : "none", color: state === "confirmed" ? "#fff" : "var(--text-faint)", cursor: "pointer", fontSize: "12px" }}>✓</button><button type="button" onClick={onHide} aria-label="Hide" style={{ width: "44px", height: "44px", borderRadius: "6px", border: "1px solid var(--wire)", background: "none", color: "var(--text-faint)", cursor: "pointer", fontSize: "12px" }}>×</button></div>
+    <div
+      className={cn(
+        "mb-2 grid grid-cols-[44px_32px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-[10px] border border-wire px-3 py-2.5",
+        state === "confirmed" || focused ? "bg-surface-2" : "bg-transparent",
+        state === "confirmed" && "border-l-[3px] border-l-reaction-good",
+        state === "hidden" && "opacity-40",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onPlay}
+        aria-label={`Play at ${time}`}
+        className="display num flex min-h-11 min-w-11 items-center gap-1.5 text-[15px] text-text-dim transition-colors hover:text-cream"
+      >
+        <Play size={10} className="fill-cream text-cream" aria-hidden="true" />
+        {time}
+      </button>
+
+      <div className="grid h-7 w-7 place-items-center rounded-[10px] border border-wire bg-surface">
+        <StatIcon name={icon} size={14} color={tint} />
+      </div>
+
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-[7px] text-[12.5px] font-semibold text-text">
+          <TeamToken identity={identity} size="sm" state="compare" />
+          {title}
+        </div>
+        {subtitle && <div className="mt-[3px] truncate text-[11px] text-text-faint">{subtitle}</div>}
+      </div>
+
+      <div className="flex gap-1">
+        <button
+          type="button"
+          onClick={onConfirm}
+          aria-label="Confirm"
+          aria-pressed={state === "confirmed"}
+          className={cn(
+            "grid h-11 w-11 place-items-center rounded-[10px] transition-colors",
+            state === "confirmed"
+              ? "bg-reaction-good text-white"
+              : "border border-wire text-text-faint hover:text-cream",
+          )}
+        >
+          <Check size={14} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={onHide}
+          aria-label="Hide"
+          className="grid h-11 w-11 place-items-center rounded-[10px] border border-wire text-text-faint transition-colors hover:text-cream"
+        >
+          <X size={14} aria-hidden="true" />
+        </button>
+      </div>
     </div>
   );
 }
