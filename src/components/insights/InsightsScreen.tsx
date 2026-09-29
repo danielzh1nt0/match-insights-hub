@@ -3,6 +3,7 @@ import { useMemo, useState, type ReactElement } from "react";
 import { ArrowRight } from "lucide-react";
 import { Button, StatTiles } from "@/components/ip/primitives";
 import { MomentSection, type Clip } from "@/components/insights/MomentSection";
+import { OneThingPoster } from "@/components/insights/OneThingPoster";
 import { CounterPressStrip } from "@/components/visuals/CounterPressStrip";
 import { BlockArt, PressureArt } from "@/components/visuals/PitchArt";
 import { PhaseSpine, type Phase } from "@/components/visuals/PhaseSpine";
@@ -131,30 +132,37 @@ export function InsightsScreen({ matchId, match, findings, events, stats, team, 
 
   const setPieceCount = moments.filter((event) => event.type === "set_piece").length;
 
+  /** One bar per slice of the match: our tracked moments against theirs. */
+  const momentum = useMemo(() => {
+    const SLICES = 30;
+    return Array.from({ length: SLICES }, (_, i) => {
+      const from = (duration / SLICES) * i;
+      const to = (duration / SLICES) * (i + 1);
+      const inSlice = moments.filter((event) => event.t >= from && event.t < to);
+      if (inSlice.length === 0) return 0;
+      const ours = inSlice.filter((event) => event.team === ownTeam).length;
+      return (ours * 2) / inSlice.length - 1;
+    });
+  }, [moments, duration, ownTeam]);
+
+  const scoreLine = `${match.teamA} ${match.scoreA}\u2013${match.scoreB} ${match.teamB}`;
+
   return <div className="insights-four-phases -mx-4 -mt-4 pb-4 md:-mx-0 md:mt-0 md:pb-0">
-    <div className="grid items-start md:grid-cols-2 md:gap-8 md:px-0 md:py-1">
+    <div className="px-4 pt-4 md:px-0 md:pt-0">
+      <OneThingPoster
+        kicker={`${model.top ? "The one thing" : "This match"} · ${scoreLine}`}
+        headline={headline}
+        body={sub}
+        finding={model.top}
+        matchId={matchId}
+        momentum={momentum}
+        momentumLine={`${shown(possession, "%")} possession · ${shotCount} ${shotCount === 1 ? "shot" : "shots"} · ${lossEvents.length} balls lost`}
+        chaptersLine={`${model.phases.filter((phase) => phase.findings.length > 0).length} of 4 moments need work`}
+      />
+    </div>
+
+    <div className="mt-4 grid items-start md:mt-6 md:grid-cols-2 md:gap-8 md:px-0 md:py-1">
       <div className="md:sticky md:top-32">
-
-        {/* 1. The one thing. Whatever the findings say is worst, in the coach's words. */}
-        <section className="px-5 pb-1 pt-5 md:px-0 md:pb-2 md:pt-0" aria-labelledby="insights-verdict">
-          <span className="display text-[10px] uppercase tracking-[.08em] text-text-faint">
-            {model.top ? "Fix this first" : "This match"}
-          </span>
-          <h1 id="insights-verdict" className="display-i mt-1.5 max-w-[580px] text-[30px] leading-[1.1] text-cream md:text-[36px]">{headline}</h1>
-          {sub && <p className="mt-2 max-w-[560px] text-[12.5px] leading-normal text-text-dim md:text-[13.5px]">{sub}</p>}
-        </section>
-
-        {/* 2. The numbers behind it. */}
-        <section className="mt-3.5 px-4 md:mt-5 md:px-0" aria-label="Match numbers">
-          <StatTiles
-            className="md:grid-cols-3"
-            tiles={[
-              { label: "Possession", value: shown(possession, "%") },
-              { label: "Shots", value: `${shotCount}` },
-              { label: "Balls lost", value: `${lossEvents.length}` },
-            ]}
-          />
-        </section>
 
         {model.top && (
           <Button type="button" variant="ghost" onClick={() => openPhase(model.phases[0]!.key)} className="mx-4 mt-4 flex h-auto min-h-11 w-[calc(100%-32px)] justify-start gap-2.5 rounded-[14px] border border-reaction-bad/40 bg-priority px-4 py-3 text-left hover:bg-priority md:mx-0 md:mt-6 md:w-full">

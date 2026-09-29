@@ -100,8 +100,10 @@
   --text-faint: #7f8896;
   --cream: #ede6d6;
   --cream-dim: #b9b3a5;
-  --team-a: #ef4444;
-  --team-b: #22c55e;
+  /* Build B's pair. Red against green is the only thing separating the teams in
+     a scoreline, and it disappears for red-green colourblind viewers. */
+  --team-a: #5b8cff;
+  --team-b: #d99a2b;
   --quality-good: #34d399;
   --quality-risky: #f59e0b;
   --quality-bad: #ef4444;
@@ -137,8 +139,8 @@
   --text-dim: #a29b8a;
   --text-faint: #6b6656;
   --cream: #ede6d6;
-  --team-a: #ef4444;
-  --team-b: #22c55e;
+  --team-a: #5b8cff;
+  --team-b: #d99a2b;
   --reaction-good: #1d9e75;
   --reaction-warn: #ba7517;
   --reaction-bad: #e24b4a;
