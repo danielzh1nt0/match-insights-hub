@@ -9,6 +9,7 @@ import type { RecapAnalysis } from "@/lib/recap-analysis";
 import { crestForTeam } from "@/lib/team-crests";
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
 import { cn } from "@/lib/utils";
+import { PositionsArt, PressureArt, type Loss } from "@/components/visuals/PitchArt";
 
 type Chapter = "score" | "strength" | "player" | "improve" | "verdict";
 type Action = { label: string; kind: "primary" | "secondary"; run: () => void; icon?: "play" | "share" | "session" };
@@ -32,11 +33,16 @@ export function MatchStory({
   match,
   recap,
   shape,
+  losses = [],
+  pressTarget = null,
 }: {
   matchId: string;
   match: LibraryMatch;
   recap: RecapAnalysis;
-  shape?: StoryShape | null;
+  shape?: StoryShape | null | undefined;
+  /** Possession losses that carry real coordinates. */
+  losses?: Loss[] | undefined;
+  pressTarget?: number | null | undefined;
 }) {
   const navigate = useNavigate();
   const slides = useMemo(
@@ -171,7 +177,7 @@ export function MatchStory({
         </header>
         <AnimatePresence mode="wait">
           <motion.section key={slide.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18, ease: "easeOut" }} className="relative z-20 flex min-h-0 flex-1 flex-col">
-            <ChapterContent chapter={slide.id} match={match} recap={recap} shape={shape ?? null} />
+            <ChapterContent chapter={slide.id} match={match} recap={recap} shape={shape ?? null} losses={losses} pressTarget={pressTarget} />
             <div className="relative z-30 mt-auto flex gap-2 pt-4">
               {actions.map((action) => <StoryButton key={action.label} action={action} />)}
             </div>
@@ -184,12 +190,12 @@ export function MatchStory({
   );
 }
 
-function ChapterContent({ chapter, match, recap, shape }: { chapter: Chapter; match: LibraryMatch; recap: RecapAnalysis; shape: StoryShape | null }) {
+function ChapterContent({ chapter, match, recap, shape, losses, pressTarget }: { chapter: Chapter; match: LibraryMatch; recap: RecapAnalysis; shape: StoryShape | null; losses: Loss[]; pressTarget: number | null }) {
   if (chapter === "score") return <ScoreChapter match={match} recap={recap} />;
   if (chapter === "strength") return <StrengthChapter recap={recap} />;
   if (chapter === "player") return <PlayerChapter recap={recap} />;
   if (chapter === "improve") return <ImproveChapter recap={recap} shape={shape} />;
-  return <VerdictChapter recap={recap} />;
+  return <VerdictChapter recap={recap} losses={losses} pressTarget={pressTarget} />;
 }
 
 function Kicker({ children, tone = "paper" }: { children: ReactNode; tone?: "paper" | "own" }) {
@@ -285,21 +291,36 @@ function ImproveChapter({ recap, shape }: { recap: RecapAnalysis; shape: StorySh
           <p className="mt-3 text-[12px] leading-relaxed text-story-paper/75 sm:text-[15px]">{finding?.interpretation ?? `${recap.ownName} met every configured target in this match.`}</p>
           {finding && <div className="mt-3 flex items-center gap-3 text-[10px] font-black uppercase"><span className="bg-story-paper px-2 py-1 text-story-ink">Target {finding.target}{finding.unit === "%" ? "%" : ` ${finding.unit}`}</span><span>{finding.events} real moments</span></div>}
         </div>
-        <TacticalMoment shape={shape} colour={recap.ownColour} moment={recap.firstMoment} />
+        <PositionsArt
+          dots={shape?.dots ?? []}
+          carrier={shape?.carrier ?? null}
+          target={shape?.target ?? null}
+          caption={recap.firstMoment == null ? "Actual frame" : `${formatClock(recap.firstMoment)} · actual frame`}
+          note="Real tracked positions at the first moment behind this finding."
+        />
       </div>
     </div>
   );
 }
 
-function VerdictChapter({ recap }: { recap: RecapAnalysis }) {
+function VerdictChapter({ recap, losses, pressTarget }: { recap: RecapAnalysis; losses: Loss[]; pressTarget: number | null }) {
+  const quick = losses.filter((loss) => loss.timeToPress !== null && loss.timeToPress <= 2).length;
   return (
     <div className="flex flex-1 flex-col justify-center pb-3">
       <Kicker tone="own">The coach’s page</Kicker>
-      <h1 className="display-i mt-4 text-[48px] leading-[0.86] sm:text-[70px]">Keep it.<br />Fix it.<br /><span className="text-story-own">Train it.</span></h1>
-      <div className="mt-6 grid gap-2 sm:grid-cols-3">
-        <VerdictItem icon={<Check size={16} />} label="Keep" value={recap.strength.headline} />
-        <VerdictItem icon={<RotateCcw size={16} />} label="Improve" value={recap.improvement?.headline ?? "Maintain every target"} />
-        <VerdictItem icon={<Target size={16} />} label="Next session" value={recap.improvement ? `Train the ${recap.improvement.events} moments behind the finding` : "Reinforce the strongest match habit"} />
+      <h1 className="display-i mt-3 text-[40px] leading-[0.86] sm:text-[62px]">Keep it.<br />Fix it.<br /><span className="text-story-own">Train it.</span></h1>
+      <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_.8fr] sm:items-center">
+        <div className="grid gap-2">
+          <VerdictItem icon={<Check size={16} />} label="Keep" value={recap.strength.headline} />
+          <VerdictItem icon={<RotateCcw size={16} />} label="Improve" value={recap.improvement?.headline ?? "Maintain every target"} />
+          <VerdictItem icon={<Target size={16} />} label="Next session" value={recap.improvement ? `Train the ${recap.improvement.events} moments behind the finding` : "Reinforce the strongest match habit"} />
+        </div>
+        <PressureArt
+          losses={losses}
+          caption="Where we lost it"
+          note={losses.length ? `${quick} of ${losses.length} losses got pressure inside two seconds${pressTarget === null ? "" : ` · target ${pressTarget}%`}` : "No losses in this match carry coordinates."}
+          className="hidden sm:block"
+        />
       </div>
       <p className="mt-5 max-w-[560px] border-t border-story-paper/20 pt-4 text-[11px] leading-relaxed text-story-paper/60">Built only from this match: {recap.eventCount} team events, the tracking frames, player rows and your saved targets.</p>
     </div>

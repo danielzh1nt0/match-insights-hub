@@ -86,7 +86,8 @@
   --wire-2: #1e232a;
   --text: #e7eaee;
   --text-dim: #8b94a3;
-  --text-faint: #5b6472;
+  /* #5b6472 was 3.24:1 on --bg and failed WCAG AA for body text. 5.43:1. */
+  --text-faint: #7f8896;
   --cream: #ede6d6;
   --cream-dim: #b9b3a5;
   --team-a: #ef4444;
