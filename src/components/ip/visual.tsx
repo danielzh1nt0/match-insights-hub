@@ -45,7 +45,7 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-ink/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-[rgba(8,9,11,0.7)] backdrop-blur-sm"
       />
       <motion.div
         role="dialog"

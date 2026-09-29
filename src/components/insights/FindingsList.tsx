@@ -84,7 +84,7 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
                       >
                         Train it <ArrowRight size={14} aria-hidden="true" />
                       </Link>
-                      {finding.timestamps[0] !== undefined && (
+                      {finding.timestamps?.[0] !== undefined && (
                         <Link
                           to="/match/$matchId/match"
                           params={{ matchId }}

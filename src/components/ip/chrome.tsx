@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { ArrowLeft, ChartNoAxesColumn, Film, Library, Map, Settings, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "./theme-toggle";
 import { Wordmark, Segmented } from "./primitives";
 import { AccountMenu } from "./account-menu";
 
@@ -10,7 +11,7 @@ import { AccountMenu } from "./account-menu";
 export function AppHeader({ backTo, onBack }: { backTo?: string; onBack?: () => void }) {
   return (
     <header className="sticky top-0 z-40 border-b border-wire-2 bg-bg/95 backdrop-blur">
-      <div className="mx-auto grid min-h-16 max-w-[1440px] grid-cols-[44px_1fr_44px] items-center px-4 md:px-7">
+      <div className="mx-auto grid min-h-16 max-w-[1440px] grid-cols-[44px_1fr_auto] items-center px-4 md:px-7">
       <div className="flex items-center">
         {backTo ? (
           <Link
@@ -41,7 +42,8 @@ export function AppHeader({ backTo, onBack }: { backTo?: string; onBack?: () => 
           <Library size={15} /> Match library
         </Link>
       </div>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-end gap-1">
+        <ThemeToggle />
         <AccountMenu />
       </div>
       </div>

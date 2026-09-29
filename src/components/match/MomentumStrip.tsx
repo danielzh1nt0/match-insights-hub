@@ -54,7 +54,7 @@ export function MomentumStrip({ windows, events, durationSeconds, currentTime, o
           ) : (
             <span
               key={`${event.t}-${i}`}
-              className="absolute inset-y-1 w-0.5 bg-ink/50"
+              className="absolute inset-y-1 w-0.5 bg-[rgba(8,9,11,0.5)]"
               style={{ left: `${at(event.t)}%` }}
               aria-hidden="true"
             />

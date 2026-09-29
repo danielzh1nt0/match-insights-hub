@@ -59,18 +59,19 @@ export function PhaseNumbers({
               )}
             </span>
             <span className="flex shrink-0 flex-col items-end gap-1">
-              <span
-                className={cn(
-                  "display-i text-[22px] leading-none",
-                  number.value === null
-                    ? "text-text-faint"
-                    : number.status === "off"
-                      ? "text-reaction-bad"
-                      : "text-cream",
-                )}
-              >
-                {number.value ?? "Not tracked"}
-              </span>
+              {number.value === null ? (
+                // A missing number should read as an absence, not shout like a figure.
+                <span className="text-[12px] text-text-faint">Not tracked</span>
+              ) : (
+                <span
+                  className={cn(
+                    "display-i text-[22px] leading-none",
+                    number.status === "off" ? "text-reaction-bad" : "text-cream",
+                  )}
+                >
+                  {number.value}
+                </span>
+              )}
               {number.status !== "unknown" && (
                 <span
                   className={cn(

@@ -323,9 +323,15 @@ function VerdictChapter({ recap, losses, pressTarget }: { recap: RecapAnalysis; 
 }
 
 function Crest({ name, src, colour }: { name: string; src?: string; colour: string }) {
+  // A crest that fails to load must not leave a broken-image glyph on a slide
+  // the coach is about to show the squad — fall back to the monogram.
+  const [broken, setBroken] = useState(false);
   return <div className="relative z-10 flex w-[88px] flex-col items-center sm:w-[130px]">
-    <span className="grid h-[76px] w-[76px] place-items-center rounded-full border-[5px] bg-story-paper shadow-story sm:h-[106px] sm:w-[106px]" style={{ borderColor: colour }}>
-      {src ? <img src={src} alt={`${name} crest`} className="h-[86%] w-[86%] object-contain" /> : <span className="display-i text-[24px] text-story-ink">{name.slice(0, 3)}</span>}
+    {/* The disc stays paper in both themes — club crests are drawn for light. */}
+    <span className="grid h-[76px] w-[76px] place-items-center rounded-full border-[5px] bg-[#f4f0e6] shadow-story sm:h-[106px] sm:w-[106px]" style={{ borderColor: colour }}>
+      {src && !broken
+        ? <img src={src} alt={`${name} crest`} onError={() => setBroken(true)} className="h-[86%] w-[86%] object-contain" />
+        : <span className="display-i text-[24px] text-[#111315]">{name.slice(0, 3)}</span>}
     </span>
     <span className="mt-2 max-w-full truncate bg-story-ink px-2 py-1 text-[9px] font-black uppercase" style={{ color: colour }}>{name}</span>
   </div>;

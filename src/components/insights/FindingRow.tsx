@@ -19,10 +19,11 @@ const RESULT = {
     icon: AlertCircle,
     classes: "border border-reaction-warn/50 bg-reaction-warn/15 text-reaction-warn",
   },
+  // The worst finding on the screen should not be the quietest thing on it.
   critical: {
     label: "Critical",
     icon: X,
-    classes: "border border-wire bg-surface-3 text-text-faint",
+    classes: "border border-reaction-bad/50 bg-reaction-bad/15 text-reaction-bad",
   },
 } as const;
 

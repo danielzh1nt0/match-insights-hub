@@ -128,25 +128,66 @@
   color-scheme: dark;
 }
 
-.insights-four-phases {
-  --bg: #0e0f0c;
-  --surface: #151714;
-  --surface-2: #1c1e1a;
-  --surface-3: #24261f;
-  --wire: #2a2d28;
-  --wire-2: #1e201c;
-  --text: #ede6d6;
-  --text-dim: #a29b8a;
-  --text-faint: #6b6656;
-  --cream: #ede6d6;
-  --team-a: #5b8cff;
-  --team-b: #d99a2b;
-  --reaction-good: #1d9e75;
-  --reaction-warn: #ba7517;
-  --reaction-bad: #e24b4a;
-  --graphite: #3a3d38;
-  background: var(--bg);
+/* ===== Light, as the prototype defines it =====
+   Paper and ink, from the story slides. The turf stays dark in both themes —
+   a pitch is green whatever the room is like. --ink is the colour that sits
+   ON cream, so it flips with the theme; scrims use their own literal dark. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f0e6;
+    --surface: #fcfaf5;
+    --surface-2: #efe9dc;
+    --surface-3: #e6dfcf;
+    --wire: #d6cdb9;
+    --wire-2: #e4dccb;
+    --text: #111315;
+    --text-dim: #4f555e;
+    --text-faint: #6b7079;
+    --cream: #111315;
+    --cream-dim: #3a4049;
+    --ink: #f4f0e6;
+    --team-a: #1e40af;
+    --team-b: #a15c07;
+    --quality-good: #0f8a60;
+    --quality-risky: #b26a00;
+    --quality-bad: #c62828;
+    --reaction-good: #0f8a60;
+    --reaction-warn: #b26a00;
+    --reaction-bad: #c62828;
+    --story-ink: #f4f0e6;
+    --story-paper: #08090b;
+    --workspace: #efe9dc;
+    color-scheme: light;
+  }
 }
+
+:root[data-theme="light"] {
+  --bg: #f4f0e6;
+  --surface: #fcfaf5;
+  --surface-2: #efe9dc;
+  --surface-3: #e6dfcf;
+  --wire: #d6cdb9;
+  --wire-2: #e4dccb;
+  --text: #111315;
+  --text-dim: #4f555e;
+  --text-faint: #6b7079;
+  --cream: #111315;
+  --cream-dim: #3a4049;
+  --ink: #f4f0e6;
+  --team-a: #1e40af;
+  --team-b: #a15c07;
+  --quality-good: #0f8a60;
+  --quality-risky: #b26a00;
+  --quality-bad: #c62828;
+  --reaction-good: #0f8a60;
+  --reaction-warn: #b26a00;
+  --reaction-bad: #c62828;
+  --story-ink: #f4f0e6;
+  --story-paper: #08090b;
+  --workspace: #efe9dc;
+  color-scheme: light;
+}
+
 
 .bg-priority {
   background: linear-gradient(90deg, rgba(226, 75, 74, 0.12), rgba(226, 75, 74, 0.03));
@@ -155,18 +196,6 @@
 .shadow-priority {
   box-shadow: 0 0 0 1px rgba(226, 75, 74, 0.35);
 }
-
-.heat-blob-a,
-.heat-blob-b {
-  position: absolute;
-  aspect-ratio: 1;
-  border-radius: 999px;
-  filter: blur(13px);
-  transform: translate(-50%, -50%);
-}
-
-.heat-blob-a { background: var(--team-a); }
-.heat-blob-b { background: var(--team-b); }
 
 @layer base {
   * {
