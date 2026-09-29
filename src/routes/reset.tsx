@@ -27,7 +27,7 @@ function Reset() {
 
   if (sent) {
     return (
-      <AuthShell sub="Reset your password">
+      <AuthShell title="Check your email" sub="If that address has an account, a reset link is on its way.">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <Mail size={30} className="text-cream" aria-hidden="true" />
           <h1 className="display text-[20px] text-text">Check your email</h1>
@@ -60,7 +60,8 @@ function Reset() {
 
   return (
     <AuthShell
-      sub="Reset your password"
+      title="Reset your password"
+      sub="Give us the address you signed up with and we will send a link."
       foot={
         <Link to="/signin" className="text-cream underline-offset-2 hover:underline">
           Back to sign in

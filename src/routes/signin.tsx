@@ -94,7 +94,13 @@ function SignIn() {
 
   return (
     <AuthShell
-      sub="Sign in to your club"
+      title="Welcome back"
+      sub="Open your library and pick up where the analysis left off."
+      note={
+        <>
+          Ipanema only ever shows what your match file supports. Nothing here is estimated.
+        </>
+      }
       foot={
         <>
           No account?{" "}
@@ -104,6 +110,7 @@ function SignIn() {
         </>
       }
     >
+      <h2 className="display-i text-[26px] uppercase leading-none text-cream">Sign in</h2>
       <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label="Email">
           <Input

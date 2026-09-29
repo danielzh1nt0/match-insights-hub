@@ -27,7 +27,7 @@ function ResetPassword() {
 
   if (done) {
     return (
-      <AuthShell sub="Password updated">
+      <AuthShell title="Password updated" sub="You can sign in with your new password now.">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <h1 className="display text-[20px] text-text">You're all set</h1>
           <p className="text-[13px] text-text-dim">Your password has been changed.</p>
@@ -61,7 +61,8 @@ function ResetPassword() {
 
   return (
     <AuthShell
-      sub="Set a new password"
+      title="Choose a new password"
+      sub="Pick something you have not used here before."
       foot={
         <Link to="/signin" className="text-cream underline-offset-2 hover:underline">
           Back to sign in
