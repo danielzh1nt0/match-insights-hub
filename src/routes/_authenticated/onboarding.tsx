@@ -74,7 +74,14 @@ function Onboarding() {
     completeOnboarding();
     clearMatches();
     setSaving(false);
-    navigate({ to: "/library" });
+    // First time through, the five-screen intro; after that, straight to the library.
+    let seen = false;
+    try {
+      seen = window.localStorage.getItem("ipanema-welcome-seen") === "1";
+    } catch {
+      /* private mode — show the intro */
+    }
+    navigate({ to: seen ? "/library" : "/welcome" });
   }
 
   return (
