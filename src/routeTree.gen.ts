@@ -21,6 +21,7 @@ import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
+import { Route as AuthenticatedWelcomeRouteImport } from './routes/_authenticated/welcome'
 import { Route as SignupClubRouteImport } from './routes/signup_.club'
 import { Route as SignupReadyRouteImport } from './routes/signup_.ready'
 import { Route as SignupTeamRouteImport } from './routes/signup_.team'
@@ -94,6 +95,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
 const AuthenticatedProcessingRoute = AuthenticatedProcessingRouteImport.update({
   id: '/processing',
   path: '/processing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWelcomeRoute = AuthenticatedWelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const SignupClubRoute = SignupClubRouteImport.update({
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/welcome': typeof AuthenticatedWelcomeRoute
   '/signup/club': typeof SignupClubRoute
   '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/welcome': typeof AuthenticatedWelcomeRoute
   '/signup/club': typeof SignupClubRoute
   '/signup/ready': typeof SignupReadyRoute
   '/signup/team': typeof SignupTeamRoute
@@ -253,6 +261,7 @@ export interface FileRoutesById {
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/processing': typeof AuthenticatedProcessingRoute
+  '/_authenticated/welcome': typeof AuthenticatedWelcomeRoute
   '/signup_/club': typeof SignupClubRoute
   '/signup_/ready': typeof SignupReadyRoute
   '/signup_/team': typeof SignupTeamRoute
@@ -283,6 +292,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/welcome'
     | '/signup/club'
     | '/signup/ready'
     | '/signup/team'
@@ -311,6 +321,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/welcome'
     | '/signup/club'
     | '/signup/ready'
     | '/signup/team'
@@ -340,6 +351,7 @@ export interface FileRouteTypes {
     | '/_authenticated/new'
     | '/_authenticated/onboarding'
     | '/_authenticated/processing'
+    | '/_authenticated/welcome'
     | '/signup_/club'
     | '/signup_/ready'
     | '/signup_/team'
@@ -458,6 +470,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProcessingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/welcome': {
+      id: '/_authenticated/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof AuthenticatedWelcomeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/signup_/club': {
       id: '/signup_/club'
       path: '/signup/club'
@@ -571,6 +590,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProcessingRoute: typeof AuthenticatedProcessingRoute
+  AuthenticatedWelcomeRoute: typeof AuthenticatedWelcomeRoute
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsClubRoute: typeof AuthenticatedSettingsClubRoute
   AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
@@ -589,6 +609,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProcessingRoute: AuthenticatedProcessingRoute,
+  AuthenticatedWelcomeRoute: AuthenticatedWelcomeRoute,
   AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
   AuthenticatedSettingsClubRoute: AuthenticatedSettingsClubRoute,
   AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,
