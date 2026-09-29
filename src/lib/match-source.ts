@@ -232,6 +232,7 @@ export function toLibraryMatch({ row, label }: MatchListItem): LibraryMatch {
     scoreB: label?.score_b ?? 0,
     ...(label?.colour_a ? { colourA: label.colour_a } : {}),
     ...(label?.colour_b ? { colourB: label.colour_b } : {}),
+    ...(label?.club_team ? { clubTeam: label.club_team } : {}),
     tags: label?.tags ?? [],
     summary: {
       possession: pair(summary["possession_pct"]),

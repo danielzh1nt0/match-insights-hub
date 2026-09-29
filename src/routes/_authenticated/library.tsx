@@ -7,7 +7,8 @@ import { motion } from "motion/react";
 import { Plus, Search, Video } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
 import { Card, Chip, Input, Pill, PrimaryButton } from "@/components/ip/primitives";
-import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
+import { matchTitle, type LibraryMatch } from "@/lib/sample-data";
+import { cn } from "@/lib/utils";
 import { StoryLauncher } from "@/components/ip/story-launcher";
 import { crestForTeam } from "@/lib/team-crests";
 import { matchesDb } from "@/integrations/matches/client";
@@ -132,7 +133,7 @@ function LibraryPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <div className="mt-6 grid items-start gap-4 lg:grid-cols-2">
               {visible.map((m, i) => (
                 <motion.div
                   key={m.id}
@@ -172,84 +173,95 @@ function EmptyState() {
   );
 }
 
-function MatchCard({ match }: { match: LibraryMatch }) {
-  const title = matchTitle(match);
-  const ready = match.status === "ready";
-  const crestA = crestForTeam(match.teamA);
-  const crestB = crestForTeam(match.teamB);
-  const turnovers =
-    match.summary.turnovers[1] === 0
-      ? `${match.summary.turnovers[0]}`
-      : `${match.summary.turnovers[0]} / ${match.summary.turnovers[1]}`;
+/** Win, draw or loss from the coach's own side, when the labels say which side that is. */
+function resultOf(match: LibraryMatch): { key: "W" | "D" | "L"; label: string } | null {
+  if (match.status !== "ready" || !match.clubTeam) return null;
+  const ours = match.clubTeam === "A" ? match.scoreA : match.scoreB;
+  const theirs = match.clubTeam === "A" ? match.scoreB : match.scoreA;
+  if (ours === theirs) return { key: "D", label: "Draw" };
+  return ours > theirs ? { key: "W", label: "Win" } : { key: "L", label: "Loss" };
+}
 
+const resultClasses = {
+  W: "bg-reaction-good/15 text-reaction-good",
+  D: "bg-text-faint/15 text-text-dim",
+  L: "bg-reaction-bad/15 text-reaction-bad",
+} as const;
+
+/**
+ * `ours` hides the name on a phone. The coach's own club is the same on every
+ * row, so it is the name worth losing when the opponent would otherwise
+ * truncate to "BOLLSTA…". The crest still identifies the side.
+ */
+function TeamSide({ name, crest, colour, align, ours }: { name: string; crest: string | undefined; colour: string | undefined; align: "start" | "end"; ours: boolean }) {
   return (
-    <Card className="group overflow-hidden p-0 transition-colors hover:border-cream/30">
-      <div className="tactical-grid relative h-[132px] border-b border-wire bg-workspace">
-        <span className="absolute left-3 top-3">
-          <Pill tone={statusTone[match.status]}>{statusLabel[match.status]}</Pill>
-        </span>
-        <div className="absolute inset-x-0 top-1/2 flex -translate-y-1/2 items-center justify-center gap-6" aria-hidden="true">
-          {crestA ? (
-            <img src={crestA} alt="" className="h-12 w-12 object-contain" />
-          ) : (
-            <span
-              className="h-3 w-3 rounded-full"
-              style={{ background: match.colourA ?? "var(--team-a)" }}
-            />
-          )}
-          {crestB ? (
-            <img src={crestB} alt="" className="h-12 w-12 object-contain" />
-          ) : (
-            <span
-              className="h-3 w-3 rounded-full"
-              style={{ background: match.colourB ?? "var(--team-b)" }}
-            />
-          )}
-        </div>
-        {ready && <span className="display-i absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-8 text-[20px] text-cream">{match.scoreA} : {match.scoreB}</span>}
-        <span className="num absolute bottom-3 right-3 text-[13px] text-cream">
-          {formatClock(match.durationS)}
-        </span>
-      </div>
-      <div className="p-4">
-          <h3 className="display text-[19px] text-text transition-colors group-hover:text-cream">{title}</h3>
-        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-text-faint">
-          <span>{match.date}</span>
-          <span>·</span>
-          <span>{match.competition}</span>
-          <span>·</span>
-          <span className="num">{formatClock(match.durationS)}</span>
-        </p>
-
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <SummaryChip label="Poss." value={`${match.summary.possession[0]} / ${match.summary.possession[1]}`} />
-          <SummaryChip label="Turnovers" value={turnovers} />
-          <SummaryChip label="Shots" value={`${match.summary.shots[0]} / ${match.summary.shots[1]}`} />
-        </div>
-
-        {ready && <StoryLauncher matchId={match.id} className="mt-4" />}
-
-        <div className="mt-3">
-          {ready ? (
-            <Link to="/match/$matchId/insights" params={{ matchId: match.id }}>
-              <PrimaryButton className="h-11 w-full">Open analysis</PrimaryButton>
-            </Link>
-          ) : (
-            <span className="tap flex items-center justify-center rounded-[12px] border border-wire text-[13px] font-semibold text-text-faint">
-              {match.status === "processing" ? "Still being analysed" : "Analysis failed"}
-            </span>
-          )}
-        </div>
-      </div>
-    </Card>
+    <span className={cn("flex min-w-0 items-center gap-2", ours ? "shrink-0 sm:min-w-0 sm:flex-1" : "flex-1", align === "end" && "flex-row-reverse")}>
+      {crest ? (
+        <img src={crest} alt={ours ? name : ""} className="h-8 w-8 shrink-0 object-contain" />
+      ) : (
+        <span className="h-8 w-8 shrink-0 rounded-full border border-wire" style={{ background: colour ?? "var(--surface-3)" }} aria-hidden="true" />
+      )}
+      <span className={cn("display truncate text-[14px] text-text", ours && "hidden sm:inline")}>{name}</span>
+    </span>
   );
 }
 
-function SummaryChip({ label, value }: { label: string; value: string }) {
+function MatchCard({ match }: { match: LibraryMatch }) {
+  const ready = match.status === "ready";
+  const result = resultOf(match);
+  const [poss] = match.summary.possession;
+  const [shots] = match.summary.shots;
+  const [lost] = match.summary.turnovers;
+
+  const line = !ready
+    ? match.status === "processing"
+      ? "Still being analysed. This usually takes about 30 minutes for a half."
+      : "Analysis failed. The video is safely stored."
+    : [
+        poss ? `${poss}% possession` : null,
+        shots ? `${shots} ${shots === 1 ? "shot" : "shots"}` : null,
+        lost ? `${lost} balls lost` : null,
+      ].filter(Boolean).join(" · ") || "Open the analysis to see the findings.";
+
   return (
-    <div className="rounded-[10px] border border-wire bg-surface-2 px-2.5 py-2 text-center">
-      <div className="text-[10px] uppercase tracking-[0.06em] text-text-faint">{label}</div>
-      <div className="num mt-0.5 text-[15px] text-cream">{value}</div>
-    </div>
+    <Card className="group overflow-hidden p-0 transition-colors hover:border-cream/30">
+      <Link
+        to={ready ? "/match/$matchId/insights" : "/library"}
+        params={{ matchId: match.id }}
+        disabled={!ready}
+        aria-label={`${match.teamA} ${match.scoreA} – ${match.scoreB} ${match.teamB}${result ? `, ${result.label}` : ""}`}
+        className={cn("block px-4 pb-3 pt-4", !ready && "pointer-events-none")}
+      >
+        <div className="flex items-center gap-3">
+          <TeamSide name={match.teamA} crest={crestForTeam(match.teamA)} colour={match.colourA} align="start" ours={match.clubTeam === "A"} />
+          {ready ? (
+            <span className="display-i shrink-0 text-[26px] leading-none text-cream">{match.scoreA}–{match.scoreB}</span>
+          ) : (
+            <span className="display shrink-0 text-[11px] uppercase text-text-faint">vs</span>
+          )}
+          <TeamSide name={match.teamB} crest={crestForTeam(match.teamB)} colour={match.colourB} align="end" ours={match.clubTeam === "B"} />
+        </div>
+
+        <div className="mt-3 flex items-center justify-between gap-2 text-[11.5px] text-text-faint">
+          <span className="truncate">{match.date} · {match.competition}</span>
+          {result ? (
+            <span className={cn("shrink-0 rounded-[6px] px-2 py-0.5 text-[10px] font-bold uppercase", resultClasses[result.key])}>{result.label}</span>
+          ) : (
+            <Pill tone={statusTone[match.status]}>{statusLabel[match.status]}</Pill>
+          )}
+        </div>
+
+        <p className="mt-2 text-[12.5px] leading-normal text-text-dim">{line}</p>
+      </Link>
+
+      {ready && (
+        <div className="flex items-center gap-2 border-t border-wire-2 px-4 py-2.5">
+          <StoryLauncher matchId={match.id} size="sm" label="Recap" className="flex-1" />
+          <Link to="/match/$matchId/insights" params={{ matchId: match.id }} className="shrink-0">
+            <PrimaryButton className="h-10 px-4 text-[12.5px]">Open analysis</PrimaryButton>
+          </Link>
+        </div>
+      )}
+    </Card>
   );
 }
