@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { createContext, useContext, useState } from "react";
 import type { Period } from "./chrome";
 import type { ReviewedEvent } from "@/lib/event-reviews";
+import { setPieceKind } from "@/lib/match-analysis";
 import type { LineDefending, PlayerStat, StatsFile, TeamKey, Territory, Thresholds } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
@@ -230,6 +231,61 @@ function CounterPress({ events, team, stats, matchId, teamA, teamB }: Props) {
   </Card>;
 }
 
+/** Where the set pieces were taken from, straight off the event coordinates. */
+function SetPieceMap({ events, team, matchId, colour, file }: Props & { colour: string }) {
+  const pieces = events
+    .filter((event) => event.team === team && event.type === "set_piece")
+    .map((event) => ({ event, kind: setPieceKind(event), point: eventPoint(event, file) }));
+  const placed = pieces.filter((item): item is { event: ReviewedEvent; kind: string; point: Point } => item.point !== null);
+  if (!pieces.length) return <EvidenceUnavailable question="Where did the set pieces come from?" caption="No corner, free kick or throw-in in this match file." />;
+  if (!placed.length) return <EvidenceUnavailable question="Where did the set pieces come from?" caption={`${pieces.length} set pieces detected, none with a pitch position.`} />;
+  return (
+    <Card
+      question="Where did the set pieces come from?"
+      caption="Each mark is one restart, at the position in the match file. Tap to watch it."
+      honesty={`${placed.filter((item) => item.event.status === "confirmed").length} confirmed · ${placed.length} placed of ${pieces.length}`}
+    >
+      <Pitch>
+        {placed.map(({ event, point }) => (
+          <Link key={event.id} to="/match/$matchId/match" params={{ matchId }} search={{ t: event.t }} aria-label={`Watch set piece at ${fmt(event.t)}`}>
+            <circle cx={point.x} cy={point.y / 100 * 64} r="2" fill="none" stroke={colour} strokeWidth=".8" />
+          </Link>
+        ))}
+      </Pitch>
+    </Card>
+  );
+}
+
+/** Corners, free kicks and throw-ins as counts, ours against theirs. */
+function SetPieceCounts({ events, team, teamA, teamB }: Props) {
+  const other: TeamKey = team === "A" ? "B" : "A";
+  const count = (side: TeamKey, kind: string) =>
+    events.filter((event) => event.type === "set_piece" && event.team === side && setPieceKind(event).includes(kind)).length;
+  const rows = [["Corners", "corner"], ["Free kicks", "free"], ["Throw-ins", "throw"]] as const;
+  const any = rows.some(([, kind]) => count(team, kind) + count(other, kind) > 0);
+  if (!any) return null;
+  const mine = team === "A" ? teamA : teamB;
+  const theirs = team === "A" ? teamB : teamA;
+  return (
+    <Card question="How many restarts did each side get?" caption="Counted from the set pieces in this match file." honesty={`${events.filter((event) => event.type === "set_piece").length} set pieces detected`}>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 text-[9px] font-bold uppercase text-text-faint">
+        <span>{mine.shortCode}</span>
+        <span />
+        <span className="text-right">{theirs.shortCode}</span>
+      </div>
+      <div className="mt-1 divide-y divide-wire-2">
+        {rows.map(([label, kind]) => (
+          <div key={kind} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 py-2">
+            <strong className="display-i text-[20px]" style={{ color: mine.kitColour }}>{count(team, kind)}</strong>
+            <span className="text-center text-[12px] text-text-dim">{label}</span>
+            <strong className="display-i text-right text-[20px]" style={{ color: theirs.kitColour }}>{count(other, kind)}</strong>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function Metric({value,label}:{value:string;label:string}) { return <div className="p-2 text-center"><strong className="display-i block text-[24px] text-cream">{value}</strong><span className="text-[9px] uppercase text-text-faint">{label}</span></div>; }
 
 function ShapeMultiples({ territory, colour, identity }: { territory: Territory; colour: string; identity: StatsTeamIdentity }) {
@@ -439,6 +495,7 @@ export function StatsVisuals(props: Props) {
   if(props.tab==="shape"){const line=props.lineDefending;cards=[line&&line.medianM!==null&&line.usualM!==null?<DeepAnswer key="depth" data={line}/>:<EvidenceUnavailable key="depth-empty" question="Did we defend too deep?" caption="Our defensive line compared with its usual height."/>,<ShapeByPhase key="multiples" file={props.file} events={props.events} team={props.team} colour={colour} identity={identity} ballGrade={props.ballGrade ?? null} range={range}/>,line?<ShapeOutcomeTable key="outcome" lineDefending={line}/>:<EvidenceUnavailable key="outcome-empty" question="In which shape did we suffer?" caption="Defensive states compared with opponent outcomes."/>,line&&line.timeline.length?<LineTimeline key="timeline" data={line} matchId={props.matchId}/>:<EvidenceUnavailable key="timeline-empty" question="Where was our line over time?" caption="Defensive line height across the selected period."/>];}
   if(props.tab==="shooting")cards=[<ShotMap key="map" {...p}/>,<ShotSummary key="summary" {...p}/>,<EntriesConceded key="entries" {...p}/>];
   if(props.tab==="players")cards=[<PlayerCards key="players" {...p}/>];
+  if(props.tab==="setpieces")cards=[<SetPieceCounts key="counts" {...p}/>,<SetPieceMap key="map" {...p} colour={colour}/>];
   if(props.tab==="passes")cards=[<LanesTable key="lanes" passes={passes} colour={colour} identity={identity}/>,<BetterOption key="better" {...p} colour={colour}/>,<PassNetwork key="network" passes={passes} colour={colour} identity={identity} opponentPasses={opponentPasses}/>,<PassMap key="map" passes={passes} colour={colour} matchId={props.matchId}/>,<Interceptions key="interceptions" {...p} colour={colour}/>,<PassLog key="log" passes={passes} matchId={props.matchId}/>];
-  const shown=cards.filter(Boolean); return <StatsCardContext.Provider value={{identity,other,both:props.scopeBoth}}><div className="flex flex-col gap-3">{shown.length?shown:<EmptyTab/>}</div></StatsCardContext.Provider>;
+  const shown=cards.filter(Boolean); return <StatsCardContext.Provider value={{identity,other,both:props.scopeBoth}}><div className="grid items-start gap-3 min-[1100px]:grid-cols-2">{shown.length?shown:<EmptyTab/>}</div></StatsCardContext.Provider>;
 }

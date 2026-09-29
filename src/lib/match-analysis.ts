@@ -8,7 +8,13 @@
 
 import type { TeamScope } from "@/components/ip/chrome";
 import type { Finding } from "@/lib/match-data";
-import type { FeedEvent, Frame, FramePlayer, MatchDataFile, MatchLabelRow } from "@/lib/match-source";
+import type {
+  FeedEvent,
+  Frame,
+  FramePlayer,
+  MatchDataFile,
+  MatchLabelRow,
+} from "@/lib/match-source";
 
 export type TeamKey = "A" | "B";
 
@@ -59,7 +65,9 @@ function num(v: unknown, fallback: number) {
  * Kit colours for drawing. These come from the saved match labels, so a club's
  * own colour is used everywhere (heat maps, dots, ticks, bars).
  */
-export function teamColours(label: { colour_a?: string | null; colour_b?: string | null } | null | undefined) {
+export function teamColours(
+  label: { colour_a?: string | null; colour_b?: string | null } | null | undefined,
+) {
   return {
     A: label?.colour_a || "#ef4444",
     B: label?.colour_b || "#22c55e",
@@ -110,7 +118,14 @@ export type Territory = {
   playerCount: number;
   snapshots: {
     t: number;
-    players: { id: string; x: number; y: number; shirt: number; predicted: boolean; isGK: boolean }[];
+    players: {
+      id: string;
+      x: number;
+      y: number;
+      shirt: number;
+      predicted: boolean;
+      isGK: boolean;
+    }[];
     lengthM: number;
     widthM: number;
   }[];
@@ -292,14 +307,19 @@ export function buildLineDefending(
   const row = teamRow(stats, ownTeam);
   const { length, width } = pitchSize(data, stats);
 
-  const rawTimeline = (metrics["shape_timeline"] as Record<string, unknown[]> | undefined)?.[ownTeam];
+  const rawTimeline = (metrics["shape_timeline"] as Record<string, unknown[]> | undefined)?.[
+    ownTeam
+  ];
   const timeline = Array.isArray(rawTimeline)
     ? rawTimeline
         .map((sample) => {
           const value = sample as Record<string, unknown>;
           return { t: optionalNum(value["t"]), height: optionalNum(value["line_height"]) };
         })
-        .filter((sample): sample is { t: number; height: number } => sample.t !== null && sample.height !== null)
+        .filter(
+          (sample): sample is { t: number; height: number } =>
+            sample.t !== null && sample.height !== null,
+        )
         .sort((a, b) => a.t - b.t)
     : [];
 
@@ -327,22 +347,40 @@ export function buildLineDefending(
     return {
       id: event.id,
       t: event.t,
-      x: px !== null ? Math.max(0, Math.min(100, (px / Math.max(data.width ?? 100, 1)) * 100)) : Math.max(0, Math.min(100, ((mx ?? length / 2) / length) * 100)),
-      y: py !== null ? Math.max(0, Math.min(100, (py / Math.max(data.height ?? 100, 1)) * 100)) : Math.max(0, Math.min(100, ((my ?? width / 2) / width) * 100)),
+      x:
+        px !== null
+          ? Math.max(0, Math.min(100, (px / Math.max(data.width ?? 100, 1)) * 100))
+          : Math.max(0, Math.min(100, ((mx ?? length / 2) / length) * 100)),
+      y:
+        py !== null
+          ? Math.max(0, Math.min(100, (py / Math.max(data.height ?? 100, 1)) * 100))
+          : Math.max(0, Math.min(100, ((my ?? width / 2) / width) * 100)),
     };
   });
 
   const conceded = (data.events ?? [])
-    .filter((event) => (event.type === "shot" || event.type === "goal") && eventBelongsToOpponent(event, ownTeam, opponent))
+    .filter(
+      (event) =>
+        (event.type === "shot" || event.type === "goal") &&
+        eventBelongsToOpponent(event, ownTeam, opponent),
+    )
     .map((event) => ({ event, height: nearestHeight(event.t) }))
     .filter((item): item is { event: FeedEvent; height: number } => item.height !== null);
-  const shots = conceded.map(({ event, height }) => ({ id: event.id, t: event.t, height, goal: event.type === "goal" }));
+  const shots = conceded.map(({ event, height }) => ({
+    id: event.id,
+    t: event.t,
+    height,
+    goal: event.type === "goal",
+  }));
 
   const medianM = optionalNum(row?.def_line_height_median_m);
   const usualM = optionalNum(row?.def_line_height_usual_m);
-  const belowUsualPct = usualM !== null && timeline.length > 0
-    ? Math.round((timeline.filter((sample) => sample.height < usualM).length / timeline.length) * 100)
-    : null;
+  const belowUsualPct =
+    usualM !== null && timeline.length > 0
+      ? Math.round(
+          (timeline.filter((sample) => sample.height < usualM).length / timeline.length) * 100,
+        )
+      : null;
   const typicalHeight: Record<LineState, number> = { high: 42, mid: 34, low: 26 };
   const states = (["high", "mid", "low"] as const).map((key) => {
     const inState = timeline.filter((sample) => lineState(sample.height) === key);
@@ -350,17 +388,28 @@ export function buildLineDefending(
       ? Math.round(inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length)
       : typicalHeight[key];
     const moments = conceded.filter((item) => lineState(item.height) === key);
-    return { key, height: average, shots: moments.length, goals: moments.filter((item) => item.event.type === "goal").length };
+    return {
+      key,
+      height: average,
+      shots: moments.length,
+      goals: moments.filter((item) => item.event.type === "goal").length,
+    };
   });
 
   return {
-    lineBreakCount: metricForTeam(metrics["line_breaks_against"], ownTeam) ?? (lineBreakEvents.length ? lineBreakEvents.length : null),
+    lineBreakCount:
+      metricForTeam(metrics["line_breaks_against"], ownTeam) ??
+      (lineBreakEvents.length ? lineBreakEvents.length : null),
     lineBreakLast5Avg: optionalNum(row?.line_breaks_against_last5_avg),
     lineBreaks,
-    lineBreakConfirmed: lineBreakEvents.filter((event) => (event as FeedEvent & { status?: string }).status === "confirmed").length,
+    lineBreakConfirmed: lineBreakEvents.filter(
+      (event) => (event as FeedEvent & { status?: string }).status === "confirmed",
+    ).length,
     timeline,
     shots,
-    shotConfirmed: conceded.filter(({ event }) => (event as FeedEvent & { status?: string }).status === "confirmed").length,
+    shotConfirmed: conceded.filter(
+      ({ event }) => (event as FeedEvent & { status?: string }).status === "confirmed",
+    ).length,
     shotsUnder30: shots.filter((shot) => shot.height < 30).length,
     medianM,
     usualM,
@@ -636,6 +685,19 @@ function fmt(v: unknown, suffix = "") {
   return `${rounded}${suffix}`;
 }
 
+/** The pipeline records the kind of set piece in the payload, under one of several keys. */
+export function setPieceKind(event: { payload?: Record<string, unknown> | null | undefined }) {
+  const payload = event.payload ?? {};
+  return String(payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "").toLowerCase();
+}
+
+function setPieceCount(data: MatchDataFile | undefined, team: TeamKey, kind: string) {
+  return (data?.events ?? []).filter(
+    (event) =>
+      event.type === "set_piece" && event.team === team && setPieceKind(event).includes(kind),
+  ).length;
+}
+
 export function buildStatSections(
   data: MatchDataFile | undefined,
   stats: StatsFile | undefined,
@@ -725,6 +787,33 @@ export function buildStatSections(
       ],
     },
     { key: "players", label: "Players", caption: "Each player's own numbers.", rows: [] },
+    {
+      key: "setpieces",
+      label: "Set pieces",
+      caption: "Corners and free kicks the pipeline found, and where they went.",
+      rows: [
+        {
+          label: "Corners",
+          a: `${setPieceCount(data, "A", "corner")}`,
+          b: `${setPieceCount(data, "B", "corner")}`,
+        },
+        {
+          label: "Free kicks",
+          a: `${setPieceCount(data, "A", "free")}`,
+          b: `${setPieceCount(data, "B", "free")}`,
+        },
+        {
+          label: "Throw-ins",
+          a: `${setPieceCount(data, "A", "throw")}`,
+          b: `${setPieceCount(data, "B", "throw")}`,
+        },
+        {
+          label: "Set pieces in all",
+          a: `${eventCount("A", "set_piece")}`,
+          b: `${eventCount("B", "set_piece")}`,
+        },
+      ],
+    },
     {
       key: "passes",
       label: "Passes",
