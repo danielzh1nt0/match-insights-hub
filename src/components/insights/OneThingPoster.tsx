@@ -46,7 +46,7 @@ export function OneThingPoster({
     >
       <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-team-a via-cream to-team-b opacity-70" aria-hidden="true" />
 
-      <div className="grid gap-6 md:grid-cols-[minmax(0,1.35fr)_minmax(220px,.65fr)] md:gap-8">
+      <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(200px,280px)] md:gap-8">
         <div className="min-w-0">
           <p className="text-[11.5px] font-bold text-text-faint">{kicker}</p>
           <h1 id="insights-verdict" className="display-i mt-3 max-w-[16ch] text-[clamp(30px,6.4vw,52px)] uppercase leading-[0.95] text-cream">
@@ -75,7 +75,7 @@ export function OneThingPoster({
         </div>
 
         {figures.length > 0 && (
-          <dl className="self-start overflow-hidden rounded-[14px] bg-surface-2">
+          <dl className="w-full self-start justify-self-end overflow-hidden rounded-[14px] bg-surface-2">
             {figures.map((f, i) => (
               <div key={f.label} className={cn("px-5 py-4", i > 0 && "border-t border-wire-2")}>
                 <dd className={cn("display-i text-[30px] leading-none", f.tone === "bad" ? "text-reaction-bad" : "text-cream")}>
