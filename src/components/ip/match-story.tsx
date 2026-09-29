@@ -8,6 +8,7 @@ import type { RecapAnalysis } from "@/lib/recap-analysis";
 import { crestForTeam } from "@/lib/team-crests";
 import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
 import { cn } from "@/lib/utils";
+import { STORY_CHAPTERS, chapterIndex } from "@/lib/story-chapters";
 import { PositionsArt, PressureArt, type Loss } from "@/components/visuals/PitchArt";
 
 type Chapter = "score" | "strength" | "player" | "improve" | "verdict";
@@ -19,13 +20,7 @@ export type StoryShape = {
   target?: { x: number; y: number };
 };
 
-const SLIDES: StorySlide[] = [
-  { id: "score", durationMs: 7000 },
-  { id: "strength", durationMs: 7500 },
-  { id: "player", durationMs: 7500 },
-  { id: "improve", durationMs: 9000 },
-  { id: "verdict", durationMs: 8000 },
-];
+const SLIDES: StorySlide[] = STORY_CHAPTERS.map((chapter) => ({ id: chapter.id, durationMs: chapter.durationMs }));
 
 export function MatchStory({
   matchId,
@@ -34,6 +29,7 @@ export function MatchStory({
   shape,
   losses = [],
   pressTarget = null,
+  startChapter,
 }: {
   matchId: string;
   match: LibraryMatch;
@@ -42,13 +38,15 @@ export function MatchStory({
   /** Possession losses that carry real coordinates. */
   losses?: Loss[] | undefined;
   pressTarget?: number | null | undefined;
+  /** Open straight at this chapter, from a rail bubble. */
+  startChapter?: string | undefined;
 }) {
   const navigate = useNavigate();
   const slides = useMemo(
     () => SLIDES.map((slide) => (slide.id === "improve" ? { ...slide, moment: recap.firstMoment ?? undefined } : slide)),
     [recap.firstMoment],
   );
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => chapterIndex(startChapter));
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const pausedRef = useRef(false);

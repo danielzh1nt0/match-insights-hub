@@ -4,16 +4,11 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Chip } from "@/components/ip/primitives";
 import { StatsVisuals } from "@/components/ip/stats-visuals";
-import { StatsTeamSelector, type StatsTeamIdentity } from "@/components/ip/stats-team-selector";
+import { ScopeChips } from "@/components/ip/scope-chips";
+import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import { useAnalysis } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
 import { shortTeamCode } from "@/components/team/TeamToken";
-
-const PERIODS = [
-  { key: "full" as const, label: "Full" },
-  { key: "1st" as const, label: "1st half" },
-  { key: "2nd" as const, label: "2nd half" },
-];
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/stats")({
   head: () => ({
@@ -108,18 +103,16 @@ function Stats() {
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {teamA && teamB && (
-              <div className="min-w-[280px] flex-1"><StatsTeamSelector value={scope} onChange={setScope} teamA={teamA} teamB={teamB} /></div>
-            )}
-            <div className="flex shrink-0 gap-2" role="group" aria-label="Period">
-              {PERIODS.map((p) => (
-                <Chip key={p.key} active={period === p.key} onClick={() => setPeriod(p.key)}>
-                  {p.label}
-                </Chip>
-              ))}
-            </div>
-          </div>
+          {teamA && teamB && (
+            <ScopeChips
+              scope={scope}
+              onScope={setScope}
+              period={period}
+              onPeriod={setPeriod}
+              teamA={teamA}
+              teamB={teamB}
+            />
+          )}
 
           <p className="text-[12px] text-text-faint">{active.caption}</p>
 

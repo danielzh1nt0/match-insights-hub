@@ -20,11 +20,10 @@ import {
   eventMatchesFilter,
   type EventFilterValue,
 } from "@/components/ip/event-filter";
-import { ControlBar } from "@/components/match/ControlBar";
+import { PlayerOverlay } from "@/components/match/PlayerOverlay";
 import { EventRow } from "@/components/match/EventRow";
 import { MatchSide, FeedHeading, type SideTab } from "@/components/match/MatchSide";
 import { MomentumStrip } from "@/components/match/MomentumStrip";
-import { PlaybackBar } from "@/components/match/PlaybackBar";
 import type { StatIconName } from "@/components/match/StatIcon";
 import { useAnalysis } from "@/hooks/use-match";
 import { buildClips } from "@/lib/clips";
@@ -139,6 +138,7 @@ function MatchScreen() {
   const [frame, setFrame] = useState<Frame | null>(null);
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>(DEFAULT_LAYERS);
   const [layerSheet, setLayerSheet] = useState(false);
+  const [controlsAwake, setControlsAwake] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
   const mediaRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -316,6 +316,15 @@ function MatchScreen() {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  /** The bar hides itself while the video plays, and comes back on any touch. */
+  const wakeControls = useCallback(() => setControlsAwake(true), []);
+  useEffect(() => {
+    if (!playing || layerSheet || !controlsAwake) return;
+    const timer = setTimeout(() => setControlsAwake(false), 2600);
+    return () => clearTimeout(timer);
+  }, [playing, layerSheet, controlsAwake, clock]);
+  const controlsVisible = controlsAwake || !playing || layerSheet;
+
   const shown = useMemo(() => {
     const visible = events.slice(0, visibleCount);
     const byTeam = team ? visible.filter((e) => e.team === team) : visible;
@@ -448,10 +457,12 @@ function MatchScreen() {
           <div className="min-w-0">
             <div
               ref={mediaRef}
+              onPointerDown={wakeControls}
+              onPointerMove={wakeControls}
               className={cn(
-                "relative w-full select-none overflow-hidden border border-wire bg-surface-2",
+                "relative w-full select-none overflow-hidden border border-wire bg-black",
                 fullscreen
-                  ? "h-dvh w-dvw max-w-none rounded-none border-0 bg-bg"
+                  ? "h-dvh w-dvw max-w-none rounded-none border-0"
                   : "aspect-[16/9] rounded-[10px]",
               )}
             >
@@ -498,42 +509,40 @@ function MatchScreen() {
                 />
               )}
 
-              {/* Clock and score, top left, as in the prototype. */}
-              <div className="pointer-events-none absolute left-2.5 top-2.5 flex items-center gap-1.5">
-                <span className="display num rounded-[6px] bg-black/55 px-2 py-0.5 text-[16px] font-bold text-white">
+              {/* Clock, score and who has it — one row, so nothing collides on a phone. */}
+              <div className="pointer-events-none absolute inset-x-2.5 top-2.5 flex flex-wrap items-center gap-1.5">
+                <span className="display num rounded-[6px] bg-black/55 px-2 py-0.5 text-[15px] font-bold text-white">
                   {formatClock(clock)}
                 </span>
                 {match.status === "ready" && (
-                  <span className="display-i rounded-[6px] bg-black/55 px-2 py-0.5 text-[16px] font-extrabold text-white">
+                  <span className="display-i rounded-[6px] bg-black/55 px-2 py-0.5 text-[15px] font-extrabold text-white">
                     {match.scoreA}–{match.scoreB}
                   </span>
                 )}
-              </div>
-
-              {/* Who has it, as a banner over the picture rather than a bar under it. */}
-              <div
-                className="pointer-events-none absolute bottom-2.5 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-full bg-black/70 py-1.5 pl-2 pr-3 text-[12px] font-semibold text-white md:bottom-auto md:top-3"
-                role="status"
-                aria-live="polite"
-              >
                 <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{
-                    background:
-                      possessionTeam === "A"
-                        ? colours.A
-                        : possessionTeam === "B"
-                          ? colours.B
-                          : "var(--text-faint)",
-                  }}
-                  aria-hidden="true"
-                />
-                {possessionLine}
+                  className="flex min-w-0 items-center gap-1.5 truncate rounded-full bg-black/60 py-1 pl-1.5 pr-2.5 text-[11.5px] font-semibold text-white"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{
+                      background:
+                        possessionTeam === "A"
+                          ? colours.A
+                          : possessionTeam === "B"
+                            ? colours.B
+                            : "var(--text-faint)",
+                    }}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{possessionLine}</span>
+                </span>
               </div>
 
               {mode === "both" && (
                 <div
-                  className="absolute bottom-2.5 right-2.5 w-[34%] overflow-hidden rounded-[10px] border border-wire"
+                  className="absolute right-2.5 top-12 w-[34%] overflow-hidden rounded-[10px] border border-wire"
                   style={{
                     background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))",
                   }}
@@ -550,32 +559,118 @@ function MatchScreen() {
                   </div>
                 </div>
               )}
-            </div>
-
-            <ControlBar
-              playing={playing}
-              onPlayPause={togglePlay}
-              onStep={(seconds) => seek(clock + seconds)}
-              onEvent={jumpEvent}
-              speed={speed}
-              onSpeed={cycleSpeed}
-              mode={mode}
-              onMode={setMode}
-              onOverlays={() => setLayerSheet(true)}
-              onFullscreen={toggleFullscreen}
-              hasEvents={ticks.length > 0}
-            />
-
-            <div className="mt-3 overflow-hidden rounded-[10px] border border-wire bg-surface">
-              <PlaybackBar
+              <PlayerOverlay
                 playing={playing}
                 currentTime={clock}
                 duration={total}
                 markers={playbackMarkers}
                 onPlayPause={togglePlay}
                 onSeek={seek}
+                onStep={(seconds) => seek(clock + seconds)}
+                onEvent={jumpEvent}
+                speed={speed}
+                onSpeed={cycleSpeed}
+                mode={mode}
+                onMode={setMode}
+                onOverlays={() => setLayerSheet((v) => !v)}
+                overlaysOpen={layerSheet}
+                fullscreen={fullscreen}
                 onFullscreen={toggleFullscreen}
+                hasEvents={ticks.length > 0}
+                visible={controlsVisible}
               />
+
+              {/* The overlays panel lives inside the frame so it is still reachable
+                  in fullscreen, where nothing outside the video element is shown. */}
+              {layerSheet && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
+                  <button
+                    type="button"
+                    aria-label="Close overlays"
+                    onClick={() => setLayerSheet(false)}
+                    className="absolute inset-0 bg-black/60"
+                  />
+                  <div
+                    className="relative max-h-[80vh] w-full max-w-[420px] overflow-y-auto rounded-t-[18px] border border-wire bg-surface p-5 pb-[max(20px,env(safe-area-inset-bottom))] sm:rounded-[18px] sm:pb-5"
+                    onPointerDown={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="display text-[17px] uppercase text-cream">Overlays</h2>
+                      <button
+                        type="button"
+                        onClick={() => setLayerSheet(false)}
+                        className="tap rounded-[8px] px-2 text-[12px] font-bold text-text-dim hover:text-text"
+                      >
+                        Done
+                      </button>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {PRESETS.map((p) => {
+                        const active = (Object.keys(layers) as LayerKey[]).every(
+                          (k) => layers[k] === presetLayers(p.key)[k],
+                        );
+                        return (
+                          <button
+                            key={p.key}
+                            type="button"
+                            onClick={() => applyPreset(p.key)}
+                            aria-pressed={active}
+                            className={cn(
+                              "tap h-10 rounded-[10px] border text-[13px] font-semibold",
+                              active
+                                ? "border-cream bg-cream text-ink"
+                                : "border-wire text-text hover:bg-surface-2",
+                            )}
+                          >
+                            {p.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-4 text-[11px] uppercase tracking-wide text-text-dim">
+                      Custom · up to 3 besides players
+                    </p>
+                    <ul className="mt-2 flex flex-col gap-1">
+                      {LAYERS.map((l) => (
+                        <li key={l.key}>
+                          <button
+                            type="button"
+                            onClick={() => layerAllowed(l.needs) && toggleLayer(l.key)}
+                            aria-pressed={layers[l.key]}
+                            aria-disabled={!layerAllowed(l.needs)}
+                            title={
+                              layerAllowed(l.needs) ? undefined : "Needs reliable ball tracking"
+                            }
+                            className={cn(
+                              "tap flex w-full items-center justify-between rounded-[10px] px-2 text-left text-[13.5px] text-text hover:bg-surface-2",
+                              !layerAllowed(l.needs) && "opacity-40",
+                            )}
+                          >
+                            <span>
+                              {l.label}
+                              {!layerAllowed(l.needs) && (
+                                <span className="ml-2 text-[11px] text-text-dim">
+                                  needs reliable ball
+                                </span>
+                              )}
+                            </span>
+                            <span
+                              className={cn(
+                                "h-4 w-4 rounded-[6px] border",
+                                layers[l.key] ? "border-cream bg-cream" : "border-wire",
+                              )}
+                              aria-hidden="true"
+                            />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 overflow-hidden rounded-[10px] border border-wire bg-surface">
               <MomentumStrip
                 windows={momentumWindows}
                 events={momentumEvents}
@@ -773,79 +868,6 @@ function MatchScreen() {
               onReview={(input) => review.setVerdict.mutate(input)}
               onClose={() => setFixing(null)}
             />
-          )}
-
-          {layerSheet && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(0,0,0,0.6)] p-0 md:items-center md:p-6">
-              <button
-                type="button"
-                aria-label="Close overlays"
-                onClick={() => setLayerSheet(false)}
-                className="absolute inset-0"
-              />
-              <div className="relative w-full max-w-[420px] rounded-t-[18px] border border-wire bg-surface p-5 md:rounded-[18px]">
-                <h2 className="display text-[17px] uppercase text-cream">Overlays</h2>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  {PRESETS.map((p) => {
-                    const active = (Object.keys(layers) as LayerKey[]).every(
-                      (k) => layers[k] === presetLayers(p.key)[k],
-                    );
-                    return (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => applyPreset(p.key)}
-                        aria-pressed={active}
-                        className={cn(
-                          "tap h-10 rounded-[10px] border text-[13px] font-semibold",
-                          active
-                            ? "border-cream bg-cream text-ink"
-                            : "border-wire text-text hover:bg-surface-2",
-                        )}
-                      >
-                        {p.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-4 text-[11px] uppercase tracking-wide text-text-dim">
-                  Custom · up to 3 besides players
-                </p>
-                <ul className="mt-2 flex flex-col gap-1">
-                  {LAYERS.map((l) => (
-                    <li key={l.key}>
-                      <button
-                        type="button"
-                        onClick={() => layerAllowed(l.needs) && toggleLayer(l.key)}
-                        aria-pressed={layers[l.key]}
-                        aria-disabled={!layerAllowed(l.needs)}
-                        title={layerAllowed(l.needs) ? undefined : "Needs reliable ball tracking"}
-                        className={cn(
-                          "tap flex w-full items-center justify-between rounded-[10px] px-2 text-left text-[13.5px] text-text hover:bg-surface-2",
-                          !layerAllowed(l.needs) && "opacity-40",
-                        )}
-                      >
-                        <span>
-                          {l.label}
-                          {!layerAllowed(l.needs) && (
-                            <span className="ml-2 text-[11px] text-text-dim">
-                              needs reliable ball
-                            </span>
-                          )}
-                        </span>
-                        <span
-                          className={cn(
-                            "h-4 w-4 rounded-[6px] border",
-                            layers[l.key] ? "border-cream bg-cream" : "border-wire",
-                          )}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
           )}
         </div>
       )}

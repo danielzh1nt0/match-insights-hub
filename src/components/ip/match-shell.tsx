@@ -1,14 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { AppHeader, FloatingNav, PeriodSelector, Screen, TeamSelector } from "@/components/ip/chrome";
+import { AppHeader, FloatingNav, Screen } from "@/components/ip/chrome";
 import type { Period, TeamScope } from "@/components/ip/chrome";
-import { MatchHeader } from "@/components/ip/match-header";
 import { MatchSetupSheet } from "@/components/ip/match-setup-sheet";
 import { Card } from "@/components/ip/primitives";
 import { formatClock } from "@/lib/sample-data";
 import type { LibraryMatch } from "@/lib/sample-data";
 import { isLabelled } from "@/lib/match-source";
-import { attacksRight, teamColours } from "@/lib/match-analysis";
+import { teamColours } from "@/lib/match-analysis";
+import { shortTeamCode } from "@/components/team/TeamToken";
 import { useMatchRecord } from "@/hooks/use-match";
 import { colourForTeam, crestForTeam } from "@/lib/team-crests";
 import { useApp } from "@/store/app-store";
@@ -46,8 +46,12 @@ export function MatchShell({
   const [prompted, setPrompted] = useState(false);
   const selectorsVisible = showSelectors && Boolean(scope && setScope && period && setPeriod);
   const colours = teamColours(record?.label ?? null);
-  const colourA = match ? colourForTeam(match.teamA, record?.label?.colour_a ?? team?.colorA ?? colours.A) : colours.A;
-  const colourB = match ? colourForTeam(match.teamB, record?.label?.colour_b ?? team?.colorB ?? colours.B) : colours.B;
+  const colourA = match
+    ? colourForTeam(match.teamA, record?.label?.colour_a ?? team?.colorA ?? colours.A)
+    : colours.A;
+  const colourB = match
+    ? colourForTeam(match.teamB, record?.label?.colour_b ?? team?.colorB ?? colours.B)
+    : colours.B;
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
 
@@ -59,53 +63,37 @@ export function MatchShell({
     }
   }, [record, prompted]);
 
+  const headerMatch = match
+    ? {
+        teamA: match.teamA,
+        teamB: match.teamB,
+        codeA: shortTeamCode(match.teamA),
+        codeB: shortTeamCode(match.teamB),
+        ...(crestA ? { crestA } : {}),
+        ...(crestB ? { crestB } : {}),
+        colourA,
+        colourB,
+        scoreA: match.status === "ready" ? match.scoreA : null,
+        scoreB: match.status === "ready" ? match.scoreB : null,
+        meta: [
+          match.competition,
+          match.date,
+          match.status === "ready" ? formatClock(match.durationS) : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        result: matchResult(match),
+        onSetup: () => setSetupOpen((v) => !v),
+      }
+    : undefined;
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader backTo="/library" />
+      <AppHeader backTo="/library" {...(headerMatch ? { match: headerMatch } : {})} />
       <FloatingNav matchId={matchId} />
-      <Screen withNav className="pt-4">
+      <Screen withNav className="pt-3">
         {match ? (
           <>
-            <MatchHeader
-              teamA={match.teamA}
-              teamB={match.teamB}
-              scoreA={match.status === "ready" ? match.scoreA : null}
-              scoreB={match.status === "ready" ? match.scoreB : null}
-               colourA={colourA}
-               colourB={colourB}
-               {...(crestA ? { crestA } : {})}
-               {...(crestB ? { crestB } : {})}
-              {...(match.status === "ready"
-                ? {
-                    periodLine: `${match.competition} · ${match.date} · ${period === "2nd" ? "2nd half" : "1st half"} · ${match.teamA} attack ${
-                      attacksRight(
-                        record?.row.attack_right,
-                        record?.label?.attack_right_override,
-                        "A",
-                      ) === (period !== "2nd")
-                        ? "right"
-                        : "left"
-                    } · ${formatClock(match.durationS)}`,
-                  }
-                : { metaLine: `${match.date} · ${match.competition}` })}
-              {...(setScope ? { onSelectTeamA: () => setScope("a"), onSelectTeamB: () => setScope("b") } : {})}
-              result={matchResult(match)}
-              onSetup={() => setSetupOpen((v) => !v)}
-            />
-            {selectorsVisible && (
-              <div className="mt-3 flex flex-col gap-2 md:flex-row">
-                <TeamSelector
-                  value={scope!}
-                  onChange={setScope!}
-                  teamA={match.teamA}
-                  teamB={match.teamB}
-                   colourA={colourA}
-                   colourB={colourB}
-                />
-                <PeriodSelector value={period!} onChange={setPeriod!} periods={match.durationS > 1500 ? 2 : 1} />
-              </div>
-            )}
             {record && (
               <MatchSetupSheet
                 key={record.label ? "labelled" : "unlabelled"}
@@ -116,7 +104,7 @@ export function MatchShell({
             )}
 
             {/* gap-4 is the prototype's --gap: the rhythm between sections on every match screen. */}
-            <div className="mt-4 flex flex-col gap-4 md:mt-5">{children}</div>
+            <div className="flex flex-col gap-4">{children}</div>
           </>
         ) : (
           <Card className="mt-2">

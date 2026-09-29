@@ -7,6 +7,8 @@ import { buildMomentShape } from "@/lib/match-analysis";
 import { buildRecapAnalysis } from "@/lib/recap-analysis";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/story")({
+  validateSearch: (search: Record<string, unknown>): { chapter?: string } =>
+    typeof search["chapter"] === "string" ? { chapter: search["chapter"] } : {},
   head: () => ({
     meta: [
       { title: "Match recap — Ipanema" },
@@ -39,6 +41,7 @@ function StoryFallback({ title }: { title: string }) {
 
 function StoryPage() {
   const { matchId } = Route.useParams();
+  const { chapter } = Route.useSearch();
   const { match, findings, file, stats, players, colours, team, loading, events, thresholds } = useAnalysis(matchId, "a");
 
   /** Real loss coordinates only — a moment without them is left out, not guessed. */
@@ -91,5 +94,5 @@ function StoryPage() {
     return <StoryFallback title="That match isn't in your library" />;
   }
 
-  return <MatchStory matchId={matchId} match={match} recap={recap} shape={shape} losses={losses} pressTarget={thresholds.pressWithin2s} />;
+  return <MatchStory matchId={matchId} match={match} recap={recap} shape={shape} losses={losses} pressTarget={thresholds.pressWithin2s} startChapter={chapter} />;
 }

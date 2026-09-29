@@ -3,7 +3,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Chip } from "@/components/ip/primitives";
-import { StatsTeamSelector } from "@/components/ip/stats-team-selector";
+import { ScopeChips } from "@/components/ip/scope-chips";
 import { PhasePicker } from "@/components/phases/PhasePicker";
 import { PhasePitch, type PhaseView } from "@/components/phases/PhasePitch";
 import { Panel, PhaseMoments, PhaseNumbers, PhaseRibbon } from "@/components/phases/PhasePanels";
@@ -32,12 +32,6 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/territory")
   }),
   component: PhasesScreen,
 });
-
-const PERIODS = [
-  { key: "full" as const, label: "Full" },
-  { key: "1st" as const, label: "1st half" },
-  { key: "2nd" as const, label: "2nd half" },
-];
 
 function PhasesScreen() {
   const { matchId } = Route.useParams();
@@ -123,25 +117,17 @@ function PhasesScreen() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {identities && (
-                <div className="min-w-[280px] flex-1">
-                  <StatsTeamSelector
-                    value={scope}
-                    onChange={(next) => setScope(next === "both" ? "a" : next)}
-                    teamA={identities.A}
-                    teamB={identities.B}
-                  />
-                </div>
-              )}
-              <div className="flex shrink-0 gap-2" role="group" aria-label="Period">
-                {PERIODS.map((p) => (
-                  <Chip key={p.key} active={period === p.key} onClick={() => setPeriod(p.key)}>
-                    {p.label}
-                  </Chip>
-                ))}
-              </div>
-            </div>
+            {identities && (
+              <ScopeChips
+                scope={scope}
+                onScope={(next) => setScope(next === "both" ? "a" : next)}
+                period={period}
+                onPeriod={setPeriod}
+                teamA={identities.A}
+                teamB={identities.B}
+                allowBoth={false}
+              />
+            )}
 
             <PhasePicker phases={phases} active={phase.key} onPick={setPhaseKey} />
 

@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { ChapterRail } from "@/components/insights/ChapterRail";
 import { OneThingPoster } from "@/components/insights/OneThingPoster";
 import { MatchNumbersGrid, type NumberCell } from "@/components/insights/MatchNumbersGrid";
 import { FindingsList } from "@/components/insights/FindingsList";
@@ -144,8 +145,58 @@ export function InsightsScreen({
     },
   ];
 
+
+  /** A small drawing per chapter, all of it read off this match. */
+  const chapterFigures = useMemo(() => {
+    const step = momentum.length ? 100 / momentum.length : 100;
+    return {
+      score: (
+        <svg viewBox="0 0 100 44" className="h-full w-full" aria-hidden="true">
+          <line x1="0" y1="22" x2="100" y2="22" stroke="rgba(255,255,255,.35)" strokeWidth=".5" />
+          {momentum.map((v, i) => {
+            const h = Math.max(Math.abs(v) * 18, 0.8);
+            return (
+              <rect
+                key={i}
+                x={i * step + step * 0.2}
+                y={v >= 0 ? 22 - h : 22}
+                width={step * 0.6}
+                height={h}
+                fill={v >= 0 ? "var(--team-a)" : "var(--team-b)"}
+              />
+            );
+          })}
+        </svg>
+      ),
+      strength: (
+        <svg viewBox="0 0 100 44" className="h-full w-full" aria-hidden="true">
+          <rect x="18" y={44 - Math.max(shots, 1) * 4} width="24" height={Math.max(shots, 1) * 4} fill="var(--team-a)" />
+          <rect x="58" y={44 - Math.max(otherShots, 1) * 4} width="24" height={Math.max(otherShots, 1) * 4} fill="var(--team-b)" opacity=".7" />
+        </svg>
+      ),
+      player: (
+        <span className="display-i text-[26px] leading-none text-white">
+          {playerTalks[0] ? `#${playerTalks[0].shirtNumber}` : "—"}
+        </span>
+      ),
+      improve: (
+        <span className="display-i text-[22px] leading-none text-white">
+          {model.top ? `${model.top.value}${model.top.unit === "%" ? "%" : ""}` : "—"}
+        </span>
+      ),
+      verdict: (
+        <svg viewBox="0 0 100 44" className="h-full w-full" aria-hidden="true">
+          <circle cx="50" cy="22" r="13" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="2" />
+          <path d="M43 22l5 5 9-10" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    };
+  }, [momentum, shots, otherShots, playerTalks, model.top]);
+
   return (
     <div className="flex flex-col gap-4">
+      <ChapterRail matchId={matchId} figures={chapterFigures} />
+
       <OneThingPoster
         kicker={`${model.top ? "The one thing" : "This match"} · ${match.teamA} ${match.scoreA}–${match.scoreB} ${match.teamB}`}
         headline={headline}

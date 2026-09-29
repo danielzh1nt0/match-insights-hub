@@ -1,6 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { StatsTeamPill } from "@/components/ip/stats-team-selector";
-import { teamIdentities } from "@/lib/team-identity";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { InsightsScreen } from "@/components/insights/InsightsScreen";
@@ -11,7 +9,10 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/insights")(
   head: () => ({
     meta: [
       { title: "Match insights — Ipanema" },
-      { name: "description", content: "The match in three sentences, with findings you can train on Tuesday." },
+      {
+        name: "description",
+        content: "The match in three sentences, with findings you can train on Tuesday.",
+      },
       { property: "og:title", content: "Match insights — Ipanema" },
       { property: "og:description", content: "Findings, targets and the moments behind them." },
       { property: "og:type", content: "website" },
@@ -25,28 +26,42 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, colours, findings, summary, loading, events, review, stats, team, thresholds } = useAnalysis(matchId, scope);
+  const { match, colours, findings, summary, loading, events, review, stats, team, thresholds } =
+    useAnalysis(matchId, scope);
 
   return (
-    <MatchShell matchId={matchId} match={match} scope={scope} setScope={setScope} period={period} setPeriod={setPeriod}>
+    <MatchShell
+      matchId={matchId}
+      match={match}
+      scope={scope}
+      setScope={setScope}
+      period={period}
+      setPeriod={setPeriod}
+    >
       {loading && (
-        <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading">
+        <div
+          className="h-1 w-full overflow-hidden rounded-full bg-surface-2"
+          role="status"
+          aria-label="Loading"
+        >
           <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
         </div>
       )}
 
       {match && (
         <>
-          {(() => {
-            const ids = teamIdentities(match, colours);
-            if (!ids) return null;
-            return (
-              <div className="mb-3 flex items-center" aria-label="Teams in view">
-                {scope === "both" ? <StatsTeamPill identity={ids.A} both={ids.B} /> : <StatsTeamPill identity={scope === "b" ? ids.B : ids.A} />}
-              </div>
-            );
-          })()}
-          <InsightsScreen matchId={matchId} match={match} findings={findings} summary={summary} events={events} stats={stats} team={team} thresholds={thresholds} iconColour={scope === "b" ? colours.B : colours.A} onReview={(input) => review.setVerdict.mutate(input)} />
+          <InsightsScreen
+            matchId={matchId}
+            match={match}
+            findings={findings}
+            summary={summary}
+            events={events}
+            stats={stats}
+            team={team}
+            thresholds={thresholds}
+            iconColour={scope === "b" ? colours.B : colours.A}
+            onReview={(input) => review.setVerdict.mutate(input)}
+          />
         </>
       )}
     </MatchShell>
