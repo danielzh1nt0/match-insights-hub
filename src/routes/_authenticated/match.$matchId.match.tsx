@@ -118,7 +118,7 @@ function MatchScreen() {
   const [mode, setMode] = useState<Mode>("video");
   const [filter, setFilter] = useState<EventFilterValue>(DEFAULT_EVENT_FILTER);
   const [clock, setClock] = useState<number>(startT ?? 0);
-  const liveFile = useFrameChunks(row?.files, file, clock);
+  const liveFile = useFrameChunks(row?.id, row?.files, file, clock);
   const [playing, setPlaying] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
   const [frame, setFrame] = useState<Frame | null>(null);

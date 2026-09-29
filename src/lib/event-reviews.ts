@@ -67,7 +67,7 @@ export async function saveReview(input: {
       note: input.note ?? null,
       reviewed_by: userId,
     },
-    { onConflict: "match_id,event_id" },
+    { onConflict: "match_id,event_id,reviewed_by" },
   );
   if (error) throw error;
 }
@@ -90,18 +90,24 @@ export async function saveReviews(
       note: null,
       reviewed_by: userId,
     })),
-    { onConflict: "match_id,event_id" },
+    { onConflict: "match_id,event_id,reviewed_by" },
   );
   if (error) throw error;
 }
 
 export async function clearReviews(matchId: string, eventIds: string[]) {
   if (eventIds.length === 0) return;
+  const { data: session } = await supabase.auth.getUser();
+  const userId = session.user?.id;
+  if (!userId) throw new Error("Sign in to clear reviews");
   const { error } = await supabase
     .from("event_reviews")
     .delete()
     .eq("match_id", matchId)
-    .in("event_id", eventIds);
+    .in("event_id", eventIds)
+    // The RLS delete policy already scopes this to the caller. Stated here too
+    // so the intent is visible in the query rather than only in the database.
+    .eq("reviewed_by", userId);
   if (error) throw error;
 }
 

@@ -5,7 +5,7 @@ import { fetchFrameChunk, type Frame, type MatchDataFile, type MatchFiles } from
  * Full matches keep their frames in 5-minute files. This loads the file the video is in plus the next one, and lets go of
  * files you've moved away from, so a 100-minute match plays on a phone. Clips with frames inline are returned unchanged.
  */
-export function useFrameChunks(files: MatchFiles | undefined, file: MatchDataFile | undefined, clock: number): MatchDataFile | undefined {
+export function useFrameChunks(matchId: string | undefined, files: MatchFiles | undefined, file: MatchDataFile | undefined, clock: number): MatchDataFile | undefined {
   const chunks = file?.frame_chunks;
   const [loaded, setLoaded] = useState<Record<string, Frame[]>>({});
   const inflight = useRef(new Set<string>());
@@ -25,7 +25,7 @@ export function useFrameChunks(files: MatchFiles | undefined, file: MatchDataFil
   }, [chunks, index]);
 
   useEffect(() => {
-    if (!files || !neededKey) return;
+    if (!matchId || !files || !neededKey) return;
     const needed = neededKey.split(",");
     neededRef.current = needed;
     setLoaded((prev) => {
@@ -37,7 +37,7 @@ export function useFrameChunks(files: MatchFiles | undefined, file: MatchDataFil
     for (const key of needed) {
       if (inflight.current.has(key) || loadedKeys.current.has(key)) continue;
       inflight.current.add(key);
-      fetchFrameChunk(files, key)
+      fetchFrameChunk(matchId, files, key)
         .then((frames) => {
           setLoaded((prev) => {
             if (!neededRef.current.includes(key)) return prev;
@@ -48,7 +48,7 @@ export function useFrameChunks(files: MatchFiles | undefined, file: MatchDataFil
         .catch(() => undefined)
         .finally(() => inflight.current.delete(key));
     }
-  }, [files, neededKey]);
+  }, [matchId, files, neededKey]);
 
   return useMemo(() => {
     if (!file || !chunks?.length) return file;
