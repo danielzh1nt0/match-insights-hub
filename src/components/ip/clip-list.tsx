@@ -1,19 +1,18 @@
 import { Link } from "@tanstack/react-router";
 import { Play } from "lucide-react";
 import { Card, Pill } from "./primitives";
-import type { Clip } from "@/lib/match-data";
+import type { ReelClip } from "@/lib/clips";
 import { formatClock } from "@/lib/sample-data";
 
 /**
- * The clip reel. Each clip comes from a real moment in the analysis, so the tag
- * matches the finding it belongs to. Without `matchId` the clips are listed
- * without links, which is what a public share page needs.
+ * The clip reel. Every clip is a real tracked moment at the timestamp the match
+ * file gives it. Without `matchId` the clips are listed without links.
  */
-export function ClipList({ clips, matchId }: { clips: Clip[]; matchId?: string }) {
+export function ClipList({ clips, matchId }: { clips: ReelClip[]; matchId?: string }) {
   if (clips.length === 0) {
     return (
       <Card>
-        <p className="text-[13px] text-text-dim">Nothing stood out in this clip yet.</p>
+        <p className="text-[13px] text-text-dim">No moments in this match file are worth a clip yet. Confirm some events on the match screen and they will appear here.</p>
       </Card>
     );
   }

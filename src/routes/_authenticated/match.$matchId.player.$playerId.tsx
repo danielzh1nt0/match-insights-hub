@@ -4,9 +4,7 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { PlayerReport } from "@/components/ip/player-report";
 import { Card } from "@/components/ip/primitives";
-import { ShareButton } from "@/components/ip/share-button";
-import { useMatch } from "@/hooks/use-match";
-import { encodeShareToken } from "@/lib/share";
+import { useAnalysis } from "@/hooks/use-match";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/player/$playerId")({
   head: () => ({
@@ -14,9 +12,9 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/player/$pla
       { title: "Player page — Ipanema" },
       { name: "description", content: "One player's own numbers from this match, nothing else." },
       { property: "og:title", content: "Player page — Ipanema" },
-      { property: "og:description", content: "Touches, passes, losses and where they played." },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:description", content: "Touches, passes, losses and the moments behind them." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: PlayerPage,
@@ -24,10 +22,12 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/player/$pla
 
 function PlayerPage() {
   const { matchId, playerId } = Route.useParams();
-  const { match, data } = useMatch(matchId);
+  const { match, players, events, loading } = useAnalysis(matchId, "a");
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const player = data?.players.find((p) => p.id === playerId);
+
+  const shirt = Number(playerId);
+  const player = players.find((row) => row.id === shirt);
 
   return (
     <MatchShell
@@ -38,33 +38,16 @@ function PlayerPage() {
       period={period}
       setPeriod={setPeriod}
     >
-      {!player && data && (
+      {!loading && !player && (
         <Card>
-          <p className="text-[13px] text-text-dim">That player wasn't in this match.</p>
+          <p className="text-[13px] text-text-dim">
+            {players.length === 0
+              ? "This match file has no per-player rows, so there are no player pages for it yet."
+              : `Shirt ${playerId} is not in this match file.`}
+          </p>
         </Card>
       )}
-      {player && data && match && (
-        <>
-          <PlayerReport player={player} events={data.events} teamA={match.teamA} matchId={matchId} />
-          <Card className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <p className="text-[12.5px] leading-relaxed text-text-dim">
-              Send this page to the player or their parents. They see these numbers only — nobody else's.
-            </p>
-            <ShareButton
-              path={`/s/player/${encodeShareToken({
-                m: match.id,
-                d: match.durationS,
-                a: match.teamA,
-                b: match.teamB,
-                sa: match.scoreA,
-                sb: match.scoreB,
-                p: player.id,
-              })}`}
-              what={`${player.name}'s numbers`}
-            />
-          </Card>
-        </>
-      )}
+      {player && match && <PlayerReport player={player} events={events} matchId={matchId} />}
     </MatchShell>
   );
 }
