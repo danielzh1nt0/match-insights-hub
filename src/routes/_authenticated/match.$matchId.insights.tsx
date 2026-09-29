@@ -25,7 +25,7 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, colours, findings, summary, loading, events, review, stats, team } = useAnalysis(matchId, scope);
+  const { match, colours, findings, summary, loading, events, review, stats, team, thresholds } = useAnalysis(matchId, scope);
 
   return (
     <MatchShell matchId={matchId} match={match} scope={scope} setScope={setScope} period={period} setPeriod={setPeriod}>
@@ -46,7 +46,7 @@ function Insights() {
               </div>
             );
           })()}
-          <InsightsScreen matchId={matchId} match={match} findings={findings} summary={summary} events={events} stats={stats} team={team} iconColour={scope === "b" ? colours.B : colours.A} onReview={(input) => review.setVerdict.mutate(input)} />
+          <InsightsScreen matchId={matchId} match={match} findings={findings} summary={summary} events={events} stats={stats} team={team} thresholds={thresholds} iconColour={scope === "b" ? colours.B : colours.A} onReview={(input) => review.setVerdict.mutate(input)} />
         </>
       )}
     </MatchShell>

@@ -39,7 +39,22 @@ function StoryFallback({ title }: { title: string }) {
 
 function StoryPage() {
   const { matchId } = Route.useParams();
-  const { match, findings, file, stats, players, colours, team, loading } = useAnalysis(matchId, "a");
+  const { match, findings, file, stats, players, colours, team, loading, events, thresholds } = useAnalysis(matchId, "a");
+
+  /** Real loss coordinates only — a moment without them is left out, not guessed. */
+  const losses = useMemo(
+    () =>
+      events
+        .filter((event) => event.team === (team ?? "A") && event.type === "turnover_lost")
+        .flatMap((event) => {
+          const x = event.payload?.["x"] ?? event.payload?.["ball_x"];
+          const y = event.payload?.["y"] ?? event.payload?.["ball_y"];
+          if (typeof x !== "number" || typeof y !== "number") return [];
+          const press = event.payload?.["time_to_press"];
+          return [{ x, y, timeToPress: typeof press === "number" ? press : null }];
+        }),
+    [events, team],
+  );
 
   const recap = useMemo(
     () =>
@@ -76,5 +91,5 @@ function StoryPage() {
     return <StoryFallback title="That match isn't in your library" />;
   }
 
-  return <MatchStory matchId={matchId} match={match} recap={recap} shape={shape} />;
+  return <MatchStory matchId={matchId} match={match} recap={recap} shape={shape} losses={losses} pressTarget={thresholds.pressWithin2s} />;
 }
