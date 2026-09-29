@@ -35,7 +35,7 @@ export function MatchSetupSheet({
   const thumbPath = item.row.files.thumb;
   const { data: thumbUrl } = useQuery({
     queryKey: ["match-thumb", item.row.id],
-    queryFn: () => signedUrl(thumbPath!),
+    queryFn: () => signedUrl(item.row.id, thumbPath!),
     enabled: Boolean(thumbPath),
     staleTime: 30 * 60_000,
   });

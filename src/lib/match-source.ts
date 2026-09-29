@@ -1,4 +1,4 @@
-import { MATCHES_BUCKET, matchesDb } from "@/integrations/matches/client";
+import { getMatch, listMatches, saveLabel, signMatchFile } from "@/lib/matches.functions";
 import type { LibraryMatch, MatchStatus } from "@/lib/sample-data";
 
 export type MatchFiles = {
@@ -97,36 +97,17 @@ export type MatchDataFile = {
 };
 
 export async function fetchMatches(): Promise<MatchListItem[]> {
-  const [{ data: rows, error }, { data: labels, error: labelError }] = await Promise.all([
-    matchesDb.from("matches").select("*").order("created_at", { ascending: false }),
-    matchesDb.from("match_labels").select("*"),
-  ]);
-  if (error) throw error;
-  if (labelError) throw labelError;
-  const byId = new Map<string, MatchLabelRow>(
-    ((labels ?? []) as MatchLabelRow[]).map((l) => [l.match_id, l]),
-  );
-  return ((rows ?? []) as MatchRow[]).map((row) => ({ row, label: byId.get(row.id) ?? null }));
+  return listMatches();
 }
 
 export async function fetchMatch(id: string): Promise<MatchListItem | null> {
-  const [{ data: row, error }, { data: label }] = await Promise.all([
-    matchesDb.from("matches").select("*").eq("id", id).maybeSingle(),
-    matchesDb.from("match_labels").select("*").eq("match_id", id).maybeSingle(),
-  ]);
-  if (error) throw error;
-  if (!row) return null;
-  return { row: row as MatchRow, label: (label as MatchLabelRow | null) ?? null };
+  return getMatch({ data: { matchId: id } });
 }
 
 export async function saveMatchLabel(patch: Partial<MatchLabelRow> & { match_id: string }) {
-  const { data, error } = await matchesDb
-    .from("match_labels")
-    .upsert(patch, { onConflict: "match_id" })
-    .select("*")
-    .maybeSingle();
-  if (error) throw error;
-  return data as MatchLabelRow;
+  const { match_id, ...rest } = patch;
+  await saveLabel({ data: { matchId: match_id, patch: rest as Record<string, unknown> } });
+  return patch as MatchLabelRow;
 }
 
 /* ---------- signed URLs, cached for the session ---------- */
@@ -138,37 +119,36 @@ export function isAbsoluteUrl(path: string) {
   return /^https?:\/\//.test(path);
 }
 
-export async function signedUrl(path: string): Promise<string> {
+export async function signedUrl(matchId: string, path: string): Promise<string> {
   if (isAbsoluteUrl(path)) return path;
-  const hit = signedCache.get(path);
+  const key = `${matchId}::${path}`;
+  const hit = signedCache.get(key);
   const now = Date.now();
   if (hit && hit.expires > now) return hit.url;
-  const { data, error } = await matchesDb.storage
-    .from(MATCHES_BUCKET)
-    .createSignedUrl(path, SIGN_TTL_S);
-  if (error || !data?.signedUrl) throw error ?? new Error(`Could not sign ${path}`);
-  signedCache.set(path, { url: data.signedUrl, expires: now + (SIGN_TTL_S - 120) * 1000 });
-  return data.signedUrl;
+  const url = await signMatchFile({ data: { matchId, path } });
+  signedCache.set(key, { url, expires: now + (SIGN_TTL_S - 120) * 1000 });
+  return url;
 }
 
 /* ---------- json payloads, cached for the session ---------- */
 
 const jsonCache = new Map<string, Promise<any>>();
 
-function loadJson<T>(path: string): Promise<T> {
-  const cached = jsonCache.get(path);
+function loadJson<T>(matchId: string, path: string): Promise<T> {
+  const key = `${matchId}::${path}`;
+  const cached = jsonCache.get(key);
   if (cached) return cached as Promise<T>;
-  const promise = signedUrl(path)
+  const promise = signedUrl(matchId, path)
     .then((url) => fetch(url))
     .then((res) => {
       if (!res.ok) throw new Error(`Could not load ${path}`);
       return res.json();
     })
     .catch((err) => {
-      jsonCache.delete(path);
+      jsonCache.delete(key);
       throw err;
     });
-  jsonCache.set(path, promise);
+  jsonCache.set(key, promise);
   return promise as Promise<T>;
 }
 
@@ -185,16 +165,16 @@ export function normaliseEvents(events: FeedEvent[] | undefined): FeedEvent[] {
 }
 
 export async function fetchMatchData(row: MatchRow): Promise<MatchDataFile> {
-  const file = await loadJson<MatchDataFile>(row.files.match_data);
+  const file = await loadJson<MatchDataFile>(row.id, row.files.match_data);
   return { ...file, events: normaliseEvents(file.events), frames: file.frames ?? [] };
 }
 
 export function fetchMatchStats(row: MatchRow): Promise<Record<string, any>> {
-  return loadJson<Record<string, any>>(row.files.stats);
+  return loadJson<Record<string, any>>(row.id, row.files.stats);
 }
 
 export function videoSrc(row: MatchRow): Promise<string> {
-  return signedUrl(row.files.video);
+  return signedUrl(row.id, row.files.video);
 }
 
 export function hasCurrentSchema(row: MatchRow) {
@@ -271,10 +251,10 @@ export function feedLabel(type: string) {
 }
 
 /** One 5-minute frame file of a full match. Not kept in the JSON cache, so files you've moved away from can be freed. */
-export async function fetchFrameChunk(files: MatchFiles, key: string): Promise<Frame[]> {
+export async function fetchFrameChunk(matchId: string, files: MatchFiles, key: string): Promise<Frame[]> {
   const path = files[key];
   if (!path) return [];
-  const res = await fetch(await signedUrl(path));
+  const res = await fetch(await signedUrl(matchId, path));
   if (!res.ok) throw new Error(`Could not load ${key}`);
   const body = (await res.json()) as { frames?: Frame[] };
   return body.frames ?? [];
