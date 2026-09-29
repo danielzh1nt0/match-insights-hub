@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ip/primitives";
 import { MomentumStrip, type MomentumMarker, type MomentumSegment } from "@/components/visuals/MomentumStrip";
-import { Sparkline } from "@/components/visuals/Sparkline";
 import { cn } from "@/lib/utils";
 
 export type MomentState = "keep" | "watch" | "fix";
@@ -17,14 +16,16 @@ export type MomentProps = {
   sample: string;
   claim: string;
   sub: string;
-  comparisons: { target: string; vsOpp: string; vsL5: string; vsOppTone: Tone; vsL5Tone: Tone; trend: number[] };
+  comparisons: { target: string; vsOpp: string; vsOppTone: Tone };
   visual: ReactNode;
   whereVisual?: ReactNode;
   consequence?: ReactNode;
   cause?: string;
   clips: Clip[];
   allClipCount?: number;
-  onTrain?: () => void;
+  onTrain?: (() => void) | undefined;
+  /** What the session would actually train, from the finding behind this card. */
+  trainLabel?: string | undefined;
   onClip: (seconds: number) => void;
   expanded: boolean;
   onToggle: () => void;
@@ -36,12 +37,12 @@ export type MomentProps = {
 
 const stateLabel = { keep: "Keep doing", watch: "Watch", fix: "Fix first" } as const;
 const stateClasses = { keep: "bg-reaction-good/15 text-reaction-good", watch: "bg-reaction-warn/15 text-reaction-warn", fix: "bg-reaction-bad/15 text-reaction-bad" } as const;
-const borderClasses = { keep: "border-l-team-a", watch: "border-l-team-b", fix: "border-l-reaction-bad" } as const;
+const borderClasses = { keep: "border-l-reaction-good", watch: "border-l-reaction-warn", fix: "border-l-reaction-bad" } as const;
 const valueClasses = { good: "text-reaction-good", warn: "text-reaction-warn", bad: "text-reaction-bad" } as const;
 const toneClasses = { good: "text-reaction-good", warn: "text-reaction-warn", bad: "text-reaction-bad" } as const;
 
 export function MomentSection(props: MomentProps) {
-  const { id, name, state, timeSample, value, valueColour, sample, claim, sub, comparisons, visual, whereVisual, consequence, cause, clips, allClipCount, onTrain, onClip, expanded, onToggle, priority, whenSegments, whenMarkers, durationSeconds } = props;
+  const { id, name, state, timeSample, value, valueColour, sample, claim, sub, comparisons, visual, whereVisual, consequence, cause, clips, allClipCount, onTrain, trainLabel, onClip, expanded, onToggle, priority, whenSegments, whenMarkers, durationSeconds } = props;
   return <article id={id} className={cn("overflow-hidden rounded-[14px] border border-l-[3px] border-wire bg-surface", borderClasses[state], priority && "shadow-priority")}>
     <Button type="button" variant="ghost" aria-expanded={expanded} aria-controls={`${id}-details`} onClick={onToggle} className="h-auto min-h-11 w-full justify-between rounded-none px-4 pb-2 pt-3.5 text-left hover:bg-surface-2">
       <span className="flex min-w-0 flex-col items-start gap-1.5"><span className="display text-[13px] text-text-dim">{name}</span><span className={cn("inline-flex items-center gap-1.5 rounded-[6px] px-[9px] py-1 text-[10px] font-bold uppercase", stateClasses[state])}><span className="h-1.5 w-1.5 rounded-full bg-current" />{stateLabel[state]}</span></span>
@@ -58,7 +59,6 @@ export function MomentSection(props: MomentProps) {
       <div className="flex flex-wrap gap-5 px-4 pb-3 pt-2">
         <Compare label="Target" value={comparisons.target} />
         <Compare label="vs Opp" value={comparisons.vsOpp} tone={comparisons.vsOppTone} />
-        <span className="flex flex-col gap-0.5"><span className="text-[9px] font-bold uppercase text-text-faint">vs L5</span><span className="flex items-center gap-2"><strong className={cn("display text-[14px]", toneClasses[comparisons.vsL5Tone])}>{comparisons.vsL5}</strong><Sparkline values={comparisons.trend} colour={`var(--reaction-${comparisons.vsL5Tone})`} /></span></span>
       </div>
 
       {expanded && <>
@@ -71,7 +71,7 @@ export function MomentSection(props: MomentProps) {
 
       <div className="grid grid-cols-3 gap-1.5 px-4 pb-3">{clips.map((clip) => <Button key={`${id}-${clip.seconds}`} type="button" variant="ghost" aria-label={`Play clip at ${clip.t}`} onClick={() => onClip(clip.seconds)} className="relative aspect-[16/10] h-auto min-h-11 rounded-[8px] border border-wire bg-pitch-insight p-0 hover:bg-pitch-insight"><span className="absolute bottom-1 left-1 rounded-[3px] bg-ink/80 px-1 font-display text-[9px] font-bold text-cream">{clip.t}</span><span className="absolute left-1/2 top-1/2 h-[18px] w-[18px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-cream/40" /></Button>)}</div>
       {expanded && allClipCount && <div className="px-4 pb-3"><Button type="button" variant="ghost" onClick={() => clips[0] && onClip(clips[0].seconds)} className="w-full rounded-[8px] border border-dashed border-wire text-[11.5px] font-semibold text-text-dim">Show all {allClipCount} →</Button></div>}
-      {state === "fix" && onTrain && <div className="px-4 pb-4 pt-1"><Button type="button" onClick={onTrain} className="w-full">Train it · counter-press after loss →</Button></div>}
+      {state === "fix" && onTrain && <div className="px-4 pb-4 pt-1"><Button type="button" onClick={onTrain} className="w-full">{trainLabel ? `Train it · ${trainLabel} →` : "Build this into Tuesday →"}</Button></div>}
     </div>
   </article>;
 }
