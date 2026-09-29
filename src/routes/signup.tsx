@@ -41,7 +41,7 @@ function SignUp() {
 
   if (sent) {
     return (
-      <AuthShell sub="Request access">
+      <AuthShell title="Check your email" sub="We have sent you a link to confirm your address. Open it and you are in.">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <Mail size={30} className="text-cream" aria-hidden="true" />
           <h1 className="display text-[20px] text-text">Your account is ready</h1>
@@ -103,7 +103,8 @@ function SignUp() {
 
   return (
     <AuthShell
-      sub="Request access"
+      title="Set up your club"
+      sub="Tell us who you coach. Your first match can be analysed as soon as you are in."
       foot={
         <>
           Already have an account?{" "}

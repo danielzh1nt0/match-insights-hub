@@ -28,8 +28,6 @@ import { Route as UploadProcessingRouteImport } from './routes/upload_.processin
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings.account'
 import { Route as AuthenticatedSettingsClubRouteImport } from './routes/_authenticated/settings.club'
 import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings.profile'
-import { Route as SPlayerTokenRouteImport } from './routes/s.player.$token'
-import { Route as SReelTokenRouteImport } from './routes/s.reel.$token'
 import { Route as AuthenticatedMatchMatchIdInsightsRouteImport } from './routes/_authenticated/match.$matchId.insights'
 import { Route as AuthenticatedMatchMatchIdMatchRouteImport } from './routes/_authenticated/match.$matchId.match'
 import { Route as AuthenticatedMatchMatchIdReelRouteImport } from './routes/_authenticated/match.$matchId.reel'
@@ -136,16 +134,6 @@ const AuthenticatedSettingsProfileRoute =
     path: '/settings/profile',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const SPlayerTokenRoute = SPlayerTokenRouteImport.update({
-  id: '/s/player/$token',
-  path: '/s/player/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SReelTokenRoute = SReelTokenRouteImport.update({
-  id: '/s/reel/$token',
-  path: '/s/reel/$token',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedMatchMatchIdInsightsRoute =
   AuthenticatedMatchMatchIdInsightsRouteImport.update({
     id: '/match/$matchId/insights',
@@ -214,8 +202,6 @@ export interface FileRoutesByFullPath {
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
-  '/s/player/$token': typeof SPlayerTokenRoute
-  '/s/reel/$token': typeof SReelTokenRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
@@ -244,8 +230,6 @@ export interface FileRoutesByTo {
   '/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
-  '/s/player/$token': typeof SPlayerTokenRoute
-  '/s/reel/$token': typeof SReelTokenRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
@@ -276,8 +260,6 @@ export interface FileRoutesById {
   '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
   '/_authenticated/settings/club': typeof AuthenticatedSettingsClubRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
-  '/s/player/$token': typeof SPlayerTokenRoute
-  '/s/reel/$token': typeof SReelTokenRoute
   '/_authenticated/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
   '/_authenticated/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/_authenticated/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
@@ -308,8 +290,6 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/club'
     | '/settings/profile'
-    | '/s/player/$token'
-    | '/s/reel/$token'
     | '/match/$matchId/insights'
     | '/match/$matchId/match'
     | '/match/$matchId/reel'
@@ -338,8 +318,6 @@ export interface FileRouteTypes {
     | '/settings/account'
     | '/settings/club'
     | '/settings/profile'
-    | '/s/player/$token'
-    | '/s/reel/$token'
     | '/match/$matchId/insights'
     | '/match/$matchId/match'
     | '/match/$matchId/reel'
@@ -369,8 +347,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/account'
     | '/_authenticated/settings/club'
     | '/_authenticated/settings/profile'
-    | '/s/player/$token'
-    | '/s/reel/$token'
     | '/_authenticated/match/$matchId/insights'
     | '/_authenticated/match/$matchId/match'
     | '/_authenticated/match/$matchId/reel'
@@ -394,8 +370,6 @@ export interface RootRouteChildren {
   SignupReadyRoute: typeof SignupReadyRoute
   SignupTeamRoute: typeof SignupTeamRoute
   UploadProcessingRoute: typeof UploadProcessingRoute
-  SPlayerTokenRoute: typeof SPlayerTokenRoute
-  SReelTokenRoute: typeof SReelTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -533,20 +507,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsProfileRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/s/player/$token': {
-      id: '/s/player/$token'
-      path: '/s/player/$token'
-      fullPath: '/s/player/$token'
-      preLoaderRoute: typeof SPlayerTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/s/reel/$token': {
-      id: '/s/reel/$token'
-      path: '/s/reel/$token'
-      fullPath: '/s/reel/$token'
-      preLoaderRoute: typeof SReelTokenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/match/$matchId/insights': {
       id: '/_authenticated/match/$matchId/insights'
       path: '/match/$matchId/insights'
@@ -661,8 +621,6 @@ const rootRouteChildren: RootRouteChildren = {
   SignupReadyRoute: SignupReadyRoute,
   SignupTeamRoute: SignupTeamRoute,
   UploadProcessingRoute: UploadProcessingRoute,
-  SPlayerTokenRoute: SPlayerTokenRoute,
-  SReelTokenRoute: SReelTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

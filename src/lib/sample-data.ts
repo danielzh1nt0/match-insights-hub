@@ -14,6 +14,8 @@ export type LibraryMatch = {
   /** Kit colours from the saved labels, used for dots and bars. */
   colourA?: string;
   colourB?: string;
+  /** Which side is the coach's own team, so a result can be read from their point of view. */
+  clubTeam?: "A" | "B";
   tags: string[];
   summary: {
     possession: [number, number];

@@ -1,0 +1,122 @@
+import type { Finding } from "@/lib/match-data";
+
+/**
+ * The insights model: which of the four moments of the game each finding
+ * belongs to, and which one the coach should deal with first.
+ *
+ * The four phases are the taxonomy because every coach already thinks in them
+ * and each maps to metrics the pipeline actually emits. The priority is taken
+ * from the findings, never hardcoded: a finding exists only because a real
+ * number crossed a threshold the coach set, and `buildFindings` returns them
+ * worst-first.
+ */
+
+export type PhaseKey = "possession" | "out" | "attack" | "defence";
+export type MomentState = "keep" | "watch" | "fix";
+
+export const PHASE_NAME: Record<PhaseKey, string> = {
+  possession: "In possession",
+  out: "Out of possession",
+  attack: "Transition to attack",
+  defence: "Transition to defence",
+};
+
+/** Which moment of the game each finding is about. */
+const PHASE_OF: Record<string, PhaseKey> = {
+  // losing the ball and the reaction to it
+  slow_press: "defence",
+  no_regain: "defence",
+  press_alone: "defence",
+  // winning the ball and what happens next
+  slow_forward: "attack",
+  won_and_lost: "attack",
+  // on the ball
+  better_option: "possession",
+  risky_passing: "possession",
+  // without the ball, settled
+  long_block: "out",
+  low_tilt: "out",
+  no_high_turnovers: "out",
+};
+
+export type PhaseModel = {
+  key: PhaseKey;
+  name: string;
+  /** Findings that fired for this phase, worst first. */
+  findings: Finding[];
+  state: MomentState;
+  /** This is the one to deal with first. */
+  priority: boolean;
+};
+
+export type InsightsModel = {
+  phases: PhaseModel[];
+  /** The single most important finding, or null when every target was met. */
+  top: Finding | null;
+  /** Findings the pipeline produced that no phase claims. */
+  unmapped: Finding[];
+};
+
+/**
+ * Phases come back in the order the coach should read them: the priority first,
+ * then anything else that fired, then the phases that were fine.
+ */
+export function buildInsightsModel(findings: Finding[]): InsightsModel {
+  const top = findings[0] ?? null;
+  const topPhase = top ? PHASE_OF[top.id] : undefined;
+
+  const phases: PhaseModel[] = (Object.keys(PHASE_NAME) as PhaseKey[]).map((key) => {
+    const own = findings.filter((f) => PHASE_OF[f.id] === key);
+    const priority = topPhase === key;
+    return {
+      key,
+      name: PHASE_NAME[key],
+      findings: own,
+      state: own.length === 0 ? "keep" : priority ? "fix" : "watch",
+      priority,
+    };
+  });
+
+  const rank = (phase: PhaseModel) => (phase.priority ? 0 : phase.findings.length > 0 ? 1 : 2);
+  phases.sort((a, b) => rank(a) - rank(b));
+
+  return {
+    phases,
+    top,
+    unmapped: findings.filter((f) => !PHASE_OF[f.id]),
+  };
+}
+
+/**
+ * The headline for the top of the screen. With no findings this says so
+ * plainly rather than reaching for something dramatic to fill the space.
+ */
+export function verdict(model: InsightsModel): { headline: string; sub: string | null } {
+  if (!model.top) {
+    return {
+      headline: "Every target you set was met.",
+      sub: "Nothing in this match crossed a threshold. The phases below show what the numbers were.",
+    };
+  }
+  return { headline: model.top.headline, sub: model.top.interpretation };
+}
+
+/**
+ * A card must never say "keep doing" while the number it is showing misses the
+ * target it is showing right underneath.
+ *
+ * State normally comes from the findings, which is right: a finding means a
+ * real threshold was crossed. But if the findings engine ever misses one, the
+ * card would reassure the coach against its own printed evidence. This is the
+ * backstop, not the primary path.
+ */
+export function guardState(
+  state: MomentState,
+  value: number | null,
+  target: number | null,
+  higherIsBetter: boolean,
+): MomentState {
+  if (state !== "keep" || value === null || target === null) return state;
+  const missed = higherIsBetter ? value < target : value > target;
+  return missed ? "watch" : state;
+}

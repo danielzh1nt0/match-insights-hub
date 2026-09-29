@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Check, Play, RotateCcw, Share2, Target, X } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowRight, Check, Play, RotateCcw, Target, X } from "lucide-react";
 import type { TeamKey } from "@/lib/match-analysis";
 import type { RecapAnalysis } from "@/lib/recap-analysis";
 import { crestForTeam } from "@/lib/team-crests";
@@ -12,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { PositionsArt, PressureArt, type Loss } from "@/components/visuals/PitchArt";
 
 type Chapter = "score" | "strength" | "player" | "improve" | "verdict";
-type Action = { label: string; kind: "primary" | "secondary"; run: () => void; icon?: "play" | "share" | "session" };
+type Action = { label: string; kind: "primary" | "secondary"; run: () => void; icon?: "play" | "session" };
 type StorySlide = { id: Chapter; durationMs: number; moment?: number };
 export type StoryShape = {
   dots: { x: number; y: number; team: TeamKey }[];
@@ -124,11 +123,7 @@ export function MatchStory({
       { label: "Build the fix", kind: "primary", icon: "session", run: () => void navigate({ to: "/match/$matchId/session", params: { matchId }, search: recap.improvement ? { finding: recap.improvement.id } : {} }) },
     ];
     return [
-      { label: "Share recap", kind: "secondary", icon: "share", run: () => {
-        void navigator.clipboard?.writeText(`${window.location.origin}/s/reel/${matchId}`)
-          .then(() => toast.success("Share link copied"))
-          .catch(() => toast.error("Couldn't copy the link"));
-      } },
+      { label: "Open the clip reel", kind: "secondary", icon: "play", run: () => void navigate({ to: "/match/$matchId/reel", params: { matchId } }) },
       { label: "Open analysis", kind: "primary", run: close },
     ];
   }, [slide.id, recap, watch, next, navigate, matchId, close]);
@@ -367,6 +362,6 @@ function StoryBackdrop({ chapter, shape }: { chapter: Chapter; shape: StoryShape
 
 function StoryButton({ action }: { action: Action }) {
   return <button type="button" onClick={action.run} className={cn("tap relative z-30 flex min-h-12 flex-1 items-center justify-center gap-2 border px-3 text-[11px] font-black uppercase backdrop-blur-md", action.kind === "primary" ? "border-story-paper bg-story-paper text-story-ink" : "border-story-paper/40 bg-story-ink/55 text-story-paper")}>
-    {action.icon === "play" && <Play size={14} aria-hidden="true" />}{action.icon === "share" && <Share2 size={14} aria-hidden="true" />}{action.icon === "session" && <ArrowRight size={14} aria-hidden="true" />}{action.label}
+    {action.icon === "play" && <Play size={14} aria-hidden="true" />}{action.icon === "session" && <ArrowRight size={14} aria-hidden="true" />}{action.label}
   </button>;
 }
