@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { TeamScope } from "@/components/ip/chrome";
-import { buildMatchData } from "@/lib/match-data";
 import {
   buildFindings,
   buildLineDefending,
@@ -37,13 +36,8 @@ export function useMatchRecord(matchId: string) {
 export function useMatch(matchId: string) {
   const { data: item, isPending, error } = useMatchRecord(matchId);
   const match = useMemo(() => (item ? toLibraryMatch(item) : undefined), [item]);
-  const data = useMemo(
-    () => (match ? buildMatchData(match.id, match.durationS) : null),
-    [match?.id, match?.durationS],
-  );
   return {
     match,
-    data,
     item: item ?? null,
     loading: isPending,
     error,
