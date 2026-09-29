@@ -1,135 +1,229 @@
-import { StatsTeamPill } from "@/components/ip/stats-team-selector";
-import { teamIdentities } from "@/lib/team-identity";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type CSSProperties } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
-import { FormationReplay } from "@/components/territory/FormationReplay";
-import { LossWinPitches } from "@/components/territory/LossWinPitches";
-import { ShapeRibbon } from "@/components/territory/ShapeRibbon";
-import { TeamHeatMap } from "@/components/territory/TeamHeatMap";
+import { Chip } from "@/components/ip/primitives";
+import { StatsTeamSelector } from "@/components/ip/stats-team-selector";
+import { PhasePicker } from "@/components/phases/PhasePicker";
+import { PhasePitch, type PhaseView } from "@/components/phases/PhasePitch";
+import { Panel, PhaseMoments, PhaseNumbers, PhaseRibbon } from "@/components/phases/PhasePanels";
 import { useAnalysis } from "@/hooks/use-match";
-import { attacksRight, teamRow } from "@/lib/match-analysis";
-import type { Frame, FramePlayer } from "@/lib/match-source";
+import { attacksRight } from "@/lib/match-analysis";
+import { buildPhases, type PhaseKey } from "@/lib/phases";
+import { setPitchContext } from "@/lib/pitch-coords";
+import { teamIdentities } from "@/lib/team-identity";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/territory")({
   head: () => ({
     meta: [
-      { title: "Territory — Ipanema" },
-      { name: "description", content: "Where the team lived, where it lost the ball and where it won it back." },
-      { property: "og:title", content: "Territory — Ipanema" },
-      { property: "og:description", content: "Heat maps, losses, recoveries and a shape replay." },
+      { title: "Phases — Ipanema" },
+      {
+        name: "description",
+        content: "The four moments of the game: our shape, where it happened and the numbers.",
+      },
+      { property: "og:title", content: "Phases — Ipanema" },
+      {
+        property: "og:description",
+        content: "In possession, losing it, out of possession, winning it.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: TerritoryScreen,
+  component: PhasesScreen,
 });
 
-type TeamKey = "A" | "B";
+const PERIODS = [
+  { key: "full" as const, label: "Full" },
+  { key: "1st" as const, label: "1st half" },
+  { key: "2nd" as const, label: "2nd half" },
+];
 
-function percentPlayer(player: FramePlayer, length: number, width: number) {
-  return {
-    id: `${player.team}-${player.id}`,
-    num: String(player.id),
-    x: Math.max(0, Math.min(1, player.m[0] / length)),
-    y: Math.max(0, Math.min(1, player.m[1] / width)),
-    ...(player.gk ? { isGK: true } : {}),
-  };
-}
-
-function centroid(players: { x: number; y: number }[]) {
-  if (players.length === 0) return { x: 0.5, y: 0.5 };
-  return { x: players.reduce((sum, player) => sum + player.x, 0) / players.length, y: players.reduce((sum, player) => sum + player.y, 0) / players.length };
-}
-
-function hullPath(players: { x: number; y: number }[]) {
-  if (players.length < 4) return "";
-  const centre = centroid(players);
-  return [...players]
-    .sort((a, b) => Math.atan2(a.y - centre.y, a.x - centre.x) - Math.atan2(b.y - centre.y, b.x - centre.x))
-    .map((player, index) => `${index === 0 ? "M" : "L"}${player.x * 100},${player.y * 100}`)
-    .join(" ") + " Z";
-}
-
-function frameNear(frames: Frame[], time: number, team: TeamKey, phase: "with" | "without") {
-  const eligible = frames.filter((frame) => phase === "with" ? frame.possession === team : frame.possession !== team);
-  return eligible.reduce<Frame | null>((nearest, frame) => !nearest || Math.abs(frame.t - time) < Math.abs(nearest.t - time) ? frame : nearest, null);
-}
-
-function TerritoryScreen() {
+function PhasesScreen() {
   const { matchId } = Route.useParams();
   const navigate = Route.useNavigate();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const [heatTime, setHeatTime] = useState(1);
-  const [activePlayer, setActivePlayer] = useState<string | null>(null);
-  const [shapeTime, setShapeTime] = useState(0);
-  const [phase, setPhase] = useState<"with" | "without">("with");
-  const { match, row, label, file, team, colours, territory, loading, stats } = useAnalysis(matchId, scope);
-  const chosenTeam: TeamKey = team ?? "A";
+  const [phaseKey, setPhaseKey] = useState<PhaseKey>("defend");
+  const [view, setView] = useState<PhaseView>("shape");
+
+  const { match, row, label, file, team, colours, thresholds, events, stats, loading } =
+    useAnalysis(matchId, scope);
+  const chosenTeam = team ?? "A";
   const duration = row?.duration_s ?? match?.durationS ?? 1;
-  const periodStart = period === "2nd" ? duration / 2 : 0;
-  const periodEnd = period === "1st" ? duration / 2 : duration;
-  const frames = useMemo(() => (file?.frames ?? []).filter((frame) => frame.t >= periodStart && frame.t <= periodEnd), [file?.frames, periodStart, periodEnd]);
-  const visibleFrames = useMemo(() => frames.filter((frame) => frame.t <= periodStart + (periodEnd - periodStart) * heatTime), [frames, heatTime, periodStart, periodEnd]);
-  const length = Math.max(file?.pitch?.length ?? 105, 1);
-  const width = Math.max(file?.pitch?.width ?? 68, 1);
-  const playerIds = useMemo(() => {
-    const appearances = new Map<string, number>();
-    for (const frame of frames) for (const player of frame.players) {
-      if (player.team !== chosenTeam || player.state === "stale") continue;
-      const id = String(player.id);
-      appearances.set(id, (appearances.get(id) ?? 0) + 1);
-    }
-    return [...appearances].sort((a, b) => b[1] - a[1]).slice(0, 11).map(([id]) => id).sort((a, b) => Number(a) - Number(b));
-  }, [frames, chosenTeam]);
-  const blobsFor = (playerId: string | null) => {
-    const counts = new Map<string, { x: number; y: number; n: number }>();
-    for (const frame of visibleFrames) for (const player of frame.players) {
-      if (player.team !== chosenTeam || player.state === "stale" || (playerId && String(player.id) !== playerId)) continue;
-      const x = Math.max(0, Math.min(1, player.m[0] / length));
-      const y = Math.max(0, Math.min(1, player.m[1] / width));
-      const key = `${Math.floor(x * 7)}:${Math.floor(y * 10)}`;
-      const cell = counts.get(key) ?? { x, y, n: 0 };
-      cell.n += 1;
-      counts.set(key, cell);
-    }
-    const max = Math.max(1, ...[...counts.values()].map((cell) => cell.n));
-    return [...counts.values()].map((cell) => ({ x: cell.x, y: cell.y, r: 0.16, intensity: cell.n / max }));
-  };
-  const teamBlobs = useMemo(() => blobsFor(null), [visibleFrames, chosenTeam, length, width]);
-  const playerBlobs = useMemo(() => activePlayer ? blobsFor(activePlayer) : [], [activePlayer, visibleFrames, chosenTeam, length, width]);
-  const trackedPerFrame = visibleFrames.map((frame) => frame.players.filter((player) => player.team === chosenTeam && player.state !== "stale").length).sort((a, b) => a - b);
-  const typicalInView = trackedPerFrame.length ? trackedPerFrame[Math.floor(trackedPerFrame.length / 2)] ?? 0 : 0;
-  const rawTimeline = ((stats?.metrics?.["shape_timeline"] as Record<string, unknown[]> | undefined)?.[chosenTeam] ?? []) as Record<string, unknown>[];
-  const timeline = rawTimeline.flatMap((sample) => typeof sample["t"] === "number" && typeof sample["length"] === "number" && typeof sample["width"] === "number" ? [{ t: sample["t"], length: sample["length"], width: sample["width"] }] : []);
-  const teamStats = teamRow(stats, chosenTeam);
-  const selectedMoment = periodStart + (periodEnd - periodStart) * shapeTime;
-  const formationFrame = frameNear(frames, selectedMoment, chosenTeam, phase);
-  const formationPlayers = (formationFrame?.players ?? []).filter((player) => player.team === chosenTeam && player.state !== "stale").map((player) => percentPlayer(player, length, width));
-  const formationCentre = centroid(formationPlayers);
-  const snapshots = (territory?.snapshots ?? []).filter((snapshot) => snapshot.t >= periodStart && snapshot.t <= periodEnd).map((snapshot) => ({ t: snapshot.t, players: snapshot.players.map((player) => ({ id: player.id, num: String(player.shirt), x: player.x / 100, y: player.y / 100, ...(player.isGK ? { isGK: true } : {}) })) }));
-  const attackRight = attacksRight(row?.attack_right, label?.attack_right_override, chosenTeam) === (period !== "2nd");
+  const from = period === "2nd" ? duration / 2 : 0;
+  const to = period === "1st" ? duration / 2 : duration;
+
+  setPitchContext(file);
+
+  const inPeriod = useMemo(
+    () => events.filter((event) => event.t >= from && event.t <= to),
+    [events, from, to],
+  );
+  const phases = useMemo(
+    () => buildPhases({ stats, events: inPeriod, team: chosenTeam, thresholds }),
+    [stats, inPeriod, chosenTeam, thresholds],
+  );
+  const phase = phases.find((candidate) => candidate.key === phaseKey) ?? phases[0]!;
+
+  const frames = useMemo(() => {
+    const all = (file?.frames ?? []).filter((frame) => frame.t >= from && frame.t <= to);
+    return all.filter((frame) =>
+      phase.wantsBall ? frame.possession === chosenTeam : frame.possession !== chosenTeam,
+    );
+  }, [file?.frames, from, to, phase.wantsBall, chosenTeam]);
+
+  const phaseEvents = useMemo(
+    () =>
+      inPeriod.filter(
+        (event) => event.team === chosenTeam && phase.eventTypes.includes(event.type),
+      ),
+    [inPeriod, chosenTeam, phase.eventTypes],
+  );
+
+  const identities = match ? teamIdentities(match, colours) : null;
+  const attackRight =
+    attacksRight(row?.attack_right, label?.attack_right_override, chosenTeam) ===
+    (period !== "2nd");
   const teamName = chosenTeam === "B" ? match?.teamB : match?.teamA;
-  const teamColour = chosenTeam === "B" ? colours.B : colours.A;
   const screenVars = { "--team-a": colours.A, "--team-b": colours.B } as CSSProperties;
-  const seekToMatch = (t: number) => void navigate({ to: "/match/$matchId/match", params: { matchId }, search: { t } });
+  const watch = (t: number) =>
+    void navigate({ to: "/match/$matchId/match", params: { matchId }, search: { t } });
 
   return (
-    <MatchShell matchId={matchId} match={match} scope={scope} setScope={(next) => { setScope(next === "both" ? "a" : next); setActivePlayer(null); }} period={period} setPeriod={setPeriod}>
-      <div style={{ ...screenVars, display: "flex", flexDirection: "column", paddingBottom: "120px" }}>
-        {loading && <div className="h-1 w-full overflow-hidden rounded-full bg-surface-2" role="status" aria-label="Loading territory"><div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" /></div>}
-        {territory && match && <>
-          {(() => {
-            const ids = teamIdentities(match, colours);
-            return ids ? <div className="mb-3 flex items-center" aria-label="Team in view"><StatsTeamPill identity={chosenTeam === "B" ? ids.B : ids.A} /></div> : null;
-          })()}
-          <TeamHeatMap teamColour={teamColour} attackLabel={`${teamName ?? "Team"} attack ${attackRight ? "right" : "left"}`} teamBlobs={teamBlobs} playerBlobs={playerBlobs} activePlayer={activePlayer} players={playerIds.map((id) => ({ id, num: id }))} onPlayerTap={(id) => setActivePlayer(id === "all" ? null : id)} sliderValue={heatTime} onSliderChange={setHeatTime} reliabilityLabel={`${typicalInView} of ${playerIds.length} in view`} frameCount={visibleFrames.length} />
-          {timeline.length > 1 && <ShapeRibbon teamColour={teamColour} timeline={timeline} durationSeconds={duration} currentTime={selectedMoment} onSeek={(t) => { setShapeTime(t / duration); seekToMatch(t); }} medianLength={Math.round(teamStats?.block_length_median_m ?? territory.blockLengthM)} />}
-          {(territory.losses.length > 0 || territory.recoveries.length > 0) && <LossWinPitches teamColour={teamColour} losses={territory.losses.map((point) => ({ ...point, x: point.x / 100, y: point.y / 100 }))} wins={territory.recoveries.map((point) => ({ ...point, x: point.x / 100, y: point.y / 100 }))} onDotTap={(point) => seekToMatch(point.t)} />}
-          {formationPlayers.length > 0 && <FormationReplay teamColour={teamColour} attackLabel={`${teamName ?? "Team"} attack ${attackRight ? "right" : "left"}`} players={formationPlayers} centroid={formationCentre} hullPoints={hullPath(formationPlayers)} phase={phase} onPhaseChange={setPhase} sliderValue={shapeTime} onSliderChange={setShapeTime} snapshots={snapshots} onSnapshotTap={(t) => setShapeTime(Math.max(0, Math.min(1, (t - periodStart) / Math.max(periodEnd - periodStart, 1))))} currentTime={selectedMoment} />}
-        </>}
+    <MatchShell
+      matchId={matchId}
+      match={match}
+      scope={scope}
+      setScope={(next) => setScope(next === "both" ? "a" : next)}
+      period={period}
+      setPeriod={setPeriod}
+      showSelectors={false}
+    >
+      <div style={screenVars} className="flex flex-col gap-3 pb-24">
+        {loading && (
+          <div
+            className="h-1 w-full overflow-hidden rounded-full bg-surface-2"
+            role="status"
+            aria-label="Loading phases"
+          >
+            <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
+          </div>
+        )}
+
+        {match && (
+          <>
+            <div>
+              <h1 className="display-i text-[clamp(26px,6vw,34px)] uppercase leading-none text-cream">
+                Phases
+              </h1>
+              <p className="mt-2 max-w-[62ch] text-[13px] leading-normal text-text-dim">
+                The four moments of the game. Pick one to see how we played it: our shape, where it
+                happened, the numbers and the best and worst example.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {identities && (
+                <div className="min-w-[280px] flex-1">
+                  <StatsTeamSelector
+                    value={scope}
+                    onChange={(next) => setScope(next === "both" ? "a" : next)}
+                    teamA={identities.A}
+                    teamB={identities.B}
+                  />
+                </div>
+              )}
+              <div className="flex shrink-0 gap-2" role="group" aria-label="Period">
+                {PERIODS.map((p) => (
+                  <Chip key={p.key} active={period === p.key} onClick={() => setPeriod(p.key)}>
+                    {p.label}
+                  </Chip>
+                ))}
+              </div>
+            </div>
+
+            <PhasePicker phases={phases} active={phase.key} onPick={setPhaseKey} />
+
+            <div className="grid items-start gap-3 min-[1100px]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+              <Panel
+                title={
+                  view === "shape"
+                    ? "Average shape"
+                    : view === "zones"
+                      ? "Where it happened"
+                      : "Where we spent the time"
+                }
+                question={
+                  view === "shape"
+                    ? `Average positions ${phase.name.toLowerCase()}, from the tracked frames.`
+                    : view === "zones"
+                      ? `Share of ${phase.name.toLowerCase()} moments in each zone.`
+                      : `Every tracked position ${phase.name.toLowerCase()}, darker where we were more often.`
+                }
+                right={
+                  <div className="flex shrink-0 gap-2" role="group" aria-label="Pitch view">
+                    <Chip active={view === "shape"} onClick={() => setView("shape")}>
+                      Shape
+                    </Chip>
+                    <Chip active={view === "zones"} onClick={() => setView("zones")}>
+                      Zones
+                    </Chip>
+                    <Chip active={view === "heat"} onClick={() => setView("heat")}>
+                      Heat
+                    </Chip>
+                  </div>
+                }
+                note={
+                  view === "zones"
+                    ? `${phaseEvents.length} moments of this phase`
+                    : `${frames.length} tracked frames of this phase`
+                }
+              >
+                <PhasePitch
+                  view={view}
+                  frames={frames}
+                  events={phaseEvents}
+                  team={chosenTeam}
+                  colour={chosenTeam === "B" ? colours.B : colours.A}
+                  attackLabel={`${teamName ?? "Team"} attack ${attackRight ? "right" : "left"}`}
+                  length={Math.max(file?.pitch?.length ?? 105, 1)}
+                  width={Math.max(file?.pitch?.width ?? 68, 1)}
+                  file={file}
+                />
+              </Panel>
+
+              <Panel title="The numbers" question={`${phase.name}, ${teamName ?? "this team"}.`}>
+                <PhaseNumbers
+                  numbers={phase.numbers}
+                  phaseName={phase.name}
+                  onWatch={phase.worst ? () => watch(phase.worst!.t) : null}
+                />
+              </Panel>
+            </div>
+
+            <Panel
+              title="Over the match"
+              question={
+                phase.series
+                  ? `${phase.series.label}, through the match. Red is outside your target.`
+                  : undefined
+              }
+            >
+              {phase.series ? (
+                <PhaseRibbon series={phase.series} duration={duration} />
+              ) : (
+                <p className="text-[12.5px] text-text-faint">
+                  This match file holds nothing to plot for {phase.name.toLowerCase()} over time.
+                </p>
+              )}
+            </Panel>
+
+            <Panel title="Best and worst moment" question="Tap one to watch it on the Match page.">
+              <PhaseMoments phase={phase} onWatch={watch} />
+            </Panel>
+          </>
+        )}
       </div>
     </MatchShell>
   );

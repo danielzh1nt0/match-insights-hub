@@ -188,7 +188,7 @@ export function PeriodSelector({
 const navItems = [
   { label: "Insights", to: "/match/$matchId/insights", icon: Sparkles },
   { label: "Match", to: "/match/$matchId/match", icon: Film },
-  { label: "Territory", to: "/match/$matchId/territory", icon: Map },
+  { label: "Phases", to: "/match/$matchId/territory", icon: Map },
   { label: "Stats", to: "/match/$matchId/stats", icon: ChartNoAxesColumn },
 ] as const;
 

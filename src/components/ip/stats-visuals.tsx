@@ -6,6 +6,7 @@ import { setPieceKind } from "@/lib/match-analysis";
 import type { LineDefending, PlayerStat, StatsFile, TeamKey, Territory, Thresholds } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import { cn } from "@/lib/utils";
+import { PITCH, clamp, eventPoint, finite, metresToPct, setPitchContext, type Point } from "@/lib/pitch-coords";
 import { DeepAnswer, LineBreakHero, LineTimeline } from "./line-break-cards";
 import { Button } from "./primitives";
 import { StatsTeamPill, type StatsTeamIdentity } from "./stats-team-selector";
@@ -30,38 +31,9 @@ type Props = {
   ballGrade?: { possession_ok?: boolean; events_ok?: boolean } | null;
 };
 
-type Point = { x: number; y: number };
 type Pass = Record<string, unknown>;
-const finite = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
-/** Pipeline coordinates are metres on the real pitch; the cards draw in 0-100 with the selected team attacking up. */
-const PITCH = { length: 105, width: 68, attackRight: { A: true, B: false } as Record<TeamKey, boolean> };
-function setPitchContext(file: MatchDataFile | undefined) {
-  PITCH.length = finite(file?.pitch?.length) ?? 105;
-  PITCH.width = finite(file?.pitch?.width) ?? 68;
-  PITCH.attackRight = { A: file?.attack_right?.["A"] ?? true, B: file?.attack_right?.["B"] ?? false };
-}
-const metresToPct = (m: unknown, team: TeamKey | null): Point | null => {
-  if (!Array.isArray(m) || m.length < 2) return null;
-  const mx = finite(m[0]), my = finite(m[1]);
-  if (mx === null || my === null) return null;
-  const right = team ? PITCH.attackRight[team] : true;
-  const x = (right ? mx : PITCH.length - mx) / PITCH.length * 100;
-  const y = (right ? my : PITCH.width - my) / PITCH.width * 100;
-  return { x: clamp(x), y: clamp(y) };
-};
-const clamp = (value: number, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const teamRow = (stats: StatsFile | undefined, team: TeamKey) => (stats?.teams ?? []).find((row: any) => row?.team === team) as Record<string, unknown> | undefined;
 const value = (row: Record<string, unknown> | undefined, key: string) => finite(row?.[key]);
-const eventPoint = (event: ReviewedEvent, file?: MatchDataFile): Point | null => {
-  const p = event.payload ?? {};
-  const x = finite(p["x"] ?? p["px"] ?? p["start_x"]);
-  const y = finite(p["y"] ?? p["py"] ?? p["start_y"]);
-  if (x !== null && y !== null) return { x: clamp(x > 105 ? x / 19.2 : x), y: clamp(y > 100 ? y / 10.8 : y) };
-  const frames=file?.frames??[]; let nearest:Frame|undefined;
-  for(const frame of frames){if(!nearest||Math.abs(frame.t-event.t)<Math.abs(nearest.t-event.t))nearest=frame;}
-  const metres=nearest?.ball?.m;
-  return metres ? metresToPct(metres, event.team === "A" || event.team === "B" ? event.team : null) : null;
-};
 const passTeam = (pass: Pass): TeamKey | null => pass["team"] === "A" || pass["team"] === "B" ? pass["team"] : null;
 const passTime = (pass: Pass) => finite(pass["t"] ?? pass["time"] ?? pass["start_t"]);
 const passPlayer = (pass: Pass, side: "from" | "to") => finite(pass[side] ?? pass[`${side}_id`] ?? (side === "from" ? pass["player_id"] : pass["receiver_id"]));
