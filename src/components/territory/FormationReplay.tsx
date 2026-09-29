@@ -1,5 +1,4 @@
-
-import React from 'react';
+import { cn } from "@/lib/utils";
 
 type Player = {
   id: string;
@@ -19,9 +18,9 @@ type Props = {
   attackLabel: string;
   players: Player[];
   centroid: { x: number; y: number };
-  hullPoints: string;              // SVG path
-  phase: 'with' | 'without';
-  onPhaseChange: (p: 'with' | 'without') => void;
+  hullPoints: string; // SVG path
+  phase: "with" | "without";
+  onPhaseChange: (p: "with" | "without") => void;
   sliderValue: number;
   onSliderChange: (v: number) => void;
   snapshots: Snapshot[];
@@ -29,72 +28,80 @@ type Props = {
   currentTime: number;
 };
 
+/** Tracking coordinates should be 0–1; a stray one must not escape the pitch. */
+const pc = (v: number) => `${Math.min(Math.max(v, 0), 1) * 100}%`;
+
+const clock = (t: number) => `${Math.floor(t / 60)}:${(Math.floor(t) % 60).toString().padStart(2, "0")}`;
+
 export function FormationReplay({
   teamColour, attackLabel, players, centroid, hullPoints,
   phase, onPhaseChange, sliderValue, onSliderChange,
   snapshots, onSnapshotTap, currentTime,
 }: Props) {
   return (
-    <div style={{ margin: '14px 16px 0', border: '1px solid var(--wire)', borderRadius: '14px', background: 'var(--surface)', overflow: 'hidden' }}>
-      <div style={{ padding: '14px 16px 6px' }}>
-        <div style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: '17px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--cream)' }}>
-          How did our shape change?
-        </div>
+    <div className="mx-4 mt-3.5 overflow-hidden rounded-[14px] border border-wire bg-surface">
+      <div className="px-4 pb-1.5 pt-3.5">
+        <h2 className="display text-[17px] uppercase text-cream">How did our shape change?</h2>
       </div>
-      <div style={{ fontSize: '11.5px', color: 'var(--text-faint)', padding: '0 16px 12px' }}>
-        Watch the team's shape move. Snapshots below every 30 seconds.
-      </div>
+      <p className="px-4 pb-3 text-[11.5px] text-text-faint">
+        Watch the team&apos;s shape move. Snapshots below every 30 seconds.
+      </p>
 
-      <div style={{ padding: '0 16px 12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px', padding: '3px', background: 'var(--surface-2)', borderRadius: '10px', border: '1px solid var(--wire)', marginBottom: '10px' }}>
-          <button type="button" aria-pressed={phase === 'with'} onClick={() => onPhaseChange('with')} style={{ minHeight: '44px', padding: '8px', borderRadius: '7px', border: phase === 'with' ? '1px solid var(--wire)' : 'none', background: phase === 'with' ? 'var(--surface-3)' : 'none', color: phase === 'with' ? 'var(--cream)' : 'var(--text-faint)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>With ball</button>
-          <button type="button" aria-pressed={phase === 'without'} onClick={() => onPhaseChange('without')} style={{ minHeight: '44px', padding: '8px', borderRadius: '7px', border: phase === 'without' ? '1px solid var(--wire)' : 'none', background: phase === 'without' ? 'var(--surface-3)' : 'none', color: phase === 'without' ? 'var(--cream)' : 'var(--text-faint)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>Without ball</button>
+      <div className="px-4 pb-3">
+        <div className="mb-2.5 grid grid-cols-2 gap-[3px] rounded-[10px] border border-wire bg-surface-2 p-[3px]" role="group" aria-label="Phase">
+          {(["with", "without"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={phase === key}
+              onClick={() => onPhaseChange(key)}
+              className={cn(
+                "min-h-11 rounded-[10px] p-2 text-[11px] font-semibold transition-colors",
+                phase === key ? "border border-wire bg-surface-3 text-cream" : "text-text-faint hover:text-text",
+              )}
+            >
+              {key === "with" ? "With ball" : "Without ball"}
+            </button>
+          ))}
         </div>
 
-        <div style={{ aspectRatio: '16/10', borderRadius: '12px', background: 'linear-gradient(180deg, #1a2f1c 0%, #0f2314 100%)', border: '1px solid var(--wire)', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: '4%', border: '1px solid rgba(237,230,214,0.28)', borderRadius: '2px' }} />
-          <div style={{ position: 'absolute', top: '4%', bottom: '4%', left: '50%', width: 0, borderLeft: '1px solid rgba(237,230,214,0.28)' }} />
+        <div className="relative aspect-[16/10] overflow-hidden rounded-[10px] border border-wire bg-pitch-insight">
+          <div className="absolute inset-[4%] rounded-[2px] border border-cream/[0.28]" aria-hidden="true" />
+          <div className="absolute bottom-[4%] left-1/2 top-[4%] border-l border-cream/[0.28]" aria-hidden="true" />
 
-          {/* Hull */}
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <path d={hullPoints} fill="rgba(237,230,214,0.05)" stroke="rgba(237,230,214,0.35)" strokeWidth="0.5" strokeDasharray="2 2" />
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <path d={hullPoints} fill="var(--cream)" fillOpacity="0.05" stroke="var(--cream)" strokeOpacity="0.35" strokeWidth="0.5" strokeDasharray="2 2" />
           </svg>
 
-          {/* Centroid cross */}
-          <div style={{ position: 'absolute', left: `${centroid.x * 100}%`, top: `${centroid.y * 100}%`, transform: 'translate(-50%, -50%)', width: '10px', height: '10px', pointerEvents: 'none' }}>
-            <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1.5px', background: 'var(--cream)', transform: 'translateY(-50%)' }} />
-            <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: '1.5px', background: 'var(--cream)', transform: 'translateX(-50%)' }} />
+          {/* Centroid */}
+          <div
+            className="pointer-events-none absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2"
+            style={{ left: pc(centroid.x), top: pc(centroid.y) }}
+            aria-hidden="true"
+          >
+            <span className="absolute inset-x-0 top-1/2 h-[1.5px] -translate-y-1/2 bg-cream" />
+            <span className="absolute inset-y-0 left-1/2 w-[1.5px] -translate-x-1/2 bg-cream" />
           </div>
 
-          {/* Player dots */}
           {players.map((p) => (
             <div
               key={p.id}
+              className={cn(
+                "display-i absolute grid h-[22px] w-[22px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-2 border-white text-[9px]",
+                p.isGK ? "text-ink" : "text-white",
+              )}
               style={{
-                position: 'absolute',
-                left: `${p.x * 100}%`,
-                top: `${p.y * 100}%`,
-                width: '22px',
-                height: '22px',
-                borderRadius: '50%',
-                transform: 'translate(-50%, -50%)',
-                background: p.isGK ? '#eab308' : teamColour,
-                border: '2px solid #fff',
-                display: 'grid',
-                placeItems: 'center',
-                fontFamily: 'Barlow Condensed, sans-serif',
-                fontWeight: 800,
-                fontStyle: 'italic',
-                fontSize: '9px',
-                color: p.isGK ? '#111' : '#fff',
-                transition: 'left 400ms cubic-bezier(0.2, 0.8, 0.2, 1), top 400ms cubic-bezier(0.2, 0.8, 0.2, 1)',
+                left: pc(p.x),
+                top: pc(p.y),
+                background: p.isGK ? "var(--team-gk, #eab308)" : teamColour,
+                transition: "left 400ms cubic-bezier(0.2, 0.8, 0.2, 1), top 400ms cubic-bezier(0.2, 0.8, 0.2, 1)",
               }}
             >
               {p.num}
             </div>
           ))}
 
-          <div style={{ position: 'absolute', bottom: '8px', left: '8px', fontSize: '9px', color: 'var(--text-faint)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <div className="absolute bottom-2 left-2 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-text-faint">
             ↑ {attackLabel}
           </div>
         </div>
@@ -105,19 +112,29 @@ export function FormationReplay({
           max={1}
           step={0.01}
           value={sliderValue}
+          aria-label="Scrub the shape replay"
           onChange={(e) => onSliderChange(parseFloat(e.target.value))}
-          style={{ width: '100%', marginTop: '10px', accentColor: 'var(--cream)' }}
+          className="mt-2.5 w-full accent-cream"
         />
       </div>
 
-      {/* Snapshot strip */}
-      <div style={{ display: 'flex', gap: '8px', padding: '10px 16px 12px', borderTop: '1px solid var(--wire-2)', overflowX: 'auto' }}>
+      <div className="flex gap-2 overflow-x-auto border-t border-wire-2 px-4 pb-3 pt-2.5">
         {snapshots.map((s, i) => (
-          <button type="button" aria-label={`Show snapshot at ${Math.floor(s.t / 60)}:${(Math.floor(s.t) % 60).toString().padStart(2, '0')}`} key={i} onClick={() => onSnapshotTap(s.t)} style={{ flexShrink: 0, width: '80px', minHeight: '53px', aspectRatio: '3/2', borderRadius: '8px', border: '1px solid' + (Math.abs(s.t - currentTime) < 1 ? ' var(--cream)' : ' var(--wire)'), background: 'linear-gradient(180deg, #1a2f1c 0%, #0f2314 100%)', position: 'relative', cursor: 'pointer', padding: 0 }}>
-            <div style={{ position: 'absolute', inset: '4%', border: '1px solid rgba(237,230,214,0.28)', borderRadius: '2px' }} />
-            <div style={{ position: 'absolute', bottom: '4px', left: '4px', fontFamily: 'Barlow Condensed, sans-serif', fontSize: '10px', fontWeight: 700, color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '1px 4px', borderRadius: '3px' }}>
-              {Math.floor(s.t / 60)}:{(Math.floor(s.t) % 60).toString().padStart(2, '0')}
-            </div>
+          <button
+            type="button"
+            key={`${s.t}-${i}`}
+            aria-label={`Show snapshot at ${clock(s.t)}`}
+            aria-current={Math.abs(s.t - currentTime) < 1}
+            onClick={() => onSnapshotTap(s.t)}
+            className={cn(
+              "relative aspect-[3/2] w-20 shrink-0 rounded-[10px] border bg-pitch-insight p-0",
+              Math.abs(s.t - currentTime) < 1 ? "border-cream" : "border-wire",
+            )}
+          >
+            <span className="absolute inset-[4%] rounded-[2px] border border-cream/[0.28]" aria-hidden="true" />
+            <span className="display absolute bottom-1 left-1 rounded-[6px] bg-ink/50 px-1 text-[10px] text-white">
+              {clock(s.t)}
+            </span>
           </button>
         ))}
       </div>

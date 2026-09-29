@@ -1,26 +1,46 @@
-
-import React from 'react';
+import { Chip } from "@/components/ip/primitives";
+import { cn } from "@/lib/utils";
 
 type HeatBlob = {
-  x: number;   // 0–1 pitch coordinates
+  x: number; // 0–1 pitch coordinates
   y: number;
-  r: number;   // radius as fraction of pitch width
-  intensity: number;  // 0–1
+  r: number; // radius as fraction of pitch width
+  intensity: number; // 0–1
 };
 
 type Props = {
-  teamColour: string;          // "var(--team-a)"
-  attackLabel: string;        // "SFK attack"
+  teamColour: string;
+  attackLabel: string;
   teamBlobs: HeatBlob[];
   playerBlobs?: HeatBlob[];
   activePlayer?: string | null;
   players: { id: string; num: string }[];
   onPlayerTap: (id: string) => void;
-  sliderValue: number;         // 0–1
+  sliderValue: number; // 0–1
   onSliderChange: (v: number) => void;
-  reliabilityLabel: string;   // "13 of 22 in view"
-  frameCount: number;         // 8954
+  reliabilityLabel: string;
+  frameCount: number;
 };
+
+function Blobs({ blobs, teamColour, alpha }: { blobs: HeatBlob[]; teamColour: string; alpha: number }) {
+  return (
+    <>
+      {blobs.map((b, i) => (
+        <div
+          key={`${b.x}-${b.y}-${i}`}
+          className="pointer-events-none absolute aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full blur-[10px]"
+          style={{
+            left: `${b.x * 100}%`,
+            top: `${b.y * 100}%`,
+            width: `${b.r * 200}%`,
+            background: `radial-gradient(circle, ${teamColour}${Math.round(b.intensity * alpha).toString(16).padStart(2, "0")} 0%, transparent 70%)`,
+          }}
+          aria-hidden="true"
+        />
+      ))}
+    </>
+  );
+}
 
 export function TeamHeatMap({
   teamColour, attackLabel, teamBlobs, playerBlobs, activePlayer,
@@ -30,80 +50,70 @@ export function TeamHeatMap({
   const showPlayerOnly = activePlayer !== null && activePlayer !== undefined;
 
   return (
-    <div style={{ margin: '14px 16px 0', border: '1px solid var(--wire)', borderRadius: '14px', background: 'var(--surface)', overflow: 'hidden' }}>
-      {/* Header */}
-      <div style={{ padding: '14px 16px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-        <div style={{ fontFamily: 'Barlow Condensed, sans-serif', fontSize: '17px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--cream)', lineHeight: 1.2 }}>
-          {showPlayerOnly ? `Where did #${activePlayer} play?` : 'Where did we play?'}
-        </div>
-        <button type="button" aria-label="Heat map information" style={{ width: '44px', height: '44px', border: 'none', background: 'none', color: 'var(--text-faint)', display: 'grid', placeItems: 'center', cursor: 'pointer', padding: 0 }}><span style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1.5px solid var(--wire)', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 700, fontSize: '12px', display: 'grid', placeItems: 'center' }}>i</span></button>
+    <div className="mx-4 mt-3.5 overflow-hidden rounded-[14px] border border-wire bg-surface">
+      <div className="flex items-start justify-between gap-3 px-4 pb-1.5 pt-3.5">
+        <h2 className="display text-[17px] uppercase leading-tight text-cream">
+          {showPlayerOnly ? `Where did #${activePlayer} play?` : "Where did we play?"}
+        </h2>
       </div>
 
-      <div style={{ fontSize: '11.5px', color: 'var(--text-faint)', padding: '0 16px 12px', lineHeight: 1.5 }}>
-        {showPlayerOnly ? 'Team heat dimmed. This is only the places this player was.' : 'Brighter = the team spent more time there. Drag the slider to see it change.'}
-      </div>
+      <p className="px-4 pb-3 text-[11.5px] leading-normal text-text-faint">
+        {showPlayerOnly
+          ? "Team heat dimmed. This is only the places this player was."
+          : "Brighter = the team spent more time there. Drag the slider to see it change."}
+      </p>
 
-      {/* Pitch */}
-      <div style={{ padding: '0 16px 12px' }}>
-        <div style={{ aspectRatio: '2/3', borderRadius: '12px', background: 'linear-gradient(180deg, #1a2f1c 0%, #0f2314 100%)', border: '1px solid var(--wire)', position: 'relative', overflow: 'hidden' }}>
-          {/* Pitch lines */}
-          <div style={{ position: 'absolute', inset: '4%', border: '1px solid rgba(237,230,214,0.28)', borderRadius: '2px' }} />
-          <div style={{ position: 'absolute', top: '4%', bottom: '4%', left: '50%', width: 0, borderLeft: '1px solid rgba(237,230,214,0.28)' }} />
-          <div style={{ position: 'absolute', top: '33.33%', left: '4%', right: '4%', height: 0, borderTop: '1px dashed rgba(237,230,214,0.12)' }} />
-          <div style={{ position: 'absolute', top: '66.66%', left: '4%', right: '4%', height: 0, borderTop: '1px dashed rgba(237,230,214,0.12)' }} />
+      <div className="px-4 pb-3">
+        <div className="relative aspect-[2/3] overflow-hidden rounded-[10px] border border-wire bg-pitch-insight">
+          <div className="absolute inset-[4%] rounded-[2px] border border-cream/[0.28]" aria-hidden="true" />
+          <div className="absolute bottom-[4%] left-1/2 top-[4%] border-l border-cream/[0.28]" aria-hidden="true" />
+          <div className="absolute left-[4%] right-[4%] top-1/3 border-t border-dashed border-cream/[0.12]" aria-hidden="true" />
+          <div className="absolute left-[4%] right-[4%] top-2/3 border-t border-dashed border-cream/[0.12]" aria-hidden="true" />
 
-          {/* Team heat */}
-          <div style={{ position: 'absolute', inset: 0, opacity: showPlayerOnly ? 0.2 : 1, transition: 'opacity 200ms ease-out' }}>
-            {teamBlobs.map((b, i) => (
-              <div key={i} style={{ position: 'absolute', left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.r * 200}%`, aspectRatio: '1', borderRadius: '50%', background: `radial-gradient(circle, ${teamColour}${Math.round(b.intensity * 90).toString(16).padStart(2, '0')} 0%, transparent 70%)`, transform: 'translate(-50%, -50%)', filter: 'blur(10px)', pointerEvents: 'none' }} />
-            ))}
+          <div className={cn("absolute inset-0 transition-opacity duration-200", showPlayerOnly && "opacity-20")}>
+            <Blobs blobs={teamBlobs} teamColour={teamColour} alpha={90} />
           </div>
 
-          {/* Player heat */}
           {showPlayerOnly && playerBlobs && (
-            <div style={{ position: 'absolute', inset: 0 }}>
-              {playerBlobs.map((b, i) => (
-                <div key={i} style={{ position: 'absolute', left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.r * 200}%`, aspectRatio: '1', borderRadius: '50%', background: `radial-gradient(circle, ${teamColour}${Math.round(b.intensity * 220).toString(16).padStart(2, '0')} 0%, transparent 70%)`, transform: 'translate(-50%, -50%)', filter: 'blur(10px)', pointerEvents: 'none' }} />
-              ))}
+            <div className="absolute inset-0">
+              <Blobs blobs={playerBlobs} teamColour={teamColour} alpha={220} />
             </div>
           )}
 
-          <div style={{ position: 'absolute', bottom: '8%', left: '50%', transform: 'translateX(-50%)', fontSize: '9px', color: 'var(--text-faint)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <div className="absolute bottom-[8%] left-1/2 flex -translate-x-1/2 items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.08em] text-text-faint">
             ↑ {attackLabel}
           </div>
         </div>
       </div>
 
-      {/* Time slider */}
-      <div style={{ padding: '10px 16px 12px', borderTop: '1px solid var(--wire-2)' }}>
+      <div className="border-t border-wire-2 px-4 pb-3 pt-2.5">
         <input
           type="range"
           min={0}
           max={1}
           step={0.01}
           value={sliderValue}
+          aria-label="Scrub through the match"
           onChange={(e) => onSliderChange(parseFloat(e.target.value))}
-          style={{ width: '100%', accentColor: 'var(--cream)' }}
+          className="w-full accent-cream"
         />
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-faint)', fontWeight: 600, marginTop: '6px' }}>
+        <div className="mt-1.5 flex justify-between text-[10px] font-semibold text-text-faint">
           <span>0:00</span><span>1st half</span><span>2nd half</span><span>Full</span>
         </div>
       </div>
 
-      {/* Player chips */}
-      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '10px 16px', borderTop: '1px solid var(--wire-2)' }}>
-          <button type="button" aria-pressed={!showPlayerOnly}
-          onClick={() => onPlayerTap('all')}
-          style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--wire)', background: !showPlayerOnly ? 'var(--cream)' : 'var(--surface-2)', color: !showPlayerOnly ? '#111' : 'var(--text-faint)', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>All</button>
+      <div className="flex gap-1.5 overflow-x-auto border-t border-wire-2 px-4 py-2.5" role="group" aria-label="Filter by player">
+        <Chip active={!showPlayerOnly} onClick={() => onPlayerTap("all")} className="shrink-0">All</Chip>
         {players.map((p) => (
-          <button type="button" aria-pressed={activePlayer === p.id} key={p.id} onClick={() => onPlayerTap(p.id)} style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--wire)', background: activePlayer === p.id ? 'var(--cream)' : 'var(--surface-2)', color: activePlayer === p.id ? '#111' : 'var(--text-faint)', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>{p.num}</button>
+          <Chip key={p.id} active={activePlayer === p.id} onClick={() => onPlayerTap(p.id)} className="shrink-0">
+            {p.num}
+          </Chip>
         ))}
       </div>
 
-      {/* Footer */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px 12px', borderTop: '1px solid var(--wire-2)', fontSize: '10.5px', color: 'var(--text-faint)', fontWeight: 500 }}>
-        <div>{reliabilityLabel}</div>
-        <div>n = {players.length} players · {frameCount.toLocaleString()} frames</div>
+      <div className="flex items-center justify-between border-t border-wire-2 px-4 pb-3 pt-2 text-[10.5px] text-text-faint">
+        <span>{reliabilityLabel}</span>
+        <span>n = {players.length} players · {frameCount.toLocaleString()} frames</span>
       </div>
     </div>
   );
