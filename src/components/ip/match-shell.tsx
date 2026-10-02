@@ -89,9 +89,13 @@ export function MatchShell({
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader backTo="/library" {...(headerMatch ? { match: headerMatch } : {})} />
+      <AppHeader
+        backTo="/library"
+        matchId={matchId}
+        {...(headerMatch ? { match: headerMatch } : {})}
+      />
       <FloatingNav matchId={matchId} />
-      <Screen withNav className="pt-3">
+      <Screen withNav className="pt-5">
         {match ? (
           <>
             {record && (
@@ -103,8 +107,9 @@ export function MatchShell({
               />
             )}
 
-            {/* gap-4 is the prototype's --gap: the rhythm between sections on every match screen. */}
-            <div className="flex flex-col gap-4">{children}</div>
+            {/* Sections are bands, not tiles: generous air between them, hairlines
+                inside them. This is the rhythm on every match screen. */}
+            <div className="flex flex-col gap-7 md:gap-10">{children}</div>
           </>
         ) : (
           <Card className="mt-2">

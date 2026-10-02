@@ -41,7 +41,7 @@ export function OneThingPoster({
 
   return (
     <section
-      className="relative overflow-hidden rounded-[18px] border border-wire bg-surface p-5 md:p-6"
+      className="relative overflow-hidden border border-wire bg-surface p-5 md:p-6"
       aria-labelledby="insights-verdict"
     >
       <span
@@ -68,7 +68,7 @@ export function OneThingPoster({
             <Link
               to="/match/$matchId/story"
               params={{ matchId }}
-              className="inline-flex min-h-12 items-center gap-2.5 rounded-[10px] bg-cream px-5 text-[13.5px] font-bold text-ink transition-opacity hover:opacity-90"
+              className="inline-flex min-h-12 items-center gap-2.5 bg-cream px-5 text-[13.5px] font-bold text-ink transition-opacity hover:opacity-90"
             >
               <Play size={13} className="fill-ink" aria-hidden="true" />
               Play the story
@@ -77,7 +77,7 @@ export function OneThingPoster({
               to="/match/$matchId/session"
               params={{ matchId }}
               search={finding ? { finding: finding.id } : {}}
-              className="inline-flex min-h-12 items-center rounded-[10px] border border-wire px-5 text-[13.5px] font-bold text-text transition-colors hover:border-cream/40 hover:text-cream"
+              className="inline-flex min-h-12 items-center border border-wire px-5 text-[13.5px] font-bold text-text transition-colors hover:border-cream/40 hover:text-cream"
             >
               Build Tuesday&apos;s session
             </Link>
@@ -85,7 +85,7 @@ export function OneThingPoster({
         </div>
 
         {figures.length > 0 && (
-          <dl className="w-full self-start justify-self-end overflow-hidden rounded-[14px] bg-surface-2">
+          <dl className="w-full self-start justify-self-end overflow-hidden bg-surface-2">
             {figures.map((f, i) => (
               <div key={f.label} className={cn("px-5 py-4", i > 0 && "border-t border-wire-2")}>
                 <dd

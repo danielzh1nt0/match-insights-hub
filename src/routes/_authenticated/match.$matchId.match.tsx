@@ -432,7 +432,7 @@ function MatchScreen() {
       setPeriod={setPeriod}
     >
       {staleSchema && (
-        <div className="rounded-[14px] border border-quality-risky/60 bg-surface p-5">
+        <div className=" border border-quality-risky/60 bg-surface p-5">
           <p className="text-[12.5px] text-text-dim">
             This match was processed with an older pipeline — re-run it. We're showing what we can.
           </p>
@@ -463,7 +463,7 @@ function MatchScreen() {
                 "relative w-full select-none overflow-hidden border border-wire bg-black",
                 fullscreen
                   ? "h-dvh w-dvw max-w-none rounded-none border-0"
-                  : "aspect-[16/9] rounded-[10px]",
+                  : "aspect-[16/9]",
               )}
             >
               <video
@@ -511,11 +511,11 @@ function MatchScreen() {
 
               {/* Clock, score and who has it — one row, so nothing collides on a phone. */}
               <div className="pointer-events-none absolute inset-x-2.5 top-2.5 flex flex-wrap items-center gap-1.5">
-                <span className="display num rounded-[6px] bg-black/55 px-2 py-0.5 text-[15px] font-bold text-white">
+                <span className="display num bg-black/55 px-2 py-0.5 text-[15px] font-bold text-white">
                   {formatClock(clock)}
                 </span>
                 {match.status === "ready" && (
-                  <span className="display-i rounded-[6px] bg-black/55 px-2 py-0.5 text-[15px] font-extrabold text-white">
+                  <span className="display-i bg-black/55 px-2 py-0.5 text-[15px] font-extrabold text-white">
                     {match.scoreA}–{match.scoreB}
                   </span>
                 )}
@@ -542,7 +542,7 @@ function MatchScreen() {
 
               {mode === "both" && (
                 <div
-                  className="absolute right-2.5 top-12 w-[34%] overflow-hidden rounded-[10px] border border-wire"
+                  className="absolute right-2.5 top-12 w-[34%] overflow-hidden border border-wire"
                   style={{
                     background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))",
                   }}
@@ -591,7 +591,7 @@ function MatchScreen() {
                     className="absolute inset-0 bg-black/60"
                   />
                   <div
-                    className="relative max-h-[80vh] w-full max-w-[420px] overflow-y-auto rounded-t-[18px] border border-wire bg-surface p-5 pb-[max(20px,env(safe-area-inset-bottom))] sm:rounded-[18px] sm:pb-5"
+                    className="relative max-h-[80vh] w-full max-w-[420px] overflow-y-auto border border-wire bg-surface p-5 pb-[max(20px,env(safe-area-inset-bottom))] sm: sm:pb-5"
                     onPointerDown={(event) => event.stopPropagation()}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -599,7 +599,7 @@ function MatchScreen() {
                       <button
                         type="button"
                         onClick={() => setLayerSheet(false)}
-                        className="tap rounded-[8px] px-2 text-[12px] font-bold text-text-dim hover:text-text"
+                        className="tap px-2 text-[12px] font-bold text-text-dim hover:text-text"
                       >
                         Done
                       </button>
@@ -616,7 +616,7 @@ function MatchScreen() {
                             onClick={() => applyPreset(p.key)}
                             aria-pressed={active}
                             className={cn(
-                              "tap h-10 rounded-[10px] border text-[13px] font-semibold",
+                              "tap h-10 border text-[13px] font-semibold",
                               active
                                 ? "border-cream bg-cream text-ink"
                                 : "border-wire text-text hover:bg-surface-2",
@@ -642,7 +642,7 @@ function MatchScreen() {
                               layerAllowed(l.needs) ? undefined : "Needs reliable ball tracking"
                             }
                             className={cn(
-                              "tap flex w-full items-center justify-between rounded-[10px] px-2 text-left text-[13.5px] text-text hover:bg-surface-2",
+                              "tap flex w-full items-center justify-between px-2 text-left text-[13.5px] text-text hover:bg-surface-2",
                               !layerAllowed(l.needs) && "opacity-40",
                             )}
                           >
@@ -656,7 +656,7 @@ function MatchScreen() {
                             </span>
                             <span
                               className={cn(
-                                "h-4 w-4 rounded-[6px] border",
+                                "h-4 w-4 border",
                                 layers[l.key] ? "border-cream bg-cream" : "border-wire",
                               )}
                               aria-hidden="true"
@@ -670,7 +670,7 @@ function MatchScreen() {
               )}
             </div>
 
-            <div className="mt-3 overflow-hidden rounded-[10px] border border-wire bg-surface">
+            <div className="mt-3 overflow-hidden border border-wire bg-surface">
               <MomentumStrip
                 windows={momentumWindows}
                 events={momentumEvents}
@@ -714,7 +714,7 @@ function MatchScreen() {
                         )
                       }
                       disabled={shown.every((e) => e.status === "confirmed")}
-                      className="tap rounded-[10px] border border-cream/60 px-2.5 text-[11.5px] font-semibold text-cream hover:bg-cream/10 disabled:opacity-40"
+                      className="tap border border-cream/60 px-2.5 text-[11.5px] font-semibold text-cream hover:bg-cream/10 disabled:opacity-40"
                     >
                       Confirm all
                     </button>
@@ -722,7 +722,7 @@ function MatchScreen() {
                       type="button"
                       onClick={() => downloadReviews(matchId, review.rows)}
                       disabled={review.rows.length === 0}
-                      className="tap rounded-[10px] border border-wire px-2.5 text-[11.5px] text-text-dim hover:border-cream/50 hover:text-cream disabled:opacity-40"
+                      className="tap border border-wire px-2.5 text-[11.5px] text-text-dim hover:border-cream/50 hover:text-cream disabled:opacity-40"
                     >
                       Export
                     </button>
@@ -801,7 +801,7 @@ function MatchScreen() {
                             <button
                               type="button"
                               onClick={() => review.clear.mutate([e.id])}
-                              className="tap shrink-0 rounded-[10px] border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
+                              className="tap shrink-0 border border-wire px-2 text-[11px] text-text-dim hover:border-cream/50 hover:text-cream"
                             >
                               Put back
                             </button>
@@ -819,7 +819,7 @@ function MatchScreen() {
                   is made up.
                 </p>
                 {clips.length === 0 ? (
-                  <p className="rounded-[10px] border border-wire px-3.5 py-6 text-center text-[12.5px] text-text-faint">
+                  <p className=" border border-wire px-3.5 py-6 text-center text-[12.5px] text-text-faint">
                     No moment in this match is worth a clip yet.
                   </p>
                 ) : (
@@ -828,7 +828,7 @@ function MatchScreen() {
                       key={clip.id}
                       type="button"
                       onClick={() => seek(clip.t)}
-                      className="mb-1.5 flex w-full items-center gap-2.5 rounded-[10px] border border-wire px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
+                      className="mb-1.5 flex w-full items-center gap-2.5 border border-wire px-3 py-2.5 text-left transition-colors hover:bg-surface-2"
                     >
                       <span className="display num shrink-0 text-[15px] text-text-dim">
                         {formatClock(clip.t)}
@@ -877,7 +877,7 @@ function MatchScreen() {
 
 function Key({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="rounded-[4px] border border-b-2 border-wire px-1.5 text-[10.5px] text-text-dim">
+    <kbd className=" border border-b-2 border-wire px-1.5 text-[10.5px] text-text-dim">
       {children}
     </kbd>
   );

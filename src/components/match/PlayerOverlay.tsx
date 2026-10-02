@@ -140,7 +140,9 @@ export function PlayerOverlay({
           ))}
           <span
             aria-hidden="true"
-            className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cream shadow"
+            // The one place a shadow earns its keep: this sits on live video,
+            // where a flat chalk dot can land on a white shirt and vanish.
+            className="cast-shadow absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cream shadow"
             style={{ left: `${pct}%` }}
           />
         </div>
@@ -174,14 +176,14 @@ export function PlayerOverlay({
           type="button"
           aria-label="Playback speed"
           onClick={onSpeed}
-          className="hidden h-9 shrink-0 items-center rounded-[8px] px-2 text-[12px] font-bold text-white/85 hover:bg-white/10 sm:inline-flex"
+          className="hidden h-9 shrink-0 items-center px-2 text-[12px] font-bold text-white/85 hover:bg-white/10 sm:inline-flex"
         >
           {speed}×
         </button>
 
         {/* Three chips where there is room, one cycling button where there is not. */}
         <div
-          className="hidden shrink-0 items-center gap-[2px] rounded-[8px] bg-white/10 p-[2px] sm:flex"
+          className="hidden shrink-0 items-center gap-[2px] bg-white/10 p-[2px] sm:flex"
           role="group"
           aria-label="View"
         >
@@ -192,7 +194,7 @@ export function PlayerOverlay({
               aria-pressed={mode === key}
               onClick={() => onMode(key)}
               className={cn(
-                "h-8 rounded-[6px] px-2.5 text-[12px] font-bold transition-colors",
+                "h-8 px-2.5 text-[12px] font-bold transition-colors",
                 mode === key ? "bg-white text-black" : "text-white/80 hover:text-white",
               )}
             >
@@ -204,7 +206,7 @@ export function PlayerOverlay({
           type="button"
           onClick={() => onMode(MODES[(MODES.indexOf(mode) + 1) % MODES.length]!)}
           aria-label={`View: ${MODE_LABEL[mode]}. Tap to change.`}
-          className="h-9 shrink-0 rounded-[8px] px-2 text-[12px] font-bold text-white/85 hover:bg-white/10 sm:hidden"
+          className="h-9 shrink-0 px-2 text-[12px] font-bold text-white/85 hover:bg-white/10 sm:hidden"
         >
           {MODE_LABEL[mode]}
         </button>

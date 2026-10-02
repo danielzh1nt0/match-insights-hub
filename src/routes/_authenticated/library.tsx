@@ -180,7 +180,7 @@ function LibraryPage() {
 function EmptyState() {
   return (
     <Card className="mt-6 flex flex-col items-center gap-3 py-12 text-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-[14px] border border-wire bg-surface-2 text-text-faint">
+      <span className="flex h-12 w-12 items-center justify-center border border-wire bg-surface-2 text-text-faint">
         <Video size={20} aria-hidden="true" />
       </span>
       <h2 className="display text-[19px] text-text">No matches yet</h2>
@@ -267,7 +267,7 @@ function MatchCard({ match }: { match: LibraryMatch }) {
         .join(" · ") || "Open the analysis to see the findings.";
 
   return (
-    <article className="overflow-hidden rounded-[14px] border border-wire bg-surface transition-colors hover:border-cream/30">
+    <article className="overflow-hidden border border-wire bg-surface transition-colors hover:border-cream/30">
       <Link
         to={ready ? "/match/$matchId/insights" : "/library"}
         params={{ matchId: match.id }}
@@ -304,7 +304,7 @@ function MatchCard({ match }: { match: LibraryMatch }) {
           {result ? (
             <span
               className={cn(
-                "display-i grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[5px] text-[13px]",
+                "display-i grid h-[22px] w-[22px] shrink-0 place-items-center text-[13px]",
                 resultClasses[result.key],
               )}
               title={result.label}

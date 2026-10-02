@@ -1,98 +1,104 @@
 import { Link } from "@tanstack/react-router";
+import type { ComponentType } from "react";
+import { actionLinkClass, IconSquare, SectionHead } from "@/components/ip/touchline";
 import { cn } from "@/lib/utils";
 
 export type NumberCell = {
   label: string;
   /** null means the file cannot support it — the cell says so instead of guessing. */
   value: string | null;
-  sub?: string | undefined;
-  tone?: "bad" | "warn" | undefined;
-  /** Shown in place of a value when it is withheld. */
+  /** What the number means, in a sentence. */
+  sentence?: string | undefined;
+  /** What it rests on: counts, confirmations, how it was measured. */
+  basis?: string | undefined;
+  /** Shown in place of the sentence when the value is withheld. */
   withheldNote?: string | undefined;
+  icon?: ComponentType<{ size?: number; strokeWidth?: number; "aria-hidden"?: boolean }>;
+  /** Where the number can be inspected properly. */
+  link?: { label: string; to: string; search?: Record<string, string> } | undefined;
 };
 
 /**
- * The match in numbers, as a bordered grid.
+ * The match in numbers.
  *
- * A cell with no value says "Withheld" and what would make it available,
- * rather than printing a figure the match file cannot support. That is the
- * point of the section: the certainty shows on the same line as the number.
+ * Six cells on one ruled sheet, each the same shape: the figure, what it means,
+ * what it rests on, and the way through to the evidence. A cell with nothing
+ * behind it says "Withheld" and why — the certainty sits on the same card as
+ * the number, which is the only way a coach can tell a measurement from a guess.
  */
 export function MatchNumbersGrid({ cells, matchId }: { cells: NumberCell[]; matchId: string }) {
   return (
-    <section
-      aria-labelledby="match-numbers"
-      className="rounded-[14px] border border-wire bg-surface"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pb-1 pt-4">
-        <h2 id="match-numbers" className="display text-[20px] text-text">
-          Match numbers
-        </h2>
-        <span className="text-[11.5px] text-text-faint">
-          Everything here comes from this match file
-        </span>
-      </div>
+    <section aria-labelledby="match-numbers">
+      <SectionHead
+        eyebrow="Counts"
+        title="Match numbers"
+        right={
+          <span className="text-[12px] text-text-faint">
+            Every figure comes from this match file
+          </span>
+        }
+      />
 
-      <dl className="grid grid-cols-2 border-t border-wire-2 md:grid-cols-3">
+      <div className="rule-y mt-4 grid border border-wire bg-surface sm:grid-cols-2 xl:grid-cols-3">
         {cells.map((cell, i) => (
           <div
             key={cell.label}
             className={cn(
-              "border-wire-2 px-5 py-4",
-              i % 2 === 0 && "border-r md:border-r-0",
-              "md:border-r",
-              i >= 2 && "border-t md:border-t-0",
-              i >= 3 && "md:border-t",
+              "flex min-w-0 flex-col p-4 sm:p-5",
+              // The hairlines run between columns as well as rows, without a
+              // trailing rule on the last cell of a row.
+              "sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(odd)]:border-wire",
+              "xl:border-r xl:border-wire xl:[&:nth-child(3n)]:border-r-0",
+              i < 1 && "border-t-0",
             )}
           >
-            <dt className="text-[11.5px] text-text-faint">{cell.label}</dt>
-            {cell.value === null ? (
-              <>
-                <dd className="display mt-1 text-[20px] leading-none text-text-dim">Withheld</dd>
-                {cell.withheldNote && (
-                  <p className="mt-1 text-[11px] leading-snug text-text-faint">
-                    {cell.withheldNote}
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <dd
-                  className={cn(
-                    "display-i mt-1 text-[26px] leading-none",
-                    cell.tone === "bad"
-                      ? "text-reaction-bad"
-                      : cell.tone === "warn"
-                        ? "text-reaction-warn"
-                        : "text-cream",
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-[15px] font-semibold leading-snug text-text-bright">
+                {cell.label}
+              </h3>
+              {cell.icon && <IconSquare icon={cell.icon} />}
+            </div>
+
+            <div className="mt-4 flex-1">
+              {cell.value === null ? (
+                <>
+                  <p className="text-[20px] font-medium text-text-dim">Withheld</p>
+                  {cell.withheldNote && (
+                    <p className="mt-2 text-[12.5px] leading-snug text-text-dim">
+                      {cell.withheldNote}
+                    </p>
                   )}
+                </>
+              ) : (
+                <>
+                  <p className="num text-[clamp(34px,4vw,46px)] leading-[0.9] text-text-bright">
+                    {cell.value}
+                  </p>
+                  {cell.sentence && (
+                    <p className="mt-3 text-[12.5px] leading-snug text-text-dim">{cell.sentence}</p>
+                  )}
+                </>
+              )}
+              {cell.basis && (
+                <p className="mt-2 text-[11.5px] leading-snug text-text-faint">{cell.basis}</p>
+              )}
+            </div>
+
+            {cell.link && (
+              <p className="mt-4">
+                <Link
+                  to={cell.link.to}
+                  params={{ matchId }}
+                  {...(cell.link.search ? { search: cell.link.search } : {})}
+                  className={actionLinkClass()}
                 >
-                  {cell.value}
-                </dd>
-                {cell.sub && (
-                  <p className="mt-1 text-[11px] leading-snug text-text-faint">{cell.sub}</p>
-                )}
-              </>
+                  {cell.link.label}
+                </Link>
+              </p>
             )}
           </div>
         ))}
-
-        <div className="col-span-2 border-t border-wire-2 px-5 py-4 md:col-span-1 md:border-t-0">
-          <dt className="text-[11.5px] text-text-faint">All match stats</dt>
-          <dd className="mt-1">
-            <Link
-              to="/match/$matchId/stats"
-              params={{ matchId }}
-              className="display text-[18px] text-cream hover:underline"
-            >
-              Open →
-            </Link>
-          </dd>
-          <p className="mt-1 text-[11px] leading-snug text-text-faint">
-            Shots, passes, set pieces, shape
-          </p>
-        </div>
-      </dl>
+      </div>
     </section>
   );
 }

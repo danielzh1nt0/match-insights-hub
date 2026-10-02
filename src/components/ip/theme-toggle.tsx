@@ -45,7 +45,7 @@ export function ThemeToggle() {
       type="button"
       onClick={() => choose(theme === "dark" ? "light" : "dark")}
       aria-label={theme === "dark" ? "Switch to light" : "Switch to dark"}
-      className="tap grid h-11 w-11 place-items-center rounded-[10px] text-text-dim transition-colors hover:text-text"
+      className="tap grid h-11 w-11 place-items-center text-text-dim transition-colors hover:text-text"
     >
       {theme === "dark" ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
     </button>

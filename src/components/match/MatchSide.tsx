@@ -32,7 +32,7 @@ export function MatchSide({
   return (
     <aside className="flex min-h-0 flex-col min-[1060px]:sticky min-[1060px]:top-4 min-[1060px]:max-h-[calc(100vh-6rem)]">
       <div
-        className="flex shrink-0 gap-[2px] rounded-[10px] border border-wire bg-surface p-[3px]"
+        className="flex shrink-0 gap-[2px] border border-wire bg-surface p-[3px]"
         role="tablist"
         aria-label="Match panel"
       >
@@ -44,7 +44,7 @@ export function MatchSide({
             aria-selected={tab === t.key}
             onClick={() => onTab(t.key)}
             className={cn(
-              "min-h-10 flex-1 rounded-[7px] text-[12px] font-bold uppercase tracking-[0.04em] transition-colors",
+              "min-h-10 flex-1 text-[12px] font-bold uppercase tracking-[0.04em] transition-colors",
               tab === t.key ? "bg-surface-3 text-text" : "text-text-faint hover:text-text",
             )}
           >

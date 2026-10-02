@@ -41,7 +41,7 @@ export function FilterChips({ chips, activeId, onSelect, onMore, moreActiveCount
             {moreActiveCount > 0 && (
               <span
                 className={cn(
-                  "rounded-[6px] bg-cream px-1.5 text-[10px] font-extrabold text-ink",
+                  " bg-cream px-1.5 text-[10px] font-extrabold text-ink",
                 )}
               >
                 {moreActiveCount}

@@ -27,12 +27,12 @@ export function ClipList({ clips, matchId }: { clips: ReelClip[]; matchId?: stri
               params={{ matchId }}
               search={{ t: c.t }}
               aria-label={`Watch ${c.title}`}
-              className="tap flex h-16 w-24 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-text-faint hover:text-cream"
+              className="tap flex h-16 w-24 shrink-0 items-center justify-center bg-surface-2 text-text-faint hover:text-cream"
             >
               <Play size={18} aria-hidden="true" />
             </Link>
           ) : (
-            <span className="num flex h-16 w-24 shrink-0 items-center justify-center rounded-[10px] bg-surface-2 text-[20px] text-text-faint">
+            <span className="num flex h-16 w-24 shrink-0 items-center justify-center bg-surface-2 text-[20px] text-text-faint">
               {i + 1}
             </span>
           )}

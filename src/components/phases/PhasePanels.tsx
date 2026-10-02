@@ -17,7 +17,7 @@ export function Panel({
   note?: string | undefined;
 }) {
   return (
-    <section className="rounded-[14px] border border-wire bg-surface p-5">
+    <section className=" border border-wire bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-2.5">
         <div className="min-w-0">
           <h2 className="display text-[18px] uppercase leading-tight text-cream">{title}</h2>
@@ -92,7 +92,7 @@ export function PhaseNumbers({
         <button
           type="button"
           onClick={onWatch}
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-[10px] bg-cream px-4 text-[13px] font-bold text-ink transition-opacity hover:opacity-90"
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center bg-cream px-4 text-[13px] font-bold text-ink transition-opacity hover:opacity-90"
         >
           Watch every {phaseName.toLowerCase()} moment
         </button>
@@ -182,7 +182,7 @@ export function PhaseMoments({ phase, onWatch }: { phase: Phase; onWatch: (t: nu
   return (
     <div className="grid gap-2.5 sm:grid-cols-2">
       {cards.map(([label, moment, tone]) => (
-        <div key={label} className="rounded-[10px] border border-wire bg-surface-2 p-4">
+        <div key={label} className=" border border-wire bg-surface-2 p-4">
           <span className={cn("text-[11px] font-bold uppercase tracking-[0.06em]", tone)}>
             {label}
           </span>

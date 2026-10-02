@@ -31,7 +31,7 @@ export function PhasePicker({
           aria-selected={active === phase.key}
           onClick={() => onPick(phase.key)}
           className={cn(
-            "flex items-center gap-3 rounded-[14px] border px-4 py-3 text-left transition-colors",
+            "flex items-center gap-3 border px-4 py-3 text-left transition-colors",
             active === phase.key
               ? "border-cream bg-surface-2"
               : "border-wire bg-surface hover:border-cream/40",

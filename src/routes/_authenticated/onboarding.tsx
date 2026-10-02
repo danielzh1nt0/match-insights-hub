@@ -131,9 +131,9 @@ function Onboarding() {
               <Field label="Crest">
                 <button
                   type="button"
-                  className="tap flex w-full items-center gap-3 rounded-[6px] border border-dashed border-wire bg-surface-2 px-3 py-3 text-left"
+                  className="tap flex w-full items-center gap-3 border border-dashed border-wire bg-surface-2 px-3 py-3 text-left"
                 >
-                  <span className="display flex h-11 w-11 items-center justify-center rounded-[6px] border border-wire bg-surface-3 text-[18px] text-cream">
+                  <span className="display flex h-11 w-11 items-center justify-center border border-wire bg-surface-3 text-[18px] text-cream">
                     {club.crestInitial || "K"}
                   </span>
                   <span className="text-[12.5px] text-text-dim">Tap to upload</span>
@@ -229,7 +229,7 @@ function Onboarding() {
                         aria-label={t.name}
                         value={targets[t.key]}
                         onChange={(e) => setTargets({ [t.key]: Number(e.target.value) })}
-                        className="num w-20 rounded-[14px] border border-wire bg-surface-3 px-2 py-1 text-right text-[16px] text-cream"
+                        className="num w-20 border border-wire bg-surface-3 px-2 py-1 text-right text-[16px] text-cream"
                       />
                     ) : (
                       <span className="num text-[20px] text-cream">

@@ -185,7 +185,7 @@ export function EventFilter({ value, onChange, events, teamNames }: {
           <Dialog.Overlay className="fixed inset-0 z-50 bg-bg/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
           <Dialog.Content
             aria-describedby={undefined}
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-[16px] border border-b-0 border-wire bg-surface p-5 pb-[max(24px,env(safe-area-inset-bottom))] shadow-lg outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom md:inset-y-0 md:left-auto md:right-0 md:h-dvh md:max-h-none md:w-[420px] md:rounded-none md:border-y-0 md:border-r-0 md:p-7 md:data-[state=open]:slide-in-from-right md:data-[state=closed]:slide-out-to-right"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto border border-b-0 border-wire bg-surface p-5 pb-[max(24px,env(safe-area-inset-bottom))] shadow-lg outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom md:inset-y-0 md:left-auto md:right-0 md:h-dvh md:max-h-none md:w-[420px] md:rounded-none md:border-y-0 md:border-r-0 md:p-7 md:data-[state=open]:slide-in-from-right md:data-[state=closed]:slide-out-to-right"
           >
             <header className="flex items-center justify-between gap-4 border-b border-wire-2 pb-4">
               <Dialog.Title className="display text-[20px] uppercase text-text">Filters</Dialog.Title>
@@ -225,7 +225,7 @@ export function EventFilter({ value, onChange, events, teamNames }: {
               </section>
             </div>
 
-            <button type="button" onClick={() => { onChange(draft); setOpen(false); }} className="tap mt-auto w-full rounded-[14px] bg-cream px-5 text-sm font-bold text-primary-foreground hover:bg-cream-dim">Apply</button>
+            <button type="button" onClick={() => { onChange(draft); setOpen(false); }} className="tap mt-auto w-full bg-cream px-5 text-sm font-bold text-primary-foreground hover:bg-cream-dim">Apply</button>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

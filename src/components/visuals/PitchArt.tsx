@@ -51,7 +51,7 @@ function Board({
   return (
     <figure className={cn("m-0", className)}>
       <div
-        className="relative overflow-hidden rounded-[10px] border border-wire bg-pitch-insight"
+        className="relative overflow-hidden border border-wire bg-pitch-insight"
         style={{ aspectRatio: aspect }}
         role="img"
         aria-label={label}

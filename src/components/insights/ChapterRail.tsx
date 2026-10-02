@@ -1,50 +1,81 @@
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
-import { STORY_CHAPTERS } from "@/lib/story-chapters";
+import type { ComponentType } from "react";
+import { CalendarCheck, Goal, MoveRight, Target, Users } from "lucide-react";
+import { STORY_CHAPTERS, type ChapterId } from "@/lib/story-chapters";
+import { cn } from "@/lib/utils";
+
+export type ChapterCell = {
+  /** The bold line: what this chapter says, in a handful of words. */
+  title: string;
+  /** The grey line under it. One short clause, never a sentence. */
+  sub: string;
+  /** Set on the chapter that carries the match's main problem. */
+  flagged?: boolean;
+};
+
+const ICONS: Record<ChapterId, ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  score: Goal,
+  strength: MoveRight,
+  player: Users,
+  improve: Target,
+  verdict: CalendarCheck,
+};
 
 /**
- * The chapters of the story, as bubbles across the top of Insights.
+ * The story of the match as five numbered cells across the top of Insights.
  *
- * This is the first thing on the screen because it is the first thing a coach
- * wants: tap a chapter, watch it. Each bubble carries a drawing made from this
- * match, not an icon.
+ * It is the first thing on the screen because it is the shape of the whole
+ * debrief: result, what we did, who did it, what went wrong, what we do about
+ * it on Tuesday. One ruled strip rather than five floating cards — the coach
+ * reads it as a sequence, and tapping a cell opens that chapter as a story.
  */
 export function ChapterRail({
   matchId,
-  figures,
+  cells,
 }: {
   matchId: string;
-  /** One small drawing per chapter id, in the order the chapters run. */
-  figures: Partial<Record<string, ReactNode>>;
+  cells: Partial<Record<ChapterId, ChapterCell>>;
 }) {
   return (
     <nav
       aria-label="Match story chapters"
-      className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden"
+      className="rule-x -mx-4 grid grid-flow-col auto-cols-[minmax(230px,1fr)] overflow-x-auto border-y border-wire [scrollbar-width:none] md:mx-0 md:auto-cols-auto md:grid-flow-row md:grid-cols-5 md:border-x [&::-webkit-scrollbar]:hidden"
     >
-      {STORY_CHAPTERS.map((chapter) => (
-        <Link
-          key={chapter.id}
-          to="/match/$matchId/story"
-          params={{ matchId }}
-          search={{ chapter: chapter.id }}
-          className="flex w-[78px] shrink-0 flex-col items-center gap-1.5"
-        >
-          <span className="grid h-[70px] w-[70px] place-items-center rounded-full bg-cream p-[3px]">
-            <span
-              className="grid h-full w-full place-items-center overflow-hidden rounded-full border-[3px] border-bg"
-              style={{
-                background: "linear-gradient(180deg, var(--pitch-top), var(--pitch-bottom))",
-              }}
-            >
-              {figures[chapter.id] ?? null}
+      {STORY_CHAPTERS.map((chapter, i) => {
+        const cell = cells[chapter.id];
+        if (!cell) return null;
+        const Icon = ICONS[chapter.id];
+        return (
+          <Link
+            key={chapter.id}
+            to="/match/$matchId/story"
+            params={{ matchId }}
+            search={{ chapter: chapter.id }}
+            className={cn(
+              "group flex min-w-0 flex-col gap-1 p-4 transition-colors",
+              cell.flagged ? "bg-surface-2" : "bg-surface hover:bg-surface-2",
+            )}
+          >
+            <span className="flex items-center justify-between gap-2 text-text-faint">
+              <span className="label-xs text-text-faint">
+                {String(i + 1).padStart(2, "0")} · {chapter.kind}
+              </span>
+              {cell.flagged ? (
+                <span
+                  aria-label="Needs attention"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-cream"
+                />
+              ) : (
+                <Icon size={15} strokeWidth={1.75} aria-hidden="true" />
+              )}
             </span>
-          </span>
-          <span className="text-center text-[11px] font-semibold leading-tight text-text-dim">
-            {chapter.nav}
-          </span>
-        </Link>
-      ))}
+            <span className="truncate text-[14px] font-semibold text-text-bright">
+              {cell.title}
+            </span>
+            <span className="truncate text-[11.5px] text-text-faint">{cell.sub}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

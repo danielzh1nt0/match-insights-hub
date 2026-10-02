@@ -98,7 +98,7 @@ export function MatchSetupSheet({
       <div
         role="dialog"
         aria-label="Match setup"
-        className="relative max-h-[88vh] w-full overflow-y-auto rounded-t-[16px] border border-wire bg-surface p-4 sm:max-w-[520px] sm:rounded-[18px] sm:p-6"
+        className="relative max-h-[88vh] w-full overflow-y-auto border border-wire bg-surface p-4 sm:max-w-[520px] sm: sm:p-6"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -133,7 +133,7 @@ export function MatchSetupSheet({
               value={colourA}
               onChange={(e) => setColourA(e.target.value)}
               aria-label="Team A kit colour"
-              className="h-11 w-full rounded-[10px] border border-wire bg-surface-2 p-1"
+              className="h-11 w-full border border-wire bg-surface-2 p-1"
             />
           </div>
           <div>
@@ -143,7 +143,7 @@ export function MatchSetupSheet({
               value={colourB}
               onChange={(e) => setColourB(e.target.value)}
               aria-label="Team B kit colour"
-              className="h-11 w-full rounded-[10px] border border-wire bg-surface-2 p-1"
+              className="h-11 w-full border border-wire bg-surface-2 p-1"
             />
           </div>
           <div className="sm:col-span-2">
@@ -207,7 +207,7 @@ export function MatchSetupSheet({
             <img
               src={thumbUrl}
               alt="First frame of the match video"
-              className="h-20 w-full rounded-[10px] border border-wire object-cover sm:w-40"
+              className="h-20 w-full border border-wire object-cover sm:w-40"
             />
           )}
           <div className="flex-1">

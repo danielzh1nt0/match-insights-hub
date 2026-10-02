@@ -14,7 +14,7 @@ function TeamTile({ team }: { team: Team }) {
     <div className="flex flex-col items-center gap-1.5">
       <div
         className={cn(
-          "display-i grid h-12 w-12 place-items-center rounded-[14px] border-[1.5px] border-white/10 text-[22px] text-white",
+          "display-i grid h-12 w-12 place-items-center border-[1.5px] border-white/10 text-[22px] text-white",
           team.crestUrl && "bg-surface-2",
         )}
         style={team.crestUrl ? undefined : { background: team.colour }}

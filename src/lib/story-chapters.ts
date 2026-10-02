@@ -10,15 +10,17 @@ export type Chapter = {
   id: ChapterId;
   /** The word under the bubble. Short enough not to wrap at 78px. */
   nav: string;
+  /** What kind of chapter this is, for the rail's eyebrow: "01 · Final". */
+  kind: string;
   durationMs: number;
 };
 
 export const STORY_CHAPTERS: Chapter[] = [
-  { id: "score", nav: "The match", durationMs: 7000 },
-  { id: "strength", nav: "What worked", durationMs: 7500 },
-  { id: "player", nav: "Who stood out", durationMs: 7500 },
-  { id: "improve", nav: "The one thing", durationMs: 9000 },
-  { id: "verdict", nav: "Tuesday", durationMs: 8000 },
+  { id: "score", nav: "The match", kind: "Final", durationMs: 7000 },
+  { id: "strength", nav: "What worked", kind: "Tactical", durationMs: 7500 },
+  { id: "player", nav: "Who stood out", kind: "Tracking", durationMs: 7500 },
+  { id: "improve", nav: "The one thing", kind: "Core deficit", durationMs: 9000 },
+  { id: "verdict", nav: "Tuesday", kind: "Action", durationMs: 8000 },
 ];
 
 export function chapterIndex(id: string | undefined) {

@@ -88,7 +88,7 @@ function Session() {
           </section>
 
           {drills.length > 0 && (
-            <section className="mt-4 rounded-[6px] border border-wire bg-surface px-4 py-3.5" aria-label="Session plan">
+            <section className="mt-4 border border-wire bg-surface px-4 py-3.5" aria-label="Session plan">
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="display text-[11px] uppercase tracking-[0.08em] text-text-faint">The session</h2>
                 <span className="display-i text-[18px] leading-none text-cream">{totalMinutes} min</span>
@@ -98,7 +98,7 @@ function Session() {
                   <li key={drill.id}>
                     <a
                       href={`#drill-${drill.id}`}
-                      className="tap flex min-h-11 items-center gap-3 rounded-[6px] border border-wire-2 bg-surface-2 px-3 py-2 text-left hover:border-cream/30"
+                      className="tap flex min-h-11 items-center gap-3 border border-wire-2 bg-surface-2 px-3 py-2 text-left hover:border-cream/30"
                     >
                       <span className="display-i shrink-0 text-[16px] leading-none text-text-faint">{index + 1}</span>
                       <span className="min-w-0 flex-1">

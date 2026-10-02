@@ -155,7 +155,7 @@ function Welcome() {
 function Board({ children, label }: { children: ReactNode; label: string }) {
   return (
     <div
-      className="relative overflow-hidden rounded-[14px] border border-wire bg-pitch-insight"
+      className="relative overflow-hidden border border-wire bg-pitch-insight"
       style={{ aspectRatio: "3 / 2" }}
       role="img"
       aria-label={label}

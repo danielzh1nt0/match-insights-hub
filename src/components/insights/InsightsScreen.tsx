@@ -1,15 +1,20 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ChapterRail } from "@/components/insights/ChapterRail";
-import { OneThingPoster } from "@/components/insights/OneThingPoster";
+import { ArrowLeftRight, Goal, PieChart, Printer, Route, Ruler, Timer } from "lucide-react";
+import { ChapterRail, type ChapterCell } from "@/components/insights/ChapterRail";
+import { VerdictBlock } from "@/components/insights/VerdictBlock";
+import { MatchFlow, type FlowGoal } from "@/components/insights/MatchFlow";
 import { MatchNumbersGrid, type NumberCell } from "@/components/insights/MatchNumbersGrid";
 import { FindingsList } from "@/components/insights/FindingsList";
-import { PlayerChip } from "@/components/visuals/PlayerChip";
+import { actionLinkClass, SectionHead } from "@/components/ip/touchline";
+import type { TeamIdentity } from "@/components/team/TeamToken";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import type { Finding } from "@/lib/match-data";
 import { buildInsightsModel, verdict } from "@/lib/insights-model";
 import { teamRow, type StatsFile, type TeamKey, type Thresholds } from "@/lib/match-analysis";
+import type { ChapterId } from "@/lib/story-chapters";
 import type { LibraryMatch } from "@/lib/sample-data";
+import { cn } from "@/lib/utils";
 
 function numeric(row: Record<string, unknown> | null, key: string) {
   const value = row?.[key];
@@ -21,12 +26,13 @@ function shown(value: number | null, suffix = "") {
 }
 
 /**
- * Insights, in the prototype's shape.
+ * Insights: the match as a debrief.
  *
- * The poster carries the verdict, the grid carries the numbers with their
- * certainty on the same line, and the list carries every finding with its
- * evidence. The four-phase cards that used to sit here came from a different
- * design and have been replaced.
+ * The page reads top to bottom the way a coach talks. Here is the story in five
+ * chapters; here is the verdict and the three figures it rests on; here is when
+ * the game turned; here are the counts; here is every finding with its
+ * evidence; here is who to speak to. Nothing on it is invented — a figure this
+ * match file cannot support says so rather than appearing as a number.
  */
 export function InsightsScreen({
   matchId,
@@ -36,6 +42,7 @@ export function InsightsScreen({
   stats,
   team,
   thresholds,
+  identities,
 }: {
   matchId: string;
   match: LibraryMatch;
@@ -46,6 +53,7 @@ export function InsightsScreen({
   team: TeamKey | null;
   thresholds: Thresholds;
   iconColour: string;
+  identities: { A: TeamIdentity; B: TeamIdentity };
   onReview: (input: {
     eventId: string;
     verdict: "confirmed" | "deleted" | "retimed";
@@ -53,7 +61,6 @@ export function InsightsScreen({
     teamCorrected?: string | null;
   }) => void;
 }) {
-  const navigate = useNavigate();
   const duration = Math.max(match.durationS, 1);
   const ownTeam = team ?? "A";
   const otherTeam = ownTeam === "A" ? "B" : "A";
@@ -65,10 +72,12 @@ export function InsightsScreen({
   const completion = numeric(row, "pass_completion_pct");
   const blockLength = numeric(row, "block_length_median_m");
   const pressPct = numeric(row, "pressed_within_2s_pct");
+  const betterOption = numeric(row, "better_option_count");
 
   const moments = useMemo(() => events.filter((event) => event.status !== "deleted"), [events]);
-  const lossEvents = moments.filter(
-    (event) => event.team === ownTeam && event.type === "turnover_lost",
+  const lossEvents = useMemo(
+    () => moments.filter((event) => event.team === ownTeam && event.type === "turnover_lost"),
+    [moments, ownTeam],
   );
   const shots = moments.filter((event) => event.team === ownTeam && event.type === "shot").length;
   const otherShots = moments.filter(
@@ -78,9 +87,9 @@ export function InsightsScreen({
   const confirmed = moments.filter((event) => event.status === "confirmed").length;
 
   const model = useMemo(() => buildInsightsModel(findings), [findings]);
-  const { headline, sub } = verdict(model);
+  const { headline } = verdict(model);
 
-  /** One bar per thirtieth of the match: our tracked moments against theirs. */
+  /** One value per thirtieth of the match: our tracked moments against theirs. */
   const momentum = useMemo(() => {
     const SLICES = 30;
     return Array.from({ length: SLICES }, (_, i) => {
@@ -92,155 +101,249 @@ export function InsightsScreen({
     });
   }, [moments, duration, ownTeam]);
 
-  const playerTalks = useMemo(() => {
-    const unique = new Map<string, { shirtNumber: number; team: "A" | "B"; descriptor: string }>();
+  /** The goals, each carrying the score as it stood immediately after it. */
+  const goals = useMemo<FlowGoal[]>(() => {
+    const scored = moments
+      .filter((event) => event.type === "goal" && (event.team === "A" || event.team === "B"))
+      .sort((a, b) => a.t - b.t);
+    let a = 0;
+    let b = 0;
+    return scored.map((event) => {
+      if (event.team === "A") a += 1;
+      else b += 1;
+      return { t: event.t, team: event.team as "A" | "B", score: `${a}-${b}` };
+    });
+  }, [moments]);
+
+  /**
+   * The stretch in which we lost the ball most often.
+   *
+   * The window is measured, not chosen: a fourteen-minute frame slides across
+   * the match and the busiest position wins. Too few losses to cluster and
+   * there is no window at all, rather than one drawn around nothing.
+   */
+  const pressureWindow = useMemo(() => {
+    if (lossEvents.length < 6) return undefined;
+    const span = 14 * 60;
+    let best = { from: 0, count: 0 };
+    for (const event of lossEvents) {
+      const count = lossEvents.filter(
+        (other) => other.t >= event.t && other.t < event.t + span,
+      ).length;
+      if (count > best.count) best = { from: event.t, count };
+    }
+    if (best.count < 4) return undefined;
+    return {
+      fromS: best.from,
+      toS: Math.min(best.from + span, duration),
+      label: `${best.count} losses in 14 minutes`,
+    };
+  }, [lossEvents, duration]);
+
+  /** Our own shirts, busiest first. Numbers only — the file does not know names. */
+  const players = useMemo(() => {
+    const unique = new Map<number, { shirtNumber: number; descriptor: string; count: number }>();
     for (const event of moments) {
       const raw =
         event.payload?.["shirt"] ??
         event.payload?.["shirt_number"] ??
         event.payload?.["player_shirt"];
       const shirtNumber = typeof raw === "number" ? raw : Number(raw);
-      if (!Number.isFinite(shirtNumber) || !event.team) continue;
-      const key = `${event.team}-${shirtNumber}`;
-      if (!unique.has(key))
-        unique.set(key, {
-          shirtNumber,
-          team: event.team,
-          descriptor: event.type === "turnover_lost" ? "nearest loss" : "review moment",
-        });
-      if (unique.size === 3) break;
+      if (!Number.isFinite(shirtNumber) || event.team !== ownTeam) continue;
+      const existing = unique.get(shirtNumber);
+      if (existing) {
+        existing.count += 1;
+        continue;
+      }
+      unique.set(shirtNumber, {
+        shirtNumber,
+        descriptor:
+          event.type === "turnover_lost"
+            ? "Nearest the loss"
+            : event.type === "shot"
+              ? "Took the shot"
+              : "In the moment",
+        count: 1,
+      });
     }
-    return [...unique.values()];
-  }, [moments]);
+    return [...unique.values()].sort((a, b) => b.count - a.count).slice(0, 3);
+  }, [moments, ownTeam]);
+
+  const scoreLine = `${match.teamA} ${match.scoreA}-${match.scoreB} ${match.teamB}`;
+
+  const chapterCells: Partial<Record<ChapterId, ChapterCell>> = {
+    score: {
+      title: `The result (${match.scoreA}-${match.scoreB})`,
+      sub: match.competition || match.date,
+    },
+    strength: {
+      title: shots >= otherShots ? "We made the chances" : "They made the chances",
+      sub: `${shots} shots to ${otherShots}`,
+    },
+    player: {
+      title: players.length
+        ? `Who stood out: ${players.map((p) => `#${p.shirtNumber}`).join(", ")}`
+        : "No shirt numbers yet",
+      sub: players.length ? "From the tracking file" : "Tracking did not identify players",
+    },
+    improve: model.top
+      ? {
+          title: model.top.headline,
+          sub: `${model.top.value}${model.top.unit === "%" ? "%" : ` ${model.top.unit}`} against ${model.top.target}${model.top.unit === "%" ? "%" : ""}`,
+          flagged: true,
+        }
+      : { title: "Every target met", sub: "Nothing crossed a threshold" },
+    verdict: {
+      title: "Tuesday plan",
+      sub: model.top ? "Built from the finding above" : "Keep what worked",
+    },
+  };
 
   const cells: NumberCell[] = [
     {
       label: "Shots",
-      value: `${shots}–${otherShots}`,
-      sub: shots + otherShots === 0 ? "None recorded in this match" : undefined,
+      value: `${shots}-${otherShots}`,
+      icon: Goal,
+      sentence: shots + otherShots === 0 ? undefined : `${shots} for us, ${otherShots} against.`,
+      basis: `${moments.length} moments logged from this match`,
+      link: { label: "Review all shot events", to: "/match/$matchId/stats" },
     },
     {
-      label: "Possession",
-      // A possession share needs enough tracked ball to mean anything.
-      value:
-        possession === null ? null : `${shown(possession, "%")}–${shown(otherPossession, "%")}`,
-      withheldNote: `The ball was not tracked well enough. ${confirmed} of ${moments.length} moments confirmed.`,
+      label: "Field possession",
+      value: possession === null ? null : shown(possession, "%"),
+      icon: PieChart,
+      sentence:
+        possession === null
+          ? undefined
+          : `${shown(otherPossession, "%")} to them${completion === null ? "" : `, ${shown(completion, "%")} of our passes completed`}.`,
+      withheldNote: `The ball was not tracked well enough to measure this. ${confirmed} of ${moments.length} moments confirmed.`,
+      link: { label: "Inspect phase distribution", to: "/match/$matchId/territory" },
     },
     {
-      label: "Pressed within 2 s",
+      label: "Pressed within two seconds",
       value: pressPct === null ? null : shown(pressPct, "%"),
-      sub: `Target ${thresholds.pressWithin2s}%`,
-      ...(pressPct !== null && pressPct < thresholds.pressWithin2s ? { tone: "bad" as const } : {}),
+      icon: Timer,
+      sentence:
+        pressPct === null
+          ? undefined
+          : `Target ${thresholds.pressWithin2s}%. ${pressPct < thresholds.pressWithin2s ? "Short of it." : "Met."}`,
+      basis: `${confirmed} of ${moments.length} moments confirmed`,
       withheldNote: "No loss in this match carries a time to first pressure.",
+      link: { label: "View the delayed presses", to: "/match/$matchId/stats" },
     },
-    { label: "Balls lost", value: `${lossEvents.length}`, sub: `${setPieces} set pieces detected` },
     {
-      label: "Block, back to front",
+      label: "Balls given away",
+      value: `${lossEvents.length}`,
+      icon: ArrowLeftRight,
+      sentence: "Possessions lost, all thirds.",
+      basis: `${setPieces} set pieces detected`,
+      link: { label: "Filter by pitch sector", to: "/match/$matchId/territory" },
+    },
+    {
+      label: "Block length",
       value: blockLength === null ? null : `${shown(blockLength)} m`,
-      sub: `Your ceiling is ${thresholds.blockCeilingM} m`,
-      ...(blockLength !== null && blockLength > thresholds.blockCeilingM
-        ? { tone: "warn" as const }
-        : {}),
-      withheldNote: "Shape is not tracked for this match.",
+      icon: Ruler,
+      sentence:
+        blockLength === null
+          ? undefined
+          : `Back to front. Your ceiling is ${thresholds.blockCeilingM} m.`,
+      withheldNote: "Shape is not tracked for this match, so no distance can be measured.",
+      link: { label: "Open the shape tab", to: "/match/$matchId/stats" },
+    },
+    {
+      label: "A better pass was open",
+      value: betterOption === null ? null : `${betterOption}`,
+      icon: Route,
+      sentence: betterOption === null ? undefined : "Clearer lanes neglected under pressure.",
+      withheldNote: "Passing lanes need tracked team-mate positions, which this match lacks.",
+      link: { label: "Review the passing clips", to: "/match/$matchId/stats" },
     },
   ];
 
-
-  /** A small drawing per chapter, all of it read off this match. */
-  const chapterFigures = useMemo(() => {
-    const step = momentum.length ? 100 / momentum.length : 100;
-    return {
-      score: (
-        <svg viewBox="0 0 100 44" className="h-full w-full" aria-hidden="true">
-          <line x1="0" y1="22" x2="100" y2="22" stroke="rgba(255,255,255,.35)" strokeWidth=".5" />
-          {momentum.map((v, i) => {
-            const h = Math.max(Math.abs(v) * 18, 0.8);
-            return (
-              <rect
-                key={i}
-                x={i * step + step * 0.2}
-                y={v >= 0 ? 22 - h : 22}
-                width={step * 0.6}
-                height={h}
-                fill={v >= 0 ? "var(--team-a)" : "var(--team-b)"}
-              />
-            );
-          })}
-        </svg>
-      ),
-      strength: (
-        <svg viewBox="0 0 100 44" className="h-full w-full" aria-hidden="true">
-          <rect x="18" y={44 - Math.max(shots, 1) * 4} width="24" height={Math.max(shots, 1) * 4} fill="var(--team-a)" />
-          <rect x="58" y={44 - Math.max(otherShots, 1) * 4} width="24" height={Math.max(otherShots, 1) * 4} fill="var(--team-b)" opacity=".7" />
-        </svg>
-      ),
-      player: (
-        <span className="display-i text-[26px] leading-none text-white">
-          {playerTalks[0] ? `#${playerTalks[0].shirtNumber}` : "—"}
-        </span>
-      ),
-      improve: (
-        <span className="display-i text-[22px] leading-none text-white">
-          {model.top ? `${model.top.value}${model.top.unit === "%" ? "%" : ""}` : "—"}
-        </span>
-      ),
-      verdict: (
-        <svg viewBox="0 0 100 44" className="h-full w-full" aria-hidden="true">
-          <circle cx="50" cy="22" r="13" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="2" />
-          <path d="M43 22l5 5 9-10" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    };
-  }, [momentum, shots, otherShots, playerTalks, model.top]);
-
   return (
-    <div className="flex flex-col gap-4">
-      <ChapterRail matchId={matchId} figures={chapterFigures} />
+    <>
+      <ChapterRail matchId={matchId} cells={chapterCells} />
 
-      <OneThingPoster
-        kicker={`${model.top ? "The one thing" : "This match"} · ${match.teamA} ${match.scoreA}–${match.scoreB} ${match.teamB}`}
+      <VerdictBlock
+        teamA={identities.A}
+        teamB={identities.B}
+        scoreLine={scoreLine}
         headline={headline}
-        body={sub}
         finding={model.top}
         matchId={matchId}
+        confirmed={confirmed}
+        moments={moments.length}
+      />
+
+      <MatchFlow
         momentum={momentum}
-        momentumLine={`${possession === null ? "Possession withheld" : `${shown(possession, "%")} possession`} · ${shots} ${shots === 1 ? "shot" : "shots"} · ${lossEvents.length} balls lost`}
-        chaptersLine={`${confirmed} of ${moments.length} moments confirmed`}
+        durationS={duration}
+        goals={goals}
+        turnovers={lossEvents.map((event) => event.t)}
+        window={pressureWindow}
+        teamA={identities.A}
+        teamB={identities.B}
+        confirmed={confirmed}
+        detected={Math.max(moments.length - confirmed, 0)}
       />
 
       <MatchNumbersGrid cells={cells} matchId={matchId} />
 
-      <FindingsList findings={findings} matchId={matchId} />
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] lg:gap-8">
+        <FindingsList findings={findings} matchId={matchId} />
 
-      {playerTalks.length > 0 && (
-        <section
-          className="rounded-[14px] border border-wire bg-surface p-5"
-          aria-labelledby="players-to-talk-to"
-        >
-          <h2 id="players-to-talk-to" className="display text-[20px] text-text">
-            Players to talk to
-          </h2>
-          <p className="mt-1 text-[11.5px] text-text-faint">
-            Shirt numbers from the tracking file. Match them to your own team sheet.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {playerTalks.map((player) => (
-              <PlayerChip key={`${player.team}-${player.shirtNumber}`} {...player} />
-            ))}
-          </div>
-        </section>
-      )}
+        {players.length > 0 && (
+          <section aria-labelledby="players-to-talk-to">
+            <SectionHead eyebrow="Conversations" title="Players to talk to" />
+            <div className="mt-4 border border-wire bg-surface">
+              <p className="border-b border-wire px-4 py-3 text-[11.5px] leading-snug text-text-faint sm:px-5">
+                Shirt numbers from the tracking file. Match them to your own team sheet — the
+                pipeline does not know who wears what.
+              </p>
+              <ul className="rule-y">
+                {players.map((player) => (
+                  <li key={player.shirtNumber} className="px-4 py-3.5 sm:px-5">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="flex items-baseline gap-2">
+                        <span className="num text-[19px] leading-none text-text-dim">
+                          #{player.shirtNumber}
+                        </span>
+                        <span className="text-[14px] font-semibold text-text-bright">
+                          {player.descriptor}
+                        </span>
+                      </span>
+                      <span className="num-flat shrink-0 text-[11.5px] text-text-faint">
+                        {player.count} {player.count === 1 ? "moment" : "moments"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="border-t border-wire p-4 sm:p-5">
+                <Link
+                  to="/match/$matchId/session"
+                  params={{ matchId }}
+                  className="btn btn-secondary w-full"
+                >
+                  <Printer size={15} aria-hidden="true" />
+                  Print touchline cards
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+      </div>
 
-      <span className="sr-only">
+      <p className="sr-only">
         {match.teamA} versus {match.teamB}. {findings.length} coaching findings.
-      </span>
-      <button
-        type="button"
-        className="sr-only"
-        onClick={() => void navigate({ to: "/match/$matchId/stats", params: { matchId } })}
+      </p>
+      <Link
+        to="/match/$matchId/stats"
+        params={{ matchId }}
+        className={cn(actionLinkClass(), "sr-only")}
       >
         Open all match stats
-      </button>
-    </div>
+      </Link>
+    </>
   );
 }

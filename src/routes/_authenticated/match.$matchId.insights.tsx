@@ -4,6 +4,7 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { InsightsScreen } from "@/components/insights/InsightsScreen";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useAnalysis } from "@/hooks/use-match";
+import { teamIdentities } from "@/lib/team-identity";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/insights")({
   head: () => ({
@@ -28,6 +29,7 @@ function Insights() {
   const [period, setPeriod] = useState<Period>("full");
   const { match, colours, findings, summary, loading, events, review, stats, team, thresholds } =
     useAnalysis(matchId, scope);
+  const identities = teamIdentities(match, colours);
 
   return (
     <MatchShell
@@ -48,21 +50,20 @@ function Insights() {
         </div>
       )}
 
-      {match && (
-        <>
-          <InsightsScreen
-            matchId={matchId}
-            match={match}
-            findings={findings}
-            summary={summary}
-            events={events}
-            stats={stats}
-            team={team}
-            thresholds={thresholds}
-            iconColour={scope === "b" ? colours.B : colours.A}
-            onReview={(input) => review.setVerdict.mutate(input)}
-          />
-        </>
+      {match && identities && (
+        <InsightsScreen
+          matchId={matchId}
+          match={match}
+          findings={findings}
+          summary={summary}
+          events={events}
+          stats={stats}
+          team={team}
+          thresholds={thresholds}
+          identities={identities}
+          iconColour={scope === "b" ? colours.B : colours.A}
+          onReview={(input) => review.setVerdict.mutate(input)}
+        />
       )}
     </MatchShell>
   );

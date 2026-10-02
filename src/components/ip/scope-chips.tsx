@@ -53,7 +53,7 @@ export function ScopeChips({
       )}
     >
       <div
-        className="flex shrink-0 gap-[2px] rounded-[10px] border border-wire bg-surface p-[3px]"
+        className="flex shrink-0 gap-[2px] border border-wire bg-surface p-[3px]"
         role="group"
         aria-label="Team"
       >
@@ -65,7 +65,7 @@ export function ScopeChips({
             onClick={() => onScope(key)}
             title={team?.name ?? "Both teams"}
             className={cn(
-              "flex min-h-9 items-center gap-1.5 rounded-[7px] px-2.5 text-[12px] font-bold transition-colors",
+              "flex min-h-9 items-center gap-1.5 px-2.5 text-[12px] font-bold transition-colors",
               scope === key ? "bg-surface-3 text-text" : "text-text-faint hover:text-text",
             )}
           >
@@ -86,7 +86,7 @@ export function ScopeChips({
 
       {period && onPeriod && (
         <div
-          className="flex shrink-0 gap-[2px] rounded-[10px] border border-wire bg-surface p-[3px]"
+          className="flex shrink-0 gap-[2px] border border-wire bg-surface p-[3px]"
           role="group"
           aria-label="Period"
         >
@@ -97,7 +97,7 @@ export function ScopeChips({
               aria-pressed={period === p.key}
               onClick={() => onPeriod(p.key)}
               className={cn(
-                "min-h-9 rounded-[7px] px-3 text-[12px] font-bold transition-colors",
+                "min-h-9 px-3 text-[12px] font-bold transition-colors",
                 period === p.key ? "bg-surface-3 text-text" : "text-text-faint hover:text-text",
               )}
             >

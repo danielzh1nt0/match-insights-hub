@@ -8,7 +8,7 @@ import { Avatar } from "./avatar";
 import { cn } from "@/lib/utils";
 
 const itemClass =
-  "tap flex w-full items-center gap-2 rounded-[6px] px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text";
+  "tap flex w-full items-center gap-2 px-2 text-left text-[13px] text-text-dim hover:bg-surface-3 hover:text-text";
 
 export function AccountMenu() {
   const navigate = useNavigate();
@@ -72,13 +72,13 @@ export function AccountMenu() {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-11 z-50 w-[248px] rounded-[6px] border border-wire bg-surface-2 p-2"
+          className="absolute right-0 top-11 z-50 w-[248px] border border-wire bg-surface-2 p-2"
         >
           <button
             type="button"
             role="menuitem"
             onClick={() => go("/settings/profile")}
-            className="tap flex w-full items-center gap-3 rounded-[6px] px-2 text-left hover:bg-surface-3"
+            className="tap flex w-full items-center gap-3 px-2 text-left hover:bg-surface-3"
           >
             <Avatar url={profile?.avatarUrl} name={name} email={email} size={34} />
             <span className="min-w-0">

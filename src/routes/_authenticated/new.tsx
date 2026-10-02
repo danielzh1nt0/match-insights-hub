@@ -143,7 +143,7 @@ function NewAnalysis() {
                   const f = e.dataTransfer.files?.[0];
                   if (f) setFile(f);
                 }}
-                className={`flex min-h-[156px] cursor-pointer flex-col items-center justify-center gap-2 rounded-[6px] border border-dashed px-4 py-6 text-center transition-colors duration-150 ease-out ${
+                className={`flex min-h-[156px] cursor-pointer flex-col items-center justify-center gap-2 border border-dashed px-4 py-6 text-center transition-colors duration-150 ease-out ${
                   dragging ? "border-cream bg-cream/5" : "border-wire bg-surface-2"
                 }`}
               >

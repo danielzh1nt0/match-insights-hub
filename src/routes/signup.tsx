@@ -140,7 +140,7 @@ function SignUp() {
                 aria-pressed={role === r}
                 onClick={() => setRole(r)}
                 className={cn(
-                  "tap rounded-[22px] border px-4 text-[12.5px] font-semibold transition-colors duration-150 ease-out",
+                  "tap border px-4 text-[12.5px] font-semibold transition-colors duration-150 ease-out",
                   role === r
                     ? "border-cream bg-cream text-[#111315]"
                     : "border-wire text-text-dim hover:text-text",

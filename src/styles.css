@@ -5,8 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Ipanema design system. Dark only — there is no light theme.
- * Cream (--cream) is the single accent. No purple anywhere.
+ * Ipanema — the Touchline design system.
+ *
+ * Tactical functionalism: a near-monochrome slate ground, warm chalk for text
+ * and diagrams, and saturated colour reserved for exactly two jobs — telling
+ * the two kits apart, and firing an alarm. No gradients, no blurs, no shadows,
+ * no rounded corners. Separation comes from 1px hairlines and surface steps.
  */
 
 @theme inline {
@@ -18,7 +22,7 @@
   --radius-pill: 999px;
 
   --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
-  --font-body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-sans: var(--font-body);
 
   --color-background: var(--bg);
@@ -30,6 +34,7 @@
   --color-wire: var(--wire);
   --color-wire-2: var(--wire-2);
   --color-text: var(--text);
+  --color-text-bright: var(--text-bright);
   --color-text-dim: var(--text-dim);
   --color-text-faint: var(--text-faint);
   --color-cream: var(--cream);
@@ -78,123 +83,145 @@
 }
 
 :root {
-  /* The prototype's one spacing and radius system, applied everywhere.
-     Surfaces are r-md; boards and tight controls r-sm; posters and sheets r-lg.
-     These live here rather than in @theme, which drops keys it does not know. */
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
+  /* Zero radius is a mandate, not a taste. Corners are square on cards, panels,
+     inputs, chips and buttons; only true circles — player discs, the ball,
+     status dots, crests, avatars — keep a radius, and they ask for it by name
+     with rounded-full. */
+  --r-sm: 0px;
+  --r-md: 0px;
+  --r-lg: 0px;
+
+  /* Spacing, as the system defines it. */
+  --gutter: 1rem;
+  --gutter-desktop: 1.5rem;
+  --margin: 1rem;
+  --margin-desktop: 2.5rem;
   --gap: 16px;
   --pad: 20px;
-  --sect: 32px;
+  --sect: 40px;
+  --shell: 1440px;
 
-  --bg: #0b0d10;
-  --surface: #14171c;
-  --surface-2: #1a1e24;
-  --surface-3: #20242c;
-  --wire: #2a3038;
-  --wire-2: #1e232a;
-  --text: #e7eaee;
-  --text-dim: #8b94a3;
-  /* #5b6472 was 3.24:1 on --bg and failed WCAG AA for body text. 5.43:1. */
+  /* The neutral ramp: pitch slate under warm chalk. */
+  --bg: #0d0e11;
+  --surface: #16181d;
+  --surface-2: #1f2229;
+  --surface-3: #282b33;
+  --wire: #2b2f38;
+  --wire-2: #23262e;
+  /* Chalk is the reading colour, not a decoration. Bright chalk is for
+     scoreboard values and headlines only. */
+  --text: #ede6d6;
+  --text-bright: #f7f5f0;
+  --text-dim: #8b92a0;
+  /* 5.4:1 on --bg. Anything darker fails AA at body size. */
   --text-faint: #7f8896;
   --cream: #ede6d6;
-  --cream-dim: #b9b3a5;
-  /* Build B's pair. Red against green is the only thing separating the teams in
-     a scoreline, and it disappears for red-green colourblind viewers. */
-  --team-a: #5b8cff;
-  --team-b: #d99a2b;
-  --quality-good: #34d399;
-  --quality-risky: #f59e0b;
-  --quality-bad: #ef4444;
-  --reaction-good: #1d9e75;
-  --reaction-warn: #ba7517;
-  --reaction-bad: #e24b4a;
-  --pitch-top: #2d5c30;
-  --pitch-bottom: #244a26;
-  --pitch-line: rgba(255, 255, 255, 0.25);
+  --cream-dim: #ccc6b7;
+  /* What sits on a chalk fill. */
+  --ink: #0d0e11;
+
+  /* Kit colours. Defaults only — every match overrides these from its own
+     file, because the two shirts on the day are the data. */
+  --team-a: #ede6d6;
+  --team-b: #d03b3b;
+  --team-gk: #e8b53a;
+
+  /* Alarm. Fired when a number breaches the coach's envelope, never as
+     decoration. Success is silent: it is chalk, or it is nothing. */
+  --reaction-bad: #d03b3b;
+  --reaction-warn: #c98a2e;
+  --reaction-good: #ede6d6;
+  --quality-bad: #d03b3b;
+  --quality-risky: #c98a2e;
+  --quality-good: #ede6d6;
+
+  /* Pitch boards: dark turf, chalk lines. */
+  --pitch-top: #1a2a1d;
+  --pitch-bottom: #141f17;
+  --pitch-line: rgba(237, 230, 214, 0.5);
   --pitch-control: rgba(0, 0, 0, 0.5);
-  --ball-detail: #111315;
-  --team-gk: #eab308;
+  --pitch-insight: #182d1b;
+  --ball-detail: #0d0e11;
+
   --club-bvb: #fde100;
   --club-bayern: #dc052d;
-  --story-ink: #08090b;
-  --story-paper: #f4f0e6;
-  --ink: #111315;
-  --workspace: #101318;
+  --story-ink: #0d0e11;
+  --story-paper: #ede6d6;
+  --workspace: #0d0e11;
   --graphite: #3a3d38;
-  --pitch-insight: #182d1b;
-  --radius: 16px;
+  --radius: 0px;
   color-scheme: dark;
 }
 
-/* ===== Light, as the prototype defines it =====
-   Paper and ink, from the story slides. The turf stays dark in both themes —
-   a pitch is green whatever the room is like. --ink is the colour that sits
-   ON cream, so it flips with the theme; scrims use their own literal dark. */
+/* ===== Light: the same system, inverted =====
+   Chalk on slate becomes ink on paper — a match card rather than a dugout
+   board. The turf stays dark in both themes, because a pitch is green whatever
+   the room is like, and --ink is whatever sits ON the chalk fill, so it flips. */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #f4f0e6;
-    --surface: #fcfaf5;
-    --surface-2: #efe9dc;
-    --surface-3: #e6dfcf;
-    --wire: #d6cdb9;
-    --wire-2: #e4dccb;
-    --text: #111315;
+    --bg: #ece7da;
+    --surface: #f6f2e9;
+    --surface-2: #e2dccd;
+    --surface-3: #d7d0bf;
+    --wire: #c4bba6;
+    --wire-2: #d9d2c1;
+    --text: #15171b;
+    --text-bright: #0d0e11;
     --text-dim: #4f555e;
-    --text-faint: #6b7079;
-    --cream: #111315;
+    --text-faint: #666c76;
+    --cream: #15171b;
     --cream-dim: #3a4049;
-    --ink: #f4f0e6;
-    --team-a: #1e40af;
-    --team-b: #a15c07;
-    --quality-good: #0f8a60;
-    --quality-risky: #b26a00;
-    --quality-bad: #c62828;
-    --reaction-good: #0f8a60;
-    --reaction-warn: #b26a00;
-    --reaction-bad: #c62828;
-    --story-ink: #f4f0e6;
-    --story-paper: #08090b;
-    --workspace: #efe9dc;
+    --ink: #f6f2e9;
+    --team-a: #15171b;
+    --team-b: #a62525;
+    --quality-good: #15171b;
+    --quality-risky: #8a5c12;
+    --quality-bad: #a62525;
+    --reaction-good: #15171b;
+    --reaction-warn: #8a5c12;
+    --reaction-bad: #a62525;
+    --story-ink: #ece7da;
+    --story-paper: #0d0e11;
+    --workspace: #ece7da;
     color-scheme: light;
   }
 }
 
 :root[data-theme="light"] {
-  --bg: #f4f0e6;
-  --surface: #fcfaf5;
-  --surface-2: #efe9dc;
-  --surface-3: #e6dfcf;
-  --wire: #d6cdb9;
-  --wire-2: #e4dccb;
-  --text: #111315;
+  --bg: #ece7da;
+  --surface: #f6f2e9;
+  --surface-2: #e2dccd;
+  --surface-3: #d7d0bf;
+  --wire: #c4bba6;
+  --wire-2: #d9d2c1;
+  --text: #15171b;
+  --text-bright: #0d0e11;
   --text-dim: #4f555e;
-  --text-faint: #6b7079;
-  --cream: #111315;
+  --text-faint: #666c76;
+  --cream: #15171b;
   --cream-dim: #3a4049;
-  --ink: #f4f0e6;
-  --team-a: #1e40af;
-  --team-b: #a15c07;
-  --quality-good: #0f8a60;
-  --quality-risky: #b26a00;
-  --quality-bad: #c62828;
-  --reaction-good: #0f8a60;
-  --reaction-warn: #b26a00;
-  --reaction-bad: #c62828;
-  --story-ink: #f4f0e6;
-  --story-paper: #08090b;
-  --workspace: #efe9dc;
+  --ink: #f6f2e9;
+  --team-a: #15171b;
+  --team-b: #a62525;
+  --quality-good: #15171b;
+  --quality-risky: #8a5c12;
+  --quality-bad: #a62525;
+  --reaction-good: #15171b;
+  --reaction-warn: #8a5c12;
+  --reaction-bad: #a62525;
+  --story-ink: #ece7da;
+  --story-paper: #0d0e11;
+  --workspace: #ece7da;
   color-scheme: light;
 }
 
 
 .bg-priority {
-  background: linear-gradient(90deg, rgba(226, 75, 74, 0.12), rgba(226, 75, 74, 0.03));
+  background: color-mix(in srgb, var(--reaction-bad) 8%, transparent);
 }
 
 .shadow-priority {
-  box-shadow: 0 0 0 1px rgba(226, 75, 74, 0.35);
+  box-shadow: inset 0 0 0 1px var(--reaction-bad);
 }
 
 @layer base {
@@ -214,6 +241,13 @@
     min-width: 320px;
   }
 
+  /* The system rejects floating elevation. Depth is surface brightness and a
+     crisp hairline, never a shadow — so nothing casts one except the controls
+     that float over video, which need to stay legible on any frame. */
+  *:not(.cast-shadow):not(.cast-shadow *) {
+    box-shadow: none;
+  }
+
   :focus-visible {
     outline: 2px solid var(--cream);
     outline-offset: 2px;
@@ -228,9 +262,8 @@
 }
 
 @utility section-kicker {
-  font-family: var(--font-display);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-faint);
@@ -238,31 +271,88 @@
 
 @utility workspace-panel {
   border: 1px solid var(--wire);
-  border-radius: 8px;
   background: var(--surface);
 }
 
-/* Display type helpers */
+/* ===== The two voices =====
+   Barlow Condensed italic is the scoreboard: scores, verdicts, minutes, any
+   number meant to be read from the touchline. Hanken Grotesk is the clipboard:
+   every label, annotation and sentence. Italic belongs to the scoreboard voice
+   alone — never set Hanken in italic. */
 @utility display-i {
   font-family: var(--font-display);
   font-weight: 800;
   font-style: italic;
-  letter-spacing: 0.005em;
+  letter-spacing: -0.015em;
   text-transform: uppercase;
 }
 
 @utility display {
   font-family: var(--font-display);
   font-weight: 700;
-  letter-spacing: 0.005em;
+  letter-spacing: -0.01em;
   text-transform: uppercase;
 }
 
+/* A scoreboard number: condensed, italic, tabular so columns line up. */
 @utility num {
   font-family: var(--font-display);
-  font-weight: 700;
+  font-weight: 800;
+  font-style: italic;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.005em;
+  letter-spacing: -0.015em;
+}
+
+/* An upright figure for tables, where italic would fight the grid. */
+@utility num-flat {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Archival notation. Every micro-label is set this way. */
+@utility label-xs {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@utility label-sm {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@utility label-md {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ===== Structural plates =====
+   Modules are separated by hairlines, not by gaps. A plate draws its own
+   border and its children divide themselves with the same 1px rule, so a
+   grid of cards reads as one ruled sheet rather than a scatter of tiles. */
+@utility plate {
+  border: 1px solid var(--wire);
+  background: var(--surface);
+}
+
+@utility rule-x {
+  & > * + * {
+    border-left: 1px solid var(--wire);
+  }
+}
+
+@utility rule-y {
+  & > * + * {
+    border-top: 1px solid var(--wire);
+  }
 }
 
 /* Every interactive element keeps a 44pt tap target */
@@ -272,8 +362,7 @@
 }
 
 @utility pitch-turf {
-  background:
-    linear-gradient(180deg, #16281a 0%, #0f1f13 100%);
+  background: linear-gradient(180deg, var(--pitch-top) 0%, var(--pitch-bottom) 100%);
 }
 
 @utility bg-story-scrim {
@@ -303,48 +392,109 @@
   animation: feedIn 650ms ease-out;
 }
 
+/* ===== Chips =====
+   Zero-radius geometric notation. Transparent until chosen, then the surface
+   lifts and the border goes to chalk. No fills, no pills, no emoji. */
 .fchip {
   display: inline-flex;
-  min-height: 32px;
+  min-height: 34px;
   min-width: 44px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
   border: 1px solid var(--wire);
-  border-radius: 8px;
-  background: var(--surface);
-  padding: 6px 11px;
-  color: var(--text-faint);
-  font-size: 11.5px;
+  background: transparent;
+  padding: 7px 12px;
+  color: var(--text-dim);
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   line-height: 1;
   transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
 .fchip:hover {
-  border-color: color-mix(in srgb, var(--cream) 40%, var(--wire));
+  border-color: color-mix(in srgb, var(--cream) 45%, var(--wire));
   color: var(--text);
 }
 
 .fchip-active {
   border-color: var(--cream);
-  background: var(--cream);
-  color: var(--ball-detail);
+  background: var(--surface-2);
+  color: var(--text-bright);
   font-weight: 700;
 }
 
 .fchip-badge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
   background: var(--surface-3);
   padding: 2px 5px;
   color: var(--text-dim);
-  font-size: 10.5px;
+  font-size: 10px;
+  font-weight: 700;
   line-height: 1;
 }
 
+/* ===== Actions =====
+   One chalk fill per view carries the thing the coach came to do. Everything
+   else is a hairline outline, and destructive work is the only place the
+   alarm colour may fill a surface. */
+.btn {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  padding: 12px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.btn-primary {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.btn-primary:hover {
+  background: var(--text-bright);
+}
+
+.btn-secondary {
+  border-color: var(--wire);
+  background: transparent;
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  border-color: var(--cream);
+  background: var(--surface-2);
+}
+
+/* An alarm chip. Outline and tint only — the alarm never becomes a block of
+   colour on a card, because the opponent's shirt may well be this red. */
+.alarm {
+  border: 1px solid var(--reaction-bad);
+  background: color-mix(in srgb, var(--reaction-bad) 8%, transparent);
+  color: var(--reaction-bad);
+}
+
+
+/* ===== Level 3: overlays =====
+   A menu or dialog floating over the page is pinned by a high-contrast chalk
+   outline rather than a shadow, which this system does not use. Unlayered, so
+   it beats the utility classes the shadcn primitives ship with. */
+[data-radix-popper-content-wrapper] > * {
+  border: 1px solid var(--cream);
+  background: var(--surface-2);
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,

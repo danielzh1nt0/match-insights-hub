@@ -55,7 +55,7 @@ export function Card({
       className={cn(
         "border border-wire bg-surface",
         // --r-md / --pad from the prototype's spacing system
-        small ? "rounded-[10px] p-3.5" : "rounded-[14px] p-5",
+        small ? " p-3.5" : " p-5",
         className,
       )}
       {...rest}
@@ -69,8 +69,7 @@ export function Card({
 
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & { block?: boolean };
 
-const btnBase =
-  "tap inline-flex items-center justify-center gap-2 rounded-[6px] px-5 text-sm font-semibold transition-colors duration-150 ease-out disabled:pointer-events-none disabled:opacity-50";
+const btnBase = "btn disabled:pointer-events-none disabled:opacity-40";
 
 export const PrimaryButton = forwardRef<HTMLButtonElement, BtnProps>(function PrimaryButton(
   { className, block, ...rest },
@@ -79,7 +78,7 @@ export const PrimaryButton = forwardRef<HTMLButtonElement, BtnProps>(function Pr
   return (
     <button
       ref={ref}
-      className={cn(btnBase, "bg-cream text-ink hover:bg-cream-dim", block && "w-full", className)}
+      className={cn(btnBase, "btn-primary", block && "w-full", className)}
       {...rest}
     />
   );
@@ -92,12 +91,7 @@ export const SecondaryButton = forwardRef<HTMLButtonElement, BtnProps>(function 
   return (
     <button
       ref={ref}
-      className={cn(
-        btnBase,
-        "border border-cream/60 text-cream hover:bg-cream/10",
-        block && "w-full",
-        className,
-      )}
+      className={cn(btnBase, "btn-secondary", block && "w-full", className)}
       {...rest}
     />
   );
@@ -112,7 +106,7 @@ export const GhostButton = forwardRef<HTMLButtonElement, BtnProps>(function Ghos
       ref={ref}
       className={cn(
         btnBase,
-        "text-text-dim hover:text-text hover:bg-surface-2",
+        "border-transparent text-text-dim hover:bg-surface-2 hover:text-text",
         block && "w-full",
         className,
       )}
@@ -148,26 +142,11 @@ export function Chip({
     <button
       type="button"
       aria-pressed={active}
-      className={cn(
-        "inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-[10px] border px-3 text-xs font-semibold transition-colors duration-150 ease-out",
-        active
-          ? "border-cream bg-cream text-ink"
-          : "border-wire text-text-dim hover:border-cream/40 hover:text-text",
-        className,
-      )}
+      className={cn("fchip", active && "fchip-active", className)}
       {...rest}
     >
       {children}
-      {count !== undefined && (
-        <span
-          className={cn(
-            "num rounded-full px-1.5 text-[11px]",
-            active ? "bg-ink/10 text-ink" : "bg-surface-3 text-text-dim",
-          )}
-        >
-          {count}
-        </span>
-      )}
+      {count !== undefined && <span className="fchip-badge num-flat">{count}</span>}
     </button>
   );
 }
@@ -181,20 +160,18 @@ export function Pill({
   tone?: "neutral" | "good" | "risky" | "bad" | "cream";
   className?: string;
 }) {
+  // Success is silent in this system: it is chalk, or it is nothing. Only a
+  // breached target earns the alarm, and even then as an outline, not a fill.
   const tones = {
-    neutral: "border-wire bg-surface-2 text-text-dim",
-    good: "border-quality-good/40 bg-quality-good/10 text-quality-good",
-    risky: "border-quality-risky/40 bg-quality-risky/10 text-quality-risky",
-    bad: "border-quality-bad/40 bg-quality-bad/10 text-quality-bad",
+    neutral: "border-wire bg-bg text-text-dim",
+    good: "border-wire bg-bg text-text",
+    risky: "border-quality-risky/60 bg-quality-risky/8 text-quality-risky",
+    bad: "alarm",
     cream: "border-cream bg-cream text-ink",
   } as const;
   return (
     <span
-      className={cn(
-        "inline-flex items-center rounded-[22px] border px-3 py-1 text-[11px] font-semibold",
-        tones[tone],
-        className,
-      )}
+      className={cn("label-xs inline-flex items-center border px-2 py-1", tones[tone], className)}
     >
       {children}
     </span>
@@ -209,7 +186,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       <input
         ref={ref}
         className={cn(
-          "tap w-full rounded-[6px] border border-wire bg-surface-2 px-3.5 text-[15px] text-text placeholder:text-text-faint transition-colors duration-150 ease-out focus:border-cream/60",
+          "tap w-full border border-wire bg-surface-2 px-3.5 text-[15px] text-text placeholder:text-text-faint transition-colors duration-150 ease-out focus:border-cream/60",
           className,
         )}
         {...rest}
@@ -264,7 +241,7 @@ export function Checkbox({
     >
       <span
         className={cn(
-          "flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border",
+          "flex h-5 w-5 shrink-0 items-center justify-center border",
           checked ? "border-cream bg-cream text-ink" : "border-wire bg-surface-2",
         )}
       >
@@ -303,7 +280,7 @@ export function Segmented<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className="grid w-full gap-1 rounded-[14px] border border-wire bg-surface p-1"
+      className="rule-x grid w-full border border-wire"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((o) => {
@@ -315,8 +292,10 @@ export function Segmented<T extends string>({
             aria-pressed={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "tap flex items-center justify-center gap-1.5 rounded-[6px] px-2 text-xs font-semibold transition-colors duration-150 ease-out",
-              active ? "bg-cream text-ink" : "text-text-dim hover:bg-surface-2 hover:text-text",
+              "tap label-sm flex items-center justify-center gap-1.5 px-2 transition-colors duration-150 ease-out",
+              active
+                ? "bg-surface-2 text-text-bright"
+                : "text-text-dim hover:bg-surface hover:text-text",
             )}
           >
             {o.color && (

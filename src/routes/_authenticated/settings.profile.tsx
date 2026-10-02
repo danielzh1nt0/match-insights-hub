@@ -123,7 +123,7 @@ function ProfileSettings() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder={isLoading ? "" : "Your name"}
-              className="tap mt-1 w-full rounded-[6px] border border-wire bg-surface-2 px-3 text-[14px] text-text outline-none focus:border-cream"
+              className="tap mt-1 w-full border border-wire bg-surface-2 px-3 text-[14px] text-text outline-none focus:border-cream"
             />
 
             <label className="mt-4 block text-[11px] font-semibold uppercase tracking-wide text-text-faint" htmlFor="profile-role">
@@ -133,7 +133,7 @@ function ProfileSettings() {
               id="profile-role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="tap mt-1 w-full rounded-[6px] border border-wire bg-surface-2 px-3 text-[14px] text-text outline-none focus:border-cream"
+              className="tap mt-1 w-full border border-wire bg-surface-2 px-3 text-[14px] text-text outline-none focus:border-cream"
             >
               {ROLES.map((r) => (
                 <option key={r} value={r}>
@@ -150,7 +150,7 @@ function ProfileSettings() {
               value={clubName}
               onChange={(e) => setClubName(e.target.value)}
               placeholder="Club name"
-              className="tap mt-1 w-full rounded-[6px] border border-wire bg-surface-2 px-3 text-[14px] text-text outline-none focus:border-cream"
+              className="tap mt-1 w-full border border-wire bg-surface-2 px-3 text-[14px] text-text outline-none focus:border-cream"
             />
 
             <div className="mt-5 flex items-center gap-3">

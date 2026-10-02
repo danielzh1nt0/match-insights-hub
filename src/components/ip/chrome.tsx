@@ -1,7 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
-import { ArrowLeft, ChartNoAxesColumn, Film, Library, Map, Settings, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarCheck,
+  ChartNoAxesColumn,
+  ChevronDown,
+  Film,
+  Map,
+  Scissors,
+  Settings,
+  Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Crest } from "./touchline";
 import { ThemeToggle } from "./theme-toggle";
 import { Wordmark, Segmented } from "./primitives";
 import { AccountMenu } from "./account-menu";
@@ -28,23 +39,28 @@ export type HeaderMatch = {
 /**
  * The bar at the top of every screen.
  *
- * On a match screen it carries the scoreline itself, as the prototype does,
- * instead of a separate header card taking a third of a phone screen below it.
+ * On a desktop it is the whole chrome: wordmark, the fixture under review and
+ * the sections, in one row, so everything below belongs to the match itself. On
+ * a phone it keeps only the scoreline and hands the sections to the bar at the
+ * bottom, where a thumb can reach them.
  */
 export function AppHeader({
   backTo,
   onBack,
   match,
+  matchId,
 }: {
   backTo?: string;
   onBack?: () => void;
   match?: HeaderMatch | undefined;
+  /** Given on a match screen, the sections appear in the bar on a desktop. */
+  matchId?: string | undefined;
 }) {
   const back = backTo ? (
     <Link
       to={backTo}
       aria-label="Go back"
-      className="tap flex items-center justify-center rounded-[10px] text-text-dim hover:text-text"
+      className="tap flex items-center justify-center text-text-dim hover:text-text"
     >
       <ArrowLeft size={18} />
     </Link>
@@ -53,135 +69,144 @@ export function AppHeader({
       type="button"
       aria-label="Go back"
       onClick={onBack}
-      className="tap flex items-center justify-center rounded-[10px] text-text-dim hover:text-text"
+      className="tap flex items-center justify-center text-text-dim hover:text-text"
     >
       <ArrowLeft size={18} />
     </button>
   ) : null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-wire-2 bg-bg/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-wire bg-bg">
       <div className="mx-auto max-w-[1440px] px-4 md:px-7">
-        <div className="grid min-h-14 grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-2">
-          <div className="flex items-center">{back}</div>
+        <div className="flex min-h-[56px] items-center gap-3 md:min-h-[64px] md:gap-5">
+          <div className="flex shrink-0 items-center gap-2.5">
+            <span className="md:hidden">{back}</span>
+            <Link
+              to="/library"
+              aria-label="Ipanema match library"
+              className="hidden items-center gap-2.5 md:flex"
+            >
+              <Wordmark size="sm" />
+              <span className="label-xs border border-wire px-1.5 py-1 text-text-faint">
+                Tactical
+              </span>
+            </Link>
+          </div>
 
-          {match ? (
-            <MatchScoreline match={match} />
-          ) : (
-            <div className="flex items-center justify-center md:justify-start">
-              <Link to="/library" aria-label="Ipanema home" className="flex items-center gap-3">
-                <span className="display-i grid h-9 w-9 place-items-center rounded-[6px] border border-cream text-[21px] text-cream">
-                  I
-                </span>
-                <Wordmark size="sm" className="hidden sm:inline" />
-              </Link>
-              <span className="ml-5 hidden h-6 w-px bg-wire-2 md:block" aria-hidden="true" />
-              <Link
-                to="/library"
-                className="tap ml-3 hidden items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-text-faint hover:text-text md:flex"
-              >
-                <Library size={15} /> Match library
-              </Link>
-            </div>
-          )}
+          {match && <FixtureBlock match={match} />}
 
-          <div className="flex items-center justify-end gap-1">
+          {matchId && <SectionNav matchId={matchId} className="hidden shrink-0 xl:flex" />}
+
+          <div className="ml-auto flex shrink-0 items-center gap-1">
             <ThemeToggle />
             <AccountMenu />
           </div>
         </div>
 
-        {match && (
-          <div className="flex items-center justify-center gap-2 border-t border-wire-2 py-1.5 text-[11.5px] text-text-faint">
-            <span className="truncate">{match.meta}</span>
-            {match.result && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span
-                  className={cn(
-                    "shrink-0 font-bold uppercase",
-                    match.result === "W"
-                      ? "text-reaction-good"
-                      : match.result === "L"
-                        ? "text-reaction-bad"
-                        : "text-text-dim",
-                  )}
-                >
-                  {match.result === "W" ? "Won" : match.result === "L" ? "Lost" : "Drew"}
-                </span>
-              </>
-            )}
-            {match.onSetup && (
-              <button
-                type="button"
-                onClick={match.onSetup}
-                aria-label="Match setup"
-                className="ml-1 shrink-0 text-text-faint hover:text-text"
-              >
-                <Settings size={13} aria-hidden="true" />
-              </button>
-            )}
-          </div>
+        {/* Under 1280px the sections no longer fit beside the fixture, so they
+            take their own scrollable row rather than being cut off. */}
+        {matchId && (
+          <SectionNav
+            matchId={matchId}
+            className="-mx-4 hidden border-t border-wire px-4 md:flex xl:hidden"
+          />
         )}
       </div>
     </header>
   );
 }
 
-/** Crest, code, score, code, crest — the prototype's scoreline, one line high. */
-function MatchScoreline({ match }: { match: HeaderMatch }) {
+/**
+ * Which match is under review.
+ *
+ * Both crests, the result and the date in one block, because a coach with a
+ * season on file needs to know at a glance which match he is reading — and it
+ * is the way back to the library.
+ */
+function FixtureBlock({ match }: { match: HeaderMatch }) {
   const played = match.scoreA !== null && match.scoreB !== null;
+  const score = played ? `${match.scoreA}-${match.scoreB}` : null;
   return (
-    <div className="flex min-w-0 items-center justify-center gap-3">
-      <HeaderTeam
+    <Link
+      to="/library"
+      title="Switch match"
+      className="group flex min-w-0 items-center gap-2.5 border border-wire px-2.5 py-1.5 transition-colors hover:border-cream/50 md:gap-3 md:px-3"
+    >
+      <HeaderCrest
         name={match.teamA}
-        code={match.codeA}
         crest={match.crestA}
         colour={match.colourA}
+        code={match.codeA}
       />
-      <span className="display-i shrink-0 text-[26px] leading-none text-cream [font-variant-numeric:tabular-nums] md:text-[30px]">
-        {played ? `${match.scoreA}\u2009–\u2009${match.scoreB}` : "—\u2009–\u2009—"}
+
+      {/* The competition and date sit above the fixture rather than beside it.
+          A static "Active fixture" label would be competing for width with the
+          one thing here worth reading. */}
+      <span className="flex min-w-0 flex-col">
+        <span className="num-flat hidden truncate text-[11px] text-text-faint md:block">
+          {match.meta}
+        </span>
+        <span className="flex min-w-0 items-baseline gap-1.5">
+          <span className="hidden min-w-0 truncate text-[13px] font-semibold text-text-bright lg:block">
+            {match.teamA} vs {match.teamB}
+          </span>
+          {score && (
+            <span className="num-flat hidden shrink-0 text-[13px] text-text-dim lg:block">
+              ({score})
+            </span>
+          )}
+          {/* Where the names will not fit, the codes carry the scoreline. */}
+          <span className="display-i shrink-0 text-[18px] leading-none text-text-bright lg:hidden">
+            {match.codeA} {score ?? "v"} {match.codeB}
+          </span>
+        </span>
       </span>
-      <HeaderTeam
+
+      <HeaderCrest
         name={match.teamB}
-        code={match.codeB}
         crest={match.crestB}
         colour={match.colourB}
-        reverse
+        code={match.codeB}
       />
-    </div>
+
+      {match.onSetup && (
+        <button
+          type="button"
+          aria-label="Match setup"
+          onClick={(event) => {
+            event.preventDefault();
+            match.onSetup?.();
+          }}
+          className="hidden shrink-0 text-text-faint hover:text-text md:block"
+        >
+          <Settings size={14} aria-hidden="true" />
+        </button>
+      )}
+      <ChevronDown
+        size={15}
+        aria-hidden="true"
+        className="shrink-0 text-text-faint group-hover:text-text"
+      />
+    </Link>
   );
 }
 
-function HeaderTeam({
+function HeaderCrest({
   name,
-  code,
   crest,
   colour,
-  reverse,
+  code,
 }: {
   name: string;
-  code: string;
   crest?: string | undefined;
   colour: string;
-  reverse?: boolean;
+  code: string;
 }) {
   return (
-    <span
-      className={cn("flex min-w-0 items-center gap-1.5", reverse && "flex-row-reverse")}
-      title={name}
-    >
-      {crest ? (
-        <img src={crest} alt="" className="h-7 w-7 shrink-0 object-contain md:h-8 md:w-8" />
-      ) : (
-        <span
-          className="h-7 w-7 shrink-0 rounded-[6px] md:h-8 md:w-8"
-          style={{ background: colour }}
-          aria-hidden="true"
-        />
-      )}
-      <span className="display text-[13px] text-text md:text-[15px]">{code}</span>
-    </span>
+    <Crest
+      team={{ name, shortCode: code, kitColour: colour, ...(crest ? { crestUrl: crest } : {}) }}
+      size={28}
+    />
   );
 }
 
@@ -233,7 +258,7 @@ export function MatchBar({
   periodLine: string;
 }) {
   return (
-    <div className="rounded-[18px] border border-wire bg-surface p-4">
+    <div className=" border border-wire bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <TeamBadge name={teamA} color="var(--team-a)" />
         <div className="num text-center text-[32px] leading-none text-cream">
@@ -266,11 +291,7 @@ function TeamBadge({
 }) {
   return (
     <div className={cn("flex min-w-0 items-center gap-2", align === "right" && "flex-row-reverse")}>
-      <span
-        className="h-7 w-7 shrink-0 rounded-[14px]"
-        style={{ background: color }}
-        aria-hidden="true"
-      />
+      <span className="h-7 w-7 shrink-0" style={{ background: color }} aria-hidden="true" />
       <span className="display truncate text-[13px] text-text">{name}</span>
     </div>
   );
@@ -278,22 +299,73 @@ function TeamBadge({
 
 /* ---------------- FloatingNav ---------------- */
 
+/**
+ * The sections of a match.
+ *
+ * Six on a desktop, where the header has the width for them. The last two are
+ * destinations a coach reaches from a finding more often than from a menu, so
+ * on a phone the bar carries only the four he navigates to directly.
+ */
 const navItems = [
-  { label: "Insights", to: "/match/$matchId/insights", icon: Sparkles },
-  { label: "Match", to: "/match/$matchId/match", icon: Film },
-  { label: "Phases", to: "/match/$matchId/territory", icon: Map },
-  { label: "Stats", to: "/match/$matchId/stats", icon: ChartNoAxesColumn },
+  { label: "Insights", short: "Insights", to: "/match/$matchId/insights", icon: Sparkles },
+  { label: "Match workspace", short: "Match", to: "/match/$matchId/match", icon: Film },
+  { label: "Stats", short: "Stats", to: "/match/$matchId/stats", icon: ChartNoAxesColumn },
+  { label: "Phases", short: "Phases", to: "/match/$matchId/territory", icon: Map },
+  {
+    label: "Tuesday session",
+    short: "Session",
+    to: "/match/$matchId/session",
+    icon: CalendarCheck,
+  },
+  { label: "Reels & clips", short: "Clips", to: "/match/$matchId/reel", icon: Scissors },
 ] as const;
 
+const PHONE_NAV = 4;
+
+/** The sections as a row of underline tabs, for the header. */
+export function SectionNav({ matchId, className }: { matchId: string; className?: string }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <nav
+      aria-label="Match sections"
+      className={cn(
+        "items-center gap-5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className,
+      )}
+    >
+      {navItems.map((item) => {
+        const active = pathname === item.to.replace("$matchId", matchId);
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            params={{ matchId }}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "label-sm relative flex h-11 shrink-0 items-center whitespace-nowrap transition-colors",
+              active
+                ? "text-text-bright after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-cream"
+                : "text-text-faint hover:text-text",
+            )}
+          >
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** The same sections as a bar at the bottom of a phone. */
 export function FloatingNav({ matchId }: { matchId: string }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
     <nav
       aria-label="Match sections"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-wire bg-bg/95 px-4 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur md:sticky md:top-[85px] md:bottom-auto md:border-b md:border-t-0 md:py-0"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-wire bg-bg px-2 pb-[max(6px,env(safe-area-inset-bottom))] pt-1 md:hidden"
     >
-      <div className="mx-auto grid max-w-[620px] grid-cols-4 gap-1 md:mx-0 md:flex md:max-w-none md:h-12 md:gap-7">
-        {navItems.map((item) => {
+      <div className="mx-auto grid max-w-[620px] grid-cols-4">
+        {navItems.slice(0, PHONE_NAV).map((item) => {
           const active = pathname === item.to.replace("$matchId", matchId);
           const Icon = item.icon;
           return (
@@ -304,14 +376,14 @@ export function FloatingNav({ matchId }: { matchId: string }) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "tap relative flex flex-col items-center justify-center gap-1 rounded-[6px] text-[10px] font-semibold uppercase tracking-[0.06em] md:flex-row md:justify-start md:gap-2 md:text-[12px]",
+                "tap label-xs relative flex flex-col items-center justify-center gap-1 py-1",
                 active
-                  ? "text-cream after:absolute after:inset-x-2 after:-bottom-2 after:h-0.5 after:bg-cream md:after:bottom-0"
+                  ? "text-text-bright after:absolute after:inset-x-3 after:top-0 after:h-[2px] after:bg-cream"
                   : "text-text-faint hover:text-text-dim",
               )}
             >
-              <Icon size={17} />
-              {item.label}
+              <Icon size={18} strokeWidth={1.75} aria-hidden="true" />
+              {item.short}
             </Link>
           );
         })}

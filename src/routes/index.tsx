@@ -22,7 +22,7 @@ export const Route = createFileRoute("/")({
 
 function TacticalPreview() {
   return (
-    <div className="overflow-hidden rounded-[14px] border border-wire bg-workspace">
+    <div className="overflow-hidden border border-wire bg-workspace">
       <div className="flex min-h-14 items-center justify-between border-b border-wire-2 px-4">
         <span className="section-kicker">Match review · Full time</span>
         <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
@@ -34,7 +34,7 @@ function TacticalPreview() {
           <p className="section-kicker text-cream">Coach summary</p>
           <div className="mt-4 space-y-2">
             {["Insights", "Match", "Territory", "Stats"].map((item, index) => (
-              <div key={item} className={`flex min-h-10 items-center gap-3 rounded-[6px] px-3 text-[11px] font-bold uppercase ${index === 0 ? "bg-surface-2 text-cream" : "text-text-faint"}`}>
+              <div key={item} className={`flex min-h-10 items-center gap-3 px-3 text-[11px] font-bold uppercase ${index === 0 ? "bg-surface-2 text-cream" : "text-text-faint"}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${index === 0 ? "bg-cream" : "bg-wire"}`} />{item}
               </div>
             ))}
@@ -110,7 +110,7 @@ function Landing() {
     <div className="min-h-screen bg-bg">
       <header className="border-b border-wire-2">
         <div className="mx-auto flex min-h-16 max-w-[1440px] items-center justify-between px-4 md:px-7">
-          <div className="flex items-center gap-3"><span className="display-i grid h-9 w-9 place-items-center rounded-[6px] border border-cream text-[21px] text-cream">I</span><Wordmark size="sm" /></div>
+          <div className="flex items-center gap-3"><span className="display-i grid h-9 w-9 place-items-center border border-cream text-[21px] text-cream">I</span><Wordmark size="sm" /></div>
           <nav className="flex items-center gap-2">
             {!signedIn && <Link to="/signin"><SecondaryButton>Sign in</SecondaryButton></Link>}
             <Link to={signedIn ? "/library" : "/signup"}><PrimaryButton>{signedIn ? "Open library" : "Request access"}</PrimaryButton></Link>

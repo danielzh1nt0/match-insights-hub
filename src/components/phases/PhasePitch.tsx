@@ -96,7 +96,7 @@ export function PhasePitch({
     <div className="relative mx-auto w-full max-w-[640px]">
       <svg
         viewBox="0 0 100 64"
-        className="block h-auto w-full rounded-[6px] bg-surface-2"
+        className="block h-auto w-full bg-surface-2"
         role="img"
         aria-label={view === "shape" ? "Average shape" : "Where it happened"}
       >

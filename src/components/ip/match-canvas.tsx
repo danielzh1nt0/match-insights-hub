@@ -531,7 +531,7 @@ export function MatchCanvas({
 
       const stroke = Math.max(1.5, rect.height / 400);
       const label = (text: string, x: number, y: number, colour = "#ede6d6") => {
-        ctx.font = `600 ${Math.max(11, Math.round(rect.height / 55))}px Figtree, sans-serif`;
+        ctx.font = `600 ${Math.max(11, Math.round(rect.height / 55))}px "Hanken Grotesk", sans-serif`;
         ctx.textAlign = "center";
         const w = ctx.measureText(text).width + 10;
         ctx.fillStyle = "rgba(0,0,0,0.55)";
@@ -787,7 +787,7 @@ export function MatchCanvas({
           }
           ctx.globalAlpha = 1;
           if (player.gk) {
-            ctx.font = `700 ${Math.round(radius * 1.3)}px Figtree, sans-serif`;
+            ctx.font = `700 ${Math.round(radius * 1.3)}px "Hanken Grotesk", sans-serif`;
             ctx.fillStyle = "rgba(255,255,255,0.9)";
             ctx.textAlign = "center";
             ctx.fillText("GK", point[0], point[1] - radius - 4);
@@ -808,7 +808,7 @@ export function MatchCanvas({
         }
         if (typeof bracket.before.near_opps === "number") bits.push(`${bracket.before.near_opps} near`);
         if (bits.length) {
-          ctx.font = "600 11px Figtree, sans-serif";
+          ctx.font = '600 11px "Hanken Grotesk", sans-serif';
           ctx.textAlign = "left";
           ctx.fillStyle = "rgba(0,0,0,0.55)";
           const text = bits.join(" · ");

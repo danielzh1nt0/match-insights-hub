@@ -39,7 +39,7 @@ export function EventReviewControls({
           else onReview({ eventId: event.id, verdict: "confirmed" });
         }}
         className={cn(
-          "tap grid h-9 w-9 place-items-center rounded-[10px] border text-[13px]",
+          "tap grid h-9 w-9 place-items-center border text-[13px]",
           confirmed
             ? "border-transparent text-[#111315]"
             : "border-wire text-text-faint hover:border-cream/60 hover:text-cream",
@@ -60,7 +60,7 @@ export function EventReviewControls({
           ev.stopPropagation();
           onReview({ eventId: event.id, verdict: "deleted" });
         }}
-        className="tap grid h-9 w-9 place-items-center rounded-[10px] border border-wire text-text-faint hover:border-quality-bad/70 hover:text-quality-bad"
+        className="tap grid h-9 w-9 place-items-center border border-wire text-text-faint hover:border-quality-bad/70 hover:text-quality-bad"
         title="Not an event"
       >
         <X size={14} aria-hidden="true" />
@@ -91,7 +91,7 @@ export function EventFixSheet({
       <div
         role="dialog"
         aria-label="Fix this moment"
-        className="relative w-full rounded-t-[16px] border border-wire bg-surface p-5 sm:max-w-[420px] sm:rounded-[18px]"
+        className="relative w-full border border-wire bg-surface p-5 sm:max-w-[420px] sm:"
       >
         <h2 className="display text-[18px] uppercase text-cream">Fix this moment</h2>
         <p className="mt-1 text-[12px] text-text-dim">{event.title}</p>

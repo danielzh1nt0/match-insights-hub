@@ -34,7 +34,7 @@ export function LineBreakHero({ data, matchId }: { data: LineDefending; matchId:
         <div className="mt-4 flex flex-col items-center gap-2"><MiniPitch checked /><span className="inline-flex items-center gap-1.5 text-[12.5px] text-quality-good"><Check size={15} aria-hidden="true" />Clean sheet behind the line.</span></div>
       ) : data.lineBreaks.length > 0 ? (
         <div className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Line-break moments">
-          {data.lineBreaks.map((incident, index) => <Link key={incident.id} to="/match/$matchId/match" params={{ matchId }} search={{ t: Math.max(0, incident.t - 2) }} className="tap grid place-items-center rounded-[6px]" aria-label={`Watch line break ${index + 1}`}><MiniPitch x={incident.x} y={incident.y} /></Link>)}
+          {data.lineBreaks.map((incident, index) => <Link key={incident.id} to="/match/$matchId/match" params={{ matchId }} search={{ t: Math.max(0, incident.t - 2) }} className="tap grid place-items-center" aria-label={`Watch line break ${index + 1}`}><MiniPitch x={incident.x} y={incident.y} /></Link>)}
         </div>
       ) : null}
       <div className="mt-4 flex items-center justify-between border-t border-wire-2 pt-2 text-[11.5px] font-semibold"><span className="text-text-faint">vs last 5 matches</span><span className={cn(delta !== null && delta > 0 ? "text-cream" : "text-text-faint")}>{delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta}`}</span></div>

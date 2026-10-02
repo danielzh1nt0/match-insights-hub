@@ -17,7 +17,7 @@ export function StatsTeamSelector({
   teamB: StatsTeamIdentity;
 }) {
   return (
-    <div role="group" aria-label="Team" className="grid w-full grid-cols-[1fr_auto_1fr] gap-2 rounded-[14px] border border-wire bg-surface p-2">
+    <div role="group" aria-label="Team" className="grid w-full grid-cols-[1fr_auto_1fr] gap-2 border border-wire bg-surface p-2">
       <Button
         variant="ghost"
         aria-pressed={value === "a"}
@@ -52,7 +52,7 @@ export function StatsTeamSelector({
 
 export function StatsTeamPill({ identity, both }: { identity: StatsTeamIdentity; both?: StatsTeamIdentity }) {
   return (
-    <span className="inline-flex min-h-7 items-center gap-2 rounded-[6px] bg-surface-2 px-2 py-1">
+    <span className="inline-flex min-h-7 items-center gap-2 bg-surface-2 px-2 py-1">
       <TeamToken identity={identity} size="sm" state="compare" suffix={both ? undefined : " · Only"} />
       {both && <><span className="display text-[9px] text-text-faint">vs</span><TeamToken identity={both} size="sm" state="compare" /></>}
     </span>
