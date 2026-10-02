@@ -37,6 +37,7 @@ export function useMatchModel({
   stats,
   team,
   thresholds,
+  ball,
 }: {
   match: LibraryMatch;
   findings: Finding[];
@@ -44,6 +45,8 @@ export function useMatchModel({
   stats: StatsFile | undefined;
   team: TeamKey | null;
   thresholds: Thresholds;
+  /** The pipeline's own verdict on whether the ball was tracked well enough. */
+  ball?: { possession: boolean; events: boolean } | undefined;
 }) {
   const duration = Math.max(match.durationS, 1);
   const ownTeam = team ?? "A";
@@ -51,7 +54,11 @@ export function useMatchModel({
   const row = teamRow(stats, ownTeam) as Record<string, unknown> | null;
   const otherRow = teamRow(stats, otherTeam) as Record<string, unknown> | null;
 
-  const possession = numeric(row, "possession_pct");
+  // The pipeline grades its own ball tracking, and when it says possession is
+  // not trustworthy the figure is not shown at all. Printing a precise
+  // percentage the exporter has disowned is worse than printing nothing.
+  const possessionTrusted = ball ? ball.possession : true;
+  const possession = possessionTrusted ? numeric(row, "possession_pct") : null;
   const otherPossession = numeric(otherRow, "possession_pct");
   const completion = numeric(row, "pass_completion_pct");
   const blockLength = numeric(row, "block_length_median_m");
@@ -201,7 +208,9 @@ export function useMatchModel({
         possession === null
           ? undefined
           : `${shown(otherPossession, "%")} to them${completion === null ? "" : `, ${shown(completion, "%")} of our passes completed`}.`,
-      withheldNote: `The ball was not tracked well enough to measure this. ${confirmed} of ${moments.length} moments confirmed.`,
+      withheldNote: possessionTrusted
+        ? `The ball was not tracked well enough to measure this. ${confirmed} of ${moments.length} moments confirmed.`
+        : "The pipeline graded this match's ball tracking as too unreliable to report possession from.",
       link: { label: "Inspect phase distribution", to: "/match/$matchId/territory" },
     },
     {

@@ -8,6 +8,12 @@
 
 import type { TeamScope } from "@/components/ip/chrome";
 import type { Finding } from "@/lib/match-data";
+import {
+  completionOf,
+  finalThirdEntries,
+  passCompleted,
+  shotsOf as contractShots,
+} from "@/lib/export-contract";
 import type {
   FeedEvent,
   Frame,
@@ -671,11 +677,15 @@ export function buildFindings(
   }
 
   const passes = (stats?.passes ?? []).filter((p: any) => p?.team === team);
-  const rough = passes.filter(
+  // Only passes the file actually judged can be a share of anything. Dividing
+  // by every pass, half of which carry no verdict, made the figure look better
+  // the less the pipeline knew.
+  const judged = passes.filter((p: any) => passCompleted(p) !== null);
+  const rough = judged.filter(
     (p: any) => p?.quality === "risky_completed" || p?.quality === "bad_lost",
   );
-  const roughShare = passes.length ? Math.round((rough.length / passes.length) * 100) : 0;
-  if (roughShare > 30) {
+  const roughShare = judged.length ? Math.round((rough.length / judged.length) * 100) : 0;
+  if (judged.length >= 20 && roughShare > 30) {
     out.push(
       finding({
         id: "risky_passing",
@@ -684,7 +694,11 @@ export function buildFindings(
         target: 30,
         unit: "%",
         higherIsWorse: true,
-        interpretation: `${rough.length} of ${passes.length} passes were risky or given away.`,
+        interpretation: `${rough.length} of the ${judged.length} passes this file judged were risky or given away${
+          passes.length > judged.length
+            ? ` (${passes.length - judged.length} more carry no verdict and are left out)`
+            : ""
+        }.`,
         // Passes are not in the events list, so there is nothing to open.
         population: [],
         moments: [],
@@ -759,7 +773,7 @@ export function buildSummary(
   if (!data || !row) return [];
   const other: TeamKey = team === "A" ? "B" : "A";
   const otherRow = teamRow(stats, other);
-  const shots = (stats?.metrics?.["shots"] ?? []).filter((s: any) => s?.team === team).length;
+  const shots = contractShots(stats, team).length;
   const lost = eventsFor(data, team, "turnover_lost").length;
   const won = eventsFor(data, team, "turnover_won").length;
   const lines = [
@@ -773,10 +787,9 @@ export function buildSummary(
       row.pressed_within_2s_pct,
       0,
     )}% of the time.`,
-    `${shots} shot${shots === 1 ? "" : "s"} came from ${num(
-      stats?.metrics?.["field"]?.[team]?.entries_count,
-      0,
-    )} entries into the final third, with the team typically ${Math.round(num(row.block_length_median_m, 0))} m long from back to front.`,
+    `${shots} shot${shots === 1 ? "" : "s"} came from ${
+      finalThirdEntries(stats, team) ?? 0
+    } entries into the final third, with the team typically ${Math.round(num(row.block_length_median_m, 0))} m long from back to front.`,
   ];
   if (findings.length === 0) {
     lines.push("Every target you set was met in this match, so there is nothing flagged to train.");
@@ -815,13 +828,15 @@ export function buildStatSections(
 ): StatSection[] {
   const a = teamRow(stats, "A");
   const b = teamRow(stats, "B");
-  const shotsOf = (team: TeamKey) =>
-    (stats?.metrics?.["shots"] ?? []).filter((s: any) => s?.team === team);
+  const shotsOf = (team: TeamKey) => contractShots(stats, team);
   const eventCount = (team: TeamKey, type: string) =>
     (data?.events ?? []).filter((e) => e.type === type && e.team === team).length;
   const passesOf = (team: TeamKey) => (stats?.passes ?? []).filter((p: any) => p?.team === team);
+  // Passes the file actually marked as poor. A pass with no verdict is not
+  // counted either way — it is unknown, not fine.
   const quality = (team: TeamKey, kinds: string[]) =>
     passesOf(team).filter((p: any) => kinds.includes(p?.quality)).length;
+  const completion = (team: TeamKey) => completionOf(passesOf(team));
 
   const row = (label: string, key: string, suffix = "", target?: string): StatRow => ({
     label,
@@ -876,8 +891,8 @@ export function buildStatSections(
         { label: "Shots", a: `${shotsOf("A").length}`, b: `${shotsOf("B").length}` },
         {
           label: "Goals",
-          a: `${shotsOf("A").filter((s: any) => s?.goal).length}`,
-          b: `${shotsOf("B").filter((s: any) => s?.goal).length}`,
+          a: `${shotsOf("A").filter((shot) => shot.goal).length}`,
+          b: `${shotsOf("B").filter((shot) => shot.goal).length}`,
         },
         {
           label: "Time in their third",
@@ -886,8 +901,8 @@ export function buildStatSections(
         },
         {
           label: "Entries into the final third",
-          a: fmt(stats?.metrics?.["field"]?.["A"]?.entries_count),
-          b: fmt(stats?.metrics?.["field"]?.["B"]?.entries_count),
+          a: fmt(finalThirdEntries(stats, "A")),
+          b: fmt(finalThirdEntries(stats, "B")),
         },
         {
           label: "Balls won high up",

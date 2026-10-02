@@ -36,6 +36,12 @@ import type {
   Thresholds,
 } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
+import {
+  passCompleted,
+  periodWindow,
+  shotsOf as contractShots,
+  type Shot,
+} from "@/lib/export-contract";
 import { cn } from "@/lib/utils";
 import {
   PITCH,
@@ -97,15 +103,12 @@ const passPoint = (pass: Pass, side: "start" | "end"): Point | null => {
   );
   return x === null || y === null ? null : { x: clamp(x), y: clamp(y) };
 };
-const passCompleted = (pass: Pass) =>
-  pass["completed"] === true ||
-  pass["success"] === true ||
-  !["bad_lost", "incomplete"].includes(String(pass["quality"] ?? pass["outcome"] ?? ""));
+
 const playerLabel = (id: number) =>
   id >= 100 ? String(id).slice(-2).replace(/^0/, "") || String(id).slice(-2) : String(id);
 const periodRange = (file: MatchDataFile | undefined, period: Period) => {
   const end = Math.max(file?.frames.at(-1)?.t ?? 0, file?.events.at(-1)?.t ?? 0, 1);
-  return period === "1st" ? [0, end / 2] : period === "2nd" ? [end / 2, end] : [0, end];
+  return periodWindow(file, period, end);
 };
 const inRange = (time: number | null, range: number[]) =>
   time === null || (time >= (range[0] ?? 0) && time <= (range[1] ?? Infinity));
@@ -1079,24 +1082,27 @@ function ShapeOutcome({ lineDefending, colour }: { lineDefending: LineDefending;
 }
 
 function ShotMap({ stats, colours, matchId, events, file }: Props) {
-  const metricShots = Array.isArray(stats?.metrics?.["shots"])
-    ? (stats.metrics["shots"] as Record<string, unknown>[])
-    : [];
-  const eventShots = events
+  const metricShots = contractShots(stats);
+  const eventShots: Shot[] = events
     .filter((event) => event.type === "shot" || event.type === "goal")
     .map((event) => {
       const point = eventPoint(event, file);
       return {
         id: event.id,
         t: event.t,
-        team: event.team,
-        x: point?.x,
-        y: point?.y,
+        team: (event.team === "B" ? "B" : "A") as TeamKey,
+        x: point?.x ?? null,
+        y: point?.y ?? null,
         goal: event.type === "goal",
-        on_target: event.payload?.["on_target"] === true,
+        onTarget: event.type === "goal" || event.payload?.["on_target"] === true,
       };
     });
-  const shots: Record<string, unknown>[] = metricShots.length ? metricShots : eventShots;
+  // A shot with no position cannot be drawn on a pitch. It used to be planted
+  // at a default spot, which made a metres-based export look like a team that
+  // shot from one place all match.
+  const shots = (metricShots.length ? metricShots : eventShots).filter(
+    (shot) => shot.x !== null && shot.y !== null,
+  );
   if (!shots.length)
     return (
       <EvidenceUnavailable
@@ -1114,15 +1120,15 @@ function ShotMap({ stats, colours, matchId, events, file }: Props) {
     >
       <Pitch>
         {shots.map((shot, index) => {
-          const shotTeam: TeamKey = shot["team"] === "B" ? "B" : "A";
-          const x = finite(shot["x"] ?? shot["px"]) ?? (shotTeam === "A" ? 25 : 75);
-          const y = finite(shot["y"] ?? shot["py"]) ?? 50;
-          const t = finite(shot["t"]) ?? 0;
-          const goal = shot["goal"] === true;
-          const on = goal || shot["on_target"] === true;
+          const shotTeam = shot.team;
+          const x = shot.x!;
+          const y = shot.y!;
+          const t = shot.t;
+          const goal = shot.goal;
+          const on = shot.onTarget;
           return (
             <Link
-              key={String(shot["id"] ?? index)}
+              key={shot.id || index}
               to="/match/$matchId/match"
               params={{ matchId }}
               search={{ t }}
@@ -1145,17 +1151,19 @@ function ShotMap({ stats, colours, matchId, events, file }: Props) {
 }
 
 function ShotSummary({ stats, team, events }: Props) {
-  const metricShots = (
-    Array.isArray(stats?.metrics?.["shots"]) ? stats.metrics["shots"] : []
-  ).filter((shot: any) => shot?.team === team);
-  const shots = metricShots.length
+  const metricShots = contractShots(stats, team);
+  const shots: Shot[] = metricShots.length
     ? metricShots
     : events
         .filter((event) => event.team === team && (event.type === "shot" || event.type === "goal"))
-        .map((event) => ({
+        .map((event, i) => ({
+          id: event.id || `e${i}`,
+          t: event.t,
+          team,
+          x: finite(event.payload?.["x"]),
+          y: finite(event.payload?.["y"]),
           goal: event.type === "goal",
-          on_target: event.payload?.["on_target"] === true,
-          x: event.payload?.["x"],
+          onTarget: event.type === "goal" || event.payload?.["on_target"] === true,
         }));
   if (!shots.length)
     return (
@@ -1165,11 +1173,11 @@ function ShotSummary({ stats, team, events }: Props) {
         caption="Shot volume, accuracy and penalty-area share."
       />
     );
-  const on = shots.filter((shot: any) => shot?.on_target || shot?.goal).length;
-  const goals = shots.filter((shot: any) => shot?.goal).length;
-  const box = shots.filter(
-    (shot: any) => (finite(shot?.x) ?? 50) < 18 || (finite(shot?.x) ?? 50) > 82,
-  ).length;
+  const on = shots.filter((shot) => shot.onTarget).length;
+  const goals = shots.filter((shot) => shot.goal).length;
+  // Only shots we can place can be said to be inside the box.
+  const placed = shots.filter((shot) => shot.x !== null);
+  const box = placed.filter((shot) => shot.x! < 18 || shot.x! > 82).length;
   return (
     <Card
       question="What did our shooting produce?"
@@ -1357,8 +1365,13 @@ function pairCounts(passes: Pass[]) {
       start = passPoint(pass, "start"),
       end = passPoint(pass, "end"),
       item = map.get(key) ?? { from, to, total: 0, complete: 0, gain: 0, start: null, end: null };
-    item.total += 1;
-    if (passCompleted(pass)) item.complete += 1;
+    // A pass the file never judged belongs in neither column: counting it as
+    // complete flattered every lane in the table.
+    const completed = passCompleted(pass);
+    if (completed !== null) {
+      item.total += 1;
+      if (completed) item.complete += 1;
+    }
     if (start && end) {
       item.gain += end.x - start.x;
       item.start = { x: (item.start?.x ?? 0) + start.x, y: (item.start?.y ?? 0) + start.y };

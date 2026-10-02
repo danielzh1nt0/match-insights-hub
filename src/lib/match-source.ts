@@ -79,7 +79,10 @@ export type Frame = {
   lanes?: Lane[] | null;
   /** 3x3 homography, row-major, metres -> pixels. */
   pitch_lines?: number[] | null;
-  shape: Record<string, { hull_m: [number, number][]; n: number; length: number; width: number }> | null;
+  shape: Record<
+    string,
+    { hull_m: [number, number][]; n: number; length: number; width: number }
+  > | null;
 };
 
 export type MatchDataFile = {
@@ -94,6 +97,8 @@ export type MatchDataFile = {
   events: FeedEvent[];
   /** full matches: frames live in separate files, loaded as the video reaches them */
   frame_chunks?: { key: string; t_start: number; t_end: number }[];
+  /** The real half boundaries. The second period is the mirrored one. */
+  periods?: { t_start: number; t_end: number; mirrored?: boolean }[];
 };
 
 export async function fetchMatches(): Promise<MatchListItem[]> {

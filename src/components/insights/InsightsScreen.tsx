@@ -36,6 +36,7 @@ export function InsightsScreen({
   thresholds,
   identities,
   videoUrl,
+  ball,
 }: {
   matchId: string;
   match: LibraryMatch;
@@ -49,6 +50,8 @@ export function InsightsScreen({
   identities: { A: TeamIdentity; B: TeamIdentity };
   /** The signed match video, so clips play on this page rather than linking away. */
   videoUrl?: string | undefined;
+  /** The pipeline's verdict on its own ball tracking. */
+  ball?: { possession: boolean; events: boolean } | undefined;
   onReview: (input: {
     eventId: string;
     verdict: "confirmed" | "deleted" | "retimed";
@@ -73,7 +76,7 @@ export function InsightsScreen({
     cells,
     shots,
     otherShots,
-  } = useMatchModel({ match, findings, events, stats, team, thresholds });
+  } = useMatchModel({ match, findings, events, stats, team, thresholds, ball });
 
   const chapterCells: Partial<Record<ChapterId, ChapterCell>> = {
     score: {

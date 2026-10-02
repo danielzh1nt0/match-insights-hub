@@ -1,3 +1,4 @@
+import { ballVerdict } from "@/lib/ball-verdict";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import type { Loss } from "@/components/visuals/PitchArt";
@@ -57,6 +58,7 @@ function StoryPage() {
     "a",
   );
   const videoUrl = useMatchVideo(row);
+  const ball = ballVerdict(row?.summary);
 
   /** Real loss coordinates only — a moment without them is left out, not guessed. */
   const losses = useMemo(
@@ -102,6 +104,7 @@ function StoryPage() {
       colours={colours}
       losses={losses}
       videoUrl={videoUrl}
+      ball={ball}
       startChapter={chapter}
     />
   );
@@ -122,6 +125,7 @@ function StoryBody({
   colours,
   losses,
   videoUrl,
+  ball,
   startChapter,
 }: {
   matchId: string;
@@ -134,9 +138,10 @@ function StoryBody({
   colours: { A: string; B: string };
   losses: Loss[];
   videoUrl?: string | undefined;
+  ball: { possession: boolean; events: boolean };
   startChapter?: string | undefined;
 }) {
-  const model = useMatchModel({ match, findings, events, stats, team, thresholds });
+  const model = useMatchModel({ match, findings, events, stats, team, thresholds, ball });
   const identities = teamIdentities(match, colours);
   if (!identities) return <StoryFallback title="That match isn't set up yet" />;
 

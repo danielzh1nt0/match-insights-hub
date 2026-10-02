@@ -1,3 +1,4 @@
+import { ballVerdict } from "@/lib/ball-verdict";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
@@ -42,6 +43,7 @@ function Insights() {
     thresholds,
   } = useAnalysis(matchId, scope);
   const videoUrl = useMatchVideo(row);
+  const ball = ballVerdict(row?.summary);
   const identities = teamIdentities(match, colours);
 
   return (
@@ -76,6 +78,7 @@ function Insights() {
           identities={identities}
           iconColour={scope === "b" ? colours.B : colours.A}
           videoUrl={videoUrl}
+          ball={ball}
           onReview={(input) => review.setVerdict.mutate(input)}
         />
       )}

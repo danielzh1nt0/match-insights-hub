@@ -63,10 +63,30 @@ missing, null or non-numeric renders as **Withheld** or a dash, never as zero.
 | `forward_pass_share_pct` | % | Passes head-to-head | Dash |
 | `progressive_passes` | count | Passes head-to-head | Dash |
 | `better_option_count` | count | Insights "A better pass was open" | Withheld |
-| `summary.ball_grade` | `{ possession_ok, events_ok }` | Gates the Shape tab and the possession figure | Treated as "allowed" when absent |
-| `summary.ball_reliable` | bool | Same gate, older files | Ignored when absent |
-| `duration_s` | s | Period splitting (1st/2nd half) | Falls back to the library's duration |
+| `duration_s` | s | Total match length | Falls back to the library's duration |
 | `attack_right` | `{ A: bool, B: bool }` | Which way each side attacks | Defaults A right, B left |
+
+### 1.2b On the matches row, not the stats file
+
+These two live on the `matches` row rather than in `teams[]`:
+
+| Field | Type | Where it appears | If empty |
+|---|---|---|---|
+| `summary.ball_grade` | `{ possession_ok, events_ok }` | Gates the Shape tab, the 2D layers **and the Insights possession tile** | Treated as "allowed" when absent |
+| `summary.ball_reliable` | bool | Same gate, older files | Ignored when absent |
+
+When `possession_ok` is false the Insights possession tile is withheld with the
+grade as its reason, rather than printing a percentage the export has disowned.
+
+### 1.2c Periods — `data.periods[]`
+
+`[{ t_start, t_end, mirrored? }]`. The second half is the period marked
+`mirrored: true`, because the sides have changed ends.
+
+Halves are **never** equal — stoppage time, a delayed restart and a long
+half-time all move the boundary — so the 1st/2nd filter reads these and not
+`duration_s / 2`. Without them we fall back to halving the clock, and moments
+near the break land on the wrong side of it.
 
 ### 1.3 Player row — `stats.players[]`
 
@@ -86,9 +106,9 @@ missing, null or non-numeric renders as **Withheld** or a dash, never as zero.
 
 | Bucket | Shape | Used by |
 |---|---|---|
-| `shots` | array of `{ team, x, y, goal, on_target }` | Shot map, shot summary, goal counts |
+| `shots` | array of `{ team, x_m, y_m, outcome }` — `x`/`y` (percent) and `goal`/`on_target` (bool) are also accepted | Shot map, shot summary, goal counts |
 | `field.{A,B}.field_tilt_pct` | % | Shooting tab |
-| `field.{A,B}.entries_count` | count | Shooting tab, final-third entries |
+| `field.{A,B}.final_third_entries[]` | array | Shooting tab, final-third entries — the count is its length. `entries_count` is still read but is not written by the export |
 | `high_turnover_counts.{A,B}` | count | Shooting tab, balls won high |
 | `shape_timeline.{A,B}[]` | array of `{ t, length, width }` | Phases ribbon, shape over time |
 
@@ -105,7 +125,7 @@ tell us which one the current export actually writes so we can drop the rest.
 | Receiver | `to`, `receiver_id` |
 | Start point | `start`, `from_m` |
 | End point | `end`, `to_m` |
-| Completed | `outcome` in {`complete`, `completed`, `success`}, or `quality` not in {`bad_lost`, `incomplete`} |
+| Completed | **`completed`** (bool) preferred, then `success` (bool), then `outcome` in {`complete`, `completed`, `success`} / {`incomplete`, `lost`, `failed`, `intercepted`}, then `quality`. **A pass none of these judge is excluded from the completion rate, not counted as complete** |
 | Quality band | `quality` in {`risky_completed`, `bad_lost`, …} |
 
 ### 1.6 Events — `data.events[]`

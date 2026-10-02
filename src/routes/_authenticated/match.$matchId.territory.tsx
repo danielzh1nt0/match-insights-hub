@@ -1,3 +1,4 @@
+import { periodWindow } from "@/lib/export-contract";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type CSSProperties } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
@@ -45,8 +46,7 @@ function PhasesScreen() {
     useAnalysis(matchId, scope);
   const chosenTeam = team ?? "A";
   const duration = row?.duration_s ?? match?.durationS ?? 1;
-  const from = period === "2nd" ? duration / 2 : 0;
-  const to = period === "1st" ? duration / 2 : duration;
+  const [from, to] = periodWindow(file, period, duration);
 
   setPitchContext(file);
 
