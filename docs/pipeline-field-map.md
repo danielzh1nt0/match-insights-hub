@@ -274,3 +274,70 @@ headline at all.
 
 For Part 2 tier 1: which are already in the export under a different name, and
 which would need work. Several may exist already and simply not be surfaced.
+
+---
+
+## Part 3 — The visual each stat needs, and what that changes in the ask
+
+**Read this part before exporting anything in Part 2.** The visual is not a
+decision we can take afterwards: it decides the shape of the data. A median
+cannot make a dot plot, a mean cannot make a histogram, and a single total
+cannot make a funnel. Four of the asks in Part 2 change materially once the
+visual is settled, and those are flagged **⚠ changes the ask** below.
+
+Three rules govern all of them, and they are already how the app works:
+
+- **One hue for magnitude.** Anything shaded by "more or less" uses a single
+  hue, light to dark — and in this product that hue is the kit colour, because
+  the kit is what says whose number it is. Never a rainbow.
+- **Two hues and a neutral middle for polarity.** Anything measured against a
+  target or an opponent runs accent blue one way, coral the other, with the
+  page ground as the midpoint. That is the match-flow chart's idiom already.
+- **Green and coral are reserved** for target-met and target-breached. They are
+  never used to tell two series apart, or we lose the one meaning the whole
+  product leans on.
+
+And one product rule: **every mark is a way into the video.** A dot, a bar
+segment or a cell that represents moments must carry the timestamps of those
+moments, or it is a dead end.
+
+### Tier 1
+
+| # | Stat | Visual | What the export must carry |
+|---|---|---|---|
+| 1 | Before/after split | **Dumbbell** — one row per metric, two dots joined by a rule, before on the left, after on the right | Two values per metric plus the split timestamp. Not a delta — the reader needs both ends |
+| 2 | Time to first pressure | **Strip plot**, every loss as its own dot, with a target tick and a median rule | ⚠ **changes the ask.** The full array of `{ t, seconds }`, not `time_to_press_median_s`. A median cannot be plotted as a distribution, and each dot must open its own clip |
+| 3 | Turnover zones | **Pitch heatmap**, 3 × 2 cells, single hue | Six counts, plus the timestamps behind each cell |
+| 4 | Turnover → shot | **Meter** — one bar against the total, "9 of 31" stated as a figure beside it | Two counts each way. Not a percentage: the raw pair is the point |
+| 5 | Set-piece outcome | **Stacked horizontal bar per type** — corner, free kick, throw — segmented shot / retained / lost | ⚠ **changes the ask.** Counts broken down by type *and* outcome, a 3 × 3 matrix. A total per type cannot be stacked |
+| 6 | Rest defence | **Histogram** over 0, 1, 2, 3, 4+ goal-side players | ⚠ **changes the ask.** Bucket counts or the raw array, not `rest_defence_median`. The question is how often it was below two, which a median hides |
+| 7 | Build-up exit | **Funnel** — three steps, started in our third → reached middle → reached final, each labelled with its share of the step before | Three counts in sequence |
+| 8 | Shot quality | **Shot map** on the pitch, goals filled and the rest outlined, with a stat tile for median distance and the in-box share | Already exported. Needs `x`, `y`, `goal`, `on_target` per shot — all present |
+| 9 | Possession ladder | **Column chart**, four ordered buckets: 1–2, 3–5, 6–9, 10+ passes | ⚠ **changes the ask.** Four counts, not `passes_per_sequence`. A mean collapses the only interesting thing about the distribution |
+
+### Tier 2
+
+| # | Stat | Visual | What the export must carry |
+|---|---|---|---|
+| 10 | Line-break passes | **Pitch with arrows**, the broken line drawn behind them, plus a count | Per pass: start, end, and which line it crossed |
+| 11 | Pressing in blocks | **Line against a target baseline**, shaded above and below | Per-minute values, not a total |
+| 12 | Recovery height | **Strip plot along the pitch length**, median marked, drawn over a vertical pitch | Array of distances with timestamps |
+| 13 | Opponent-adjusted | **Diverging bar** from a zero centre, one row per metric | Both sides' values; we compute the difference |
+| 14 | Width in and out | **Two hulls on one pitch**, in-possession filled and out-of-possession outlined, with a dumbbell for the two numbers | Width split by possession state, plus both hulls |
+| 15 | Cards and fouls | **Head-to-head rows** in the existing band. No chart | Counts per side, by type |
+| 16 | Aerial duels | **Meter** with the win rate as a figure | Won and contested counts |
+| 17 | Keeper distribution | **Stacked bar** short against long, with retention labelled under each | Counts by length band and whether possession was retained |
+| 18 | Minutes played | **No visual.** It corrects every per-90 figure in the product | On and off events per player |
+
+### What this means in practice
+
+Five of the nine tier-1 stats want **the underlying values rather than a summary
+of them**: the press-time array, the set-piece matrix, the rest-defence
+distribution, the sequence-length buckets and the turnover pair. That is the
+single most useful change to make to the export, and it applies to figures we
+already receive — `time_to_press_median_s` and `passes_per_sequence` both exist
+today as a single number where the array would be worth far more.
+
+If raw arrays are expensive, pre-bucketed counts are an acceptable substitute
+for 6 and 9. They are not a substitute for 2 and 12, where each value has to
+stay attached to its timestamp so the coach can open the clip behind it.
