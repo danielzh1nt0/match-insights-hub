@@ -1,8 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { ArrowRight } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { AuthShell } from "@/components/ip/auth-shell";
-import { Field, Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
+import { AuthColumn, AuthField } from "@/components/ip/auth-column";
+import { Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { getAccount } from "@/lib/profile.functions";
@@ -13,11 +14,14 @@ export const Route = createFileRoute("/signin")({
   head: () => ({
     meta: [
       { title: "Sign in — Ipanema" },
-      { name: "description", content: "Sign in to your club and open your match library in Ipanema." },
+      {
+        name: "description",
+        content: "Sign in to your club and open your match library in Ipanema.",
+      },
       { property: "og:title", content: "Sign in — Ipanema" },
       { property: "og:description", content: "Sign in to your club and open your match library." },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: SignIn,
@@ -79,7 +83,9 @@ function SignIn() {
       if (result.error) {
         const message = String((result.error as { message?: string }).message ?? "").toLowerCase();
         setError(
-          message.includes("provider") || message.includes("not enabled") || message.includes("unsupported")
+          message.includes("provider") ||
+            message.includes("not enabled") ||
+            message.includes("unsupported")
             ? "Google sign-in not enabled."
             : "Google sign-in didn't complete. Try again.",
         );
@@ -93,26 +99,26 @@ function SignIn() {
   }
 
   return (
-    <AuthShell
-      title="Welcome back"
-      sub="Open your library and pick up where the analysis left off."
-      note={
-        <>
-          Ipanema only ever shows what your match file supports. Nothing here is estimated.
-        </>
-      }
+    <AuthColumn
+      eyebrow="Ipanema"
+      meta="Season 2026/27"
+      title="Sign in"
+      sub="Your matches, findings and sessions."
+      note="Every number in Ipanema comes from your own match file. Where the file doesn't say, neither do we."
       foot={
         <>
-          No account?{" "}
-          <Link to="/signup" className="text-cream underline-offset-2 hover:underline">
-            Request access
+          <span>New club?</span>
+          <Link
+            to="/signup"
+            className="font-semibold text-accent-sea underline decoration-accent-sea/40 underline-offset-[3px] hover:decoration-accent-sea"
+          >
+            Create an account
           </Link>
         </>
       }
     >
-      <h2 className="display-i text-[26px] uppercase leading-none text-cream">Sign in</h2>
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="Email">
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <AuthField label="Email">
           <Input
             type="email"
             value={email}
@@ -121,9 +127,22 @@ function SignIn() {
             placeholder="you@club.com"
             onChange={(e) => setEmail(e.target.value)}
             aria-label="Email"
+            className="min-h-14"
           />
-        </Field>
-        <Field label="Password" error={error ?? undefined}>
+        </AuthField>
+
+        <AuthField
+          label="Password"
+          error={error ?? undefined}
+          action={
+            <Link
+              to="/reset"
+              className="text-[12px] font-semibold text-accent-sea underline decoration-accent-sea/40 underline-offset-[3px] hover:decoration-accent-sea"
+            >
+              Forgot password
+            </Link>
+          }
+        >
           <Input
             type="password"
             value={password}
@@ -132,26 +151,25 @@ function SignIn() {
             placeholder="••••••••"
             onChange={(e) => setPassword(e.target.value)}
             aria-label="Password"
+            className="min-h-14"
           />
-        </Field>
-        <PrimaryButton type="submit" block className="h-12" disabled={busy}>
+        </AuthField>
+
+        <PrimaryButton type="submit" block className="min-h-14" disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
+          {!busy && <ArrowRight size={15} aria-hidden="true" />}
         </PrimaryButton>
       </form>
 
-      <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.08em] text-text-faint">
-        <span className="h-px flex-1 bg-wire-2" />
+      <div className="label-xs flex items-center gap-3 text-text-faint">
+        <span className="h-px flex-1 bg-wire" />
         or
-        <span className="h-px flex-1 bg-wire-2" />
+        <span className="h-px flex-1 bg-wire" />
       </div>
 
-      <SecondaryButton block className="h-12" onClick={google}>
+      <SecondaryButton block className="min-h-14" onClick={google}>
         Continue with Google
       </SecondaryButton>
-
-      <Link to="/reset" className="tap flex items-center justify-center text-[12.5px] text-text-dim hover:text-text">
-        Forgot password?
-      </Link>
-    </AuthShell>
+    </AuthColumn>
   );
 }

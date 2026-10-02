@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mail } from "lucide-react";
-import { AuthShell } from "@/components/ip/auth-shell";
-import { Checkbox, Field, Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
+import { ArrowRight, Mail } from "lucide-react";
+import { AuthColumn, AuthField } from "@/components/ip/auth-column";
+import { Checkbox, Input, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import type { Role } from "@/store/app-store";
@@ -11,15 +11,15 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
-      { title: "Request access — Ipanema" },
+      { title: "Create your account — Ipanema" },
       {
         name: "description",
-        content: "Request access to Ipanema for your club and start analysing your own match video.",
+        content: "Create an Ipanema account for your club and analyse your first match free.",
       },
-      { property: "og:title", content: "Request access — Ipanema" },
-      { property: "og:description", content: "Request access to Ipanema for your club." },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary" },
+      { property: "og:title", content: "Create your account — Ipanema" },
+      { property: "og:description", content: "One match, free, start to finish." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: SignUp,
@@ -41,18 +41,27 @@ function SignUp() {
 
   if (sent) {
     return (
-      <AuthShell title="Check your email" sub="We have sent you a link to confirm your address. Open it and you are in.">
-        <div className="flex flex-col items-center gap-3 py-4 text-center">
-          <Mail size={30} className="text-cream" aria-hidden="true" />
-          <h1 className="display-i text-[22px] text-text-bright">Your account is ready</h1>
-          <p className="text-[13px] text-text-dim">
-            Signed up as <strong className="text-text">{email}</strong>.
-          </p>
-          <SecondaryButton className="mt-2 h-12" onClick={() => navigate({ to: "/onboarding" })}>
-            Set up your club
-          </SecondaryButton>
+      <AuthColumn
+        eyebrow="Step 1 of 3"
+        meta="Confirm your email"
+        title="Check your email"
+        sub="We've sent a link to confirm your address. Open it and you're in."
+        steps={{ total: 3, done: 1 }}
+      >
+        <div className="flex items-start gap-4 border border-wire bg-surface p-5">
+          <Mail size={20} className="mt-0.5 shrink-0 text-accent-sea" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-text-bright">Sent to {email}</p>
+            <p className="mt-1 text-[13px] leading-snug text-text-dim">
+              If it hasn&rsquo;t arrived in a minute, check your spam folder — confirmation mail
+              often lands there the first time.
+            </p>
+          </div>
         </div>
-      </AuthShell>
+        <SecondaryButton block onClick={() => navigate({ to: "/onboarding" })}>
+          Set up your club
+        </SecondaryButton>
+      </AuthColumn>
     );
   }
 
@@ -102,23 +111,37 @@ function SignUp() {
   }
 
   return (
-    <AuthShell
-      title="Set up your club"
-      sub="Tell us who you coach. Your first match can be analysed as soon as you are in."
+    <AuthColumn
+      eyebrow="Step 1 of 3"
+      meta="Your account"
+      title="Create your account"
+      sub="Next you'll name your club and set the targets your findings are measured against. Your first match is free, start to finish."
+      steps={{ total: 3, done: 1 }}
+      note="No card. One match, free — upload, analysis, clips and the session plan."
       foot={
         <>
-          Already have an account?{" "}
-          <Link to="/signin" className="text-cream underline-offset-2 hover:underline">
+          <span>Already have an account?</span>
+          <Link
+            to="/signin"
+            className="font-semibold text-accent-sea underline decoration-accent-sea/40 underline-offset-[3px] hover:decoration-accent-sea"
+          >
             Sign in
           </Link>
         </>
       }
     >
-      <form onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="Full name">
-          <Input value={name} required onChange={(e) => setName(e.target.value)} aria-label="Full name" />
-        </Field>
-        <Field label="Email">
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <AuthField label="Full name">
+          <Input
+            value={name}
+            required
+            onChange={(e) => setName(e.target.value)}
+            aria-label="Full name"
+            className="min-h-14"
+          />
+        </AuthField>
+
+        <AuthField label="Email">
           <Input
             type="email"
             value={email}
@@ -126,13 +149,22 @@ function SignUp() {
             autoComplete="email"
             onChange={(e) => setEmail(e.target.value)}
             aria-label="Email"
+            className="min-h-14"
           />
-        </Field>
-        <Field label="Club">
-          <Input value={club} onChange={(e) => setClub(e.target.value)} aria-label="Club" />
-        </Field>
-        <Field label="Role">
-          <div className="flex flex-wrap gap-2">
+        </AuthField>
+
+        <AuthField label="Club" help="The name that appears on every report and session sheet.">
+          <Input
+            value={club}
+            onChange={(e) => setClub(e.target.value)}
+            aria-label="Club"
+            placeholder="Sollentuna FK"
+            className="min-h-14"
+          />
+        </AuthField>
+
+        <AuthField label="Your role">
+          <div className="rule-x grid grid-cols-3 border border-wire">
             {roles.map((r) => (
               <button
                 key={r}
@@ -140,18 +172,19 @@ function SignUp() {
                 aria-pressed={role === r}
                 onClick={() => setRole(r)}
                 className={cn(
-                  "tap border px-4 text-[12.5px] font-semibold transition-colors duration-150 ease-out",
+                  "label-sm flex min-h-14 items-center justify-center px-2 text-center transition-colors",
                   role === r
-                    ? "border-cream bg-cream text-[#111315]"
-                    : "border-wire text-text-dim hover:text-text",
+                    ? "bg-surface-2 text-text-bright"
+                    : "text-text-dim hover:bg-surface hover:text-text",
                 )}
               >
                 {r}
               </button>
             ))}
           </div>
-        </Field>
-        <Field
+        </AuthField>
+
+        <AuthField
           label="Password"
           help="At least 8 characters, one number, one capital."
           error={error ?? undefined}
@@ -163,27 +196,31 @@ function SignUp() {
             placeholder="••••••••"
             onChange={(e) => setPassword(e.target.value)}
             aria-label="Password"
+            className="min-h-14"
           />
-        </Field>
+        </AuthField>
+
         <Checkbox
           checked={terms}
           onChange={setTerms}
           label={<span>I agree to the terms and the privacy policy.</span>}
         />
-        <PrimaryButton type="submit" block className="h-12" disabled={busy}>
-          {busy ? "Creating your account…" : "Request access"}
+
+        <PrimaryButton type="submit" block className="min-h-14" disabled={busy}>
+          {busy ? "Creating your account…" : "Create account"}
+          {!busy && <ArrowRight size={15} aria-hidden="true" />}
         </PrimaryButton>
       </form>
 
-      <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.08em] text-text-faint">
-        <span className="h-px flex-1 bg-wire-2" />
+      <div className="label-xs flex items-center gap-3 text-text-faint">
+        <span className="h-px flex-1 bg-wire" />
         or
-        <span className="h-px flex-1 bg-wire-2" />
+        <span className="h-px flex-1 bg-wire" />
       </div>
 
-      <SecondaryButton block className="h-12" onClick={google}>
+      <SecondaryButton block className="min-h-14" onClick={google}>
         Continue with Google
       </SecondaryButton>
-    </AuthShell>
+    </AuthColumn>
   );
 }

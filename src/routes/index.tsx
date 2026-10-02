@@ -1,8 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { ClipboardList, Pencil, Play, Plus } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { Wordmark } from "@/components/ip/primitives";
+import {
+  ClipFigure,
+  DrillFigure,
+  TelestrationFigure,
+  TerritoryFigure,
+  TriggerGapFigure,
+  TurnoverFigure,
+} from "@/components/landing/landing-visuals";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,22 +47,24 @@ function HeroPanel() {
     <div className="border border-wire bg-surface">
       <div className="flex items-center justify-between gap-3 border-b border-wire px-4 py-3">
         <span className="label-xs text-text-faint">Match debrief · U16</span>
-        <span className="label-xs text-positive">9 of 22 confirmed</span>
+        <span className="label-xs border border-positive/50 px-2 py-1 text-positive">
+          9 of 22 confirmed
+        </span>
       </div>
 
-      <div className="p-4 sm:p-5">
-        <p className="display-i text-[clamp(15px,1.5vw,19px)] leading-tight text-text-bright">
+      <div className="flex flex-col gap-4 p-4 sm:p-5">
+        <p className="display-i text-[clamp(16px,1.7vw,22px)] leading-tight text-text-bright">
           &ldquo;We won it twice. They walked back in once.&rdquo;
         </p>
 
-        <div className="rule-x mt-4 grid grid-cols-3 border border-wire">
+        <div className="rule-x grid grid-cols-3 border-y border-wire">
           {[
             { value: "42%", label: "Pressed under 2s", tone: "text-text-bright" },
             { value: "14–8", label: "Shots", tone: "text-accent-sea" },
             { value: "2.1s", label: "Reaction time", tone: "text-positive" },
           ].map((figure) => (
-            <div key={figure.label} className="p-3">
-              <p className={`num text-[clamp(20px,2.4vw,28px)] leading-none ${figure.tone}`}>
+            <div key={figure.label} className="py-3 pr-3 first:pl-0 [&:not(:first-child)]:pl-3">
+              <p className={`num text-[clamp(24px,3vw,40px)] leading-none ${figure.tone}`}>
                 {figure.value}
               </p>
               <p className="label-xs mt-1.5 text-text-faint">{figure.label}</p>
@@ -62,53 +72,8 @@ function HeroPanel() {
           ))}
         </div>
 
-        {/* The territory line: ours above the axis, theirs filled below. */}
-        <div className="mt-4 border border-wire bg-surface-2 p-3">
-          <p className="label-xs text-text-faint">Territory through the match</p>
-          <svg
-            viewBox="0 0 400 90"
-            preserveAspectRatio="none"
-            className="mt-2 h-[90px] w-full"
-            role="img"
-            aria-label="Territory swung to the opponent before half-time and back after it"
-          >
-            <defs>
-              <clipPath id="hero-below">
-                <rect x="0" y="45" width="400" height="45" />
-              </clipPath>
-            </defs>
-            <line x1="0" y1="45" x2="400" y2="45" stroke="var(--wire)" strokeWidth="1" />
-            <path
-              d="M0 48 C 40 30, 70 22, 100 34 C 130 46, 150 72, 190 70 C 230 68, 250 40, 290 30 C 330 20, 360 34, 400 40 L 400 45 L 0 45 Z"
-              fill="var(--team-b)"
-              opacity="0.45"
-              clipPath="url(#hero-below)"
-            />
-            <path
-              d="M0 48 C 40 30, 70 22, 100 34 C 130 46, 150 72, 190 70 C 230 68, 250 40, 290 30 C 330 20, 360 34, 400 40"
-              fill="none"
-              stroke="var(--cream)"
-              strokeWidth="2"
-              vectorEffect="non-scaling-stroke"
-            />
-            <line
-              x1="200"
-              y1="0"
-              x2="200"
-              y2="90"
-              stroke="var(--text-faint)"
-              strokeWidth="1"
-              strokeDasharray="3 3"
-            />
-          </svg>
-          <div className="flex justify-between">
-            {["0'", "Half-time", "90'"].map((t) => (
-              <span key={t} className="num-flat text-[10px] text-text-faint">
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
+        <TurnoverFigure />
+        <TerritoryFigure />
       </div>
     </div>
   );
@@ -195,21 +160,25 @@ function Landing() {
             icon={Plus}
             title="The one thing to fix"
             body="Every match returns a single headline finding, with the number behind it and the target you set. Not a dashboard of forty metrics."
+            figure={<TriggerGapFigure />}
           />
           <Feature
             icon={Play}
             title="The clips that prove it"
             body="Each finding carries its moments. Tap one and the video is already at the right second, ready to share to your staff group."
+            figure={<ClipFigure />}
           />
           <Feature
             icon={Pencil}
             title="Telestration on every clip"
             body="Draw straight onto the video before you send it. Circle a player, mark the run, or point an arrow at the space they missed."
+            figure={<TelestrationFigure />}
           />
           <Feature
             icon={ClipboardList}
             title="Tuesday's session"
             body="The finding becomes a session plan with drills, durations and pitch diagrams you can print and take out with you."
+            figure={<DrillFigure />}
           />
         </div>
       </section>
@@ -347,18 +316,21 @@ function Feature({
   icon: Icon,
   title,
   body,
+  figure,
 }: {
   icon: ComponentType<{ size?: number; strokeWidth?: number; "aria-hidden"?: boolean }>;
   title: string;
   body: string;
+  figure: ReactNode;
 }) {
   return (
-    <div className="p-6 md:p-7">
+    <div className="flex flex-col p-5 md:p-6">
       <span className="grid h-10 w-10 place-items-center border border-wire text-accent-sea">
         <Icon size={18} strokeWidth={1.75} aria-hidden={true} />
       </span>
       <h3 className="display-i mt-4 text-[19px] leading-none text-text-bright">{title}</h3>
-      <p className="mt-3 text-[13.5px] leading-snug text-text-dim">{body}</p>
+      <p className="mt-3 flex-1 text-[13.5px] leading-snug text-text-dim">{body}</p>
+      <div className="mt-5">{figure}</div>
     </div>
   );
 }
