@@ -50,7 +50,13 @@ export function FindingsList({
                 <p className="mt-1 text-[12.5px] text-text-faint">
                   {finding.value}
                   {unit} against a {finding.target}
-                  {unit} target · {finding.events} {finding.events === 1 ? "moment" : "moments"}
+                  {unit} target ·{" "}
+                  {/* How many moments show the fault, out of how many were
+                      measured. "116 moments" against a 35% figure invited the
+                      reading that all 116 were bad. */}
+                  {finding.evidence === "exact" && finding.population > finding.events
+                    ? `${finding.events} of ${finding.population} moments`
+                    : `${finding.events} ${finding.events === 1 ? "moment" : "moments"}`}
                   {finding.basis
                     ? ` · ${finding.basis === "confirmed" ? "confirmed" : "detected"}`
                     : ""}
@@ -72,6 +78,7 @@ export function FindingsList({
                       total={finding.events}
                       label={finding.headline}
                       videoUrl={videoUrl}
+                      note={finding.evidenceNote}
                       bare
                     />
                   </div>

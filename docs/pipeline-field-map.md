@@ -126,6 +126,33 @@ Payload keys read, by event type:
 | `better_option` | `carrier` \| `from` \| `player_id`; `receiver` \| `to` \| `receiver_id`; `better_to` \| `best_to` \| `better_receiver` \| `target_player`; `from_m`, `to_m`; `played_x`/`played_y` \| `end_x`/`end_y`; `better_x`/`better_y` \| `target_x`/`target_y`; `best_gain_m`, `best_bypassed`, `best_space_m` |
 | `shot` | `on_target` (bool) |
 
+### 1.6b Why these per-event fields matter more than the percentages
+
+Every finding we show is a claim about a **subset** of moments. "Only 35% of
+losses got pressure inside two seconds" is a claim about the other 65%, and the
+clips we attach to it have to be *those* losses. If we cannot tell which ones
+failed, a coach checking the evidence can open a loss that was pressed
+immediately — a clip that disproves the headline it is filed under.
+
+A team-level percentage cannot do this. It tells us how many failed, never
+which. So for each finding we need the per-event field that marks the instance:
+
+| Finding | Needs, per event | Have it? | Without it |
+|---|---|---|---|
+| Press faster when we lose the ball | `time_to_press` (s) on `turnover_lost` | ✅ | — |
+| Win it back before they settle | `regained_within_5s` (bool) on `turnover_lost` | ✅ | — |
+| Support the first presser | **`near_at_2s`** (count) on `turnover_lost` | ❌ only the match median `near_at_2s_median` | We show all losses and say so |
+| Play forward after we win it | **`forward_within_3s`** (bool) on `turnover_won` | ❌ only `forward_within_3s_pct` | We show all regains and say so |
+| Secure the first pass after regaining | **`lost_back_5s`** (bool) on `turnover_won` | ❌ only `lost_back_5s_pct` | We show all regains and say so |
+
+The three missing ones are each a single boolean or integer you already compute
+in order to produce the percentage — the denominator is being thrown away. The
+UI currently prints a caveat under those clip strips admitting the moments are
+not the faulty ones, which is honest but is not the product we want to demo.
+
+**Ask:** emit the per-event value alongside each percentage, not instead of it.
+
+
 ### 1.7 Frames — `data.frames[]`
 
 ```

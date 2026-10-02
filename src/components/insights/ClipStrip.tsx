@@ -40,6 +40,7 @@ export function ClipStrip({
   label,
   bare = false,
   videoUrl,
+  note,
 }: {
   matchId: string;
   /** Seconds from kick-off, in match order. */
@@ -51,6 +52,8 @@ export function ClipStrip({
   bare?: boolean;
   /** Absent until the match video is signed — the tiles then link out instead. */
   videoUrl?: string | undefined;
+  /** Set when these are not the faulty moments, and says why. */
+  note?: string | undefined;
 }) {
   const headingId = useId();
   const [shownCount, setShownCount] = useState(FIRST_PAGE);
@@ -108,6 +111,12 @@ export function ClipStrip({
           matchId={matchId}
           label={label}
         />
+      )}
+
+      {note && (
+        <p className="border-b border-wire bg-surface-2 px-4 py-2.5 text-[11.5px] leading-snug text-text-dim sm:px-5">
+          {note}
+        </p>
       )}
 
       <ul

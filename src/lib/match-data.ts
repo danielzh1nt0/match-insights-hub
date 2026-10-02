@@ -43,12 +43,25 @@ export type Finding = {
   baseline?: number | null;
   unit: string;
   higherIsWorse: boolean;
+  /** How many moments actually show this fault — what the clips are. */
   events: number;
   eventIds: string[];
   interpretation: string;
   timestamps: number[];
   /** Whether the numbers come from confirmed moments or raw detections. */
   basis?: "confirmed" | "detected";
+  /** Every moment the figure was measured over, fault or not. */
+  population: number;
+  /**
+   * Whether the moments carried here are the faulty ones.
+   *
+   * "exact" means each clip is an instance of the fault in the headline.
+   * "unfiltered" means the file cannot say which moments failed, so these are
+   * all the candidates — which the UI has to admit rather than imply.
+   */
+  evidence: "exact" | "unfiltered";
+  /** Said plainly when the moments are not the faulty ones. */
+  evidenceNote?: string | undefined;
 };
 
 export type PlayerRow = {
@@ -135,7 +148,11 @@ export const EVENT_TONE: Record<EventKind, "good" | "risky" | "bad" | "neutral" 
 export const EVENT_FILTERS = [
   { key: "all", label: "All", kinds: null },
   { key: "goals", label: "Goals & shots", kinds: ["goal", "shot"] },
-  { key: "turnovers", label: "Turnovers", kinds: ["turnover_lost", "turnover_won", "high_turnover"] },
+  {
+    key: "turnovers",
+    label: "Turnovers",
+    kinds: ["turnover_lost", "turnover_won", "high_turnover"],
+  },
   { key: "passes", label: "Passes", kinds: ["pass_bad", "pass_risky", "better_option"] },
   { key: "set", label: "Set pieces", kinds: ["set_piece"] },
 ] as const;

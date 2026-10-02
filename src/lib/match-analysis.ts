@@ -424,27 +424,88 @@ function eventsFor(data: MatchDataFile | undefined, team: TeamKey, type: string)
   return (data?.events ?? []).filter((e) => e.type === type && e.team === team);
 }
 
-function pressSorted(events: FeedEvent[]) {
-  return [...events].sort((a, b) => {
-    const av = a.payload?.["time_to_press"];
-    const bv = b.payload?.["time_to_press"];
-    if (av == null && bv == null) return a.t - b.t;
-    if (av == null) return -1; // nulls first
-    if (bv == null) return 1;
-    return bv - av;
-  });
+/** A number from a payload, or null when the file does not carry it. */
+function payloadNum(event: FeedEvent, key: string): number | null {
+  const value = event.payload?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function finding(
-  id: string,
-  headline: string,
-  value: number,
-  target: number,
-  unit: string,
-  higherIsWorse: boolean,
-  interpretation: string,
-  moments: FeedEvent[],
-): Finding {
+/**
+ * The moments that actually show a fault.
+ *
+ * A finding is a claim about a subset: "only 35% of losses got pressure inside
+ * two seconds" is a claim about the other 65%, not about all 116. Attaching
+ * every loss to it put clips behind the headline that contradicted it — a coach
+ * opening one could easily land on a loss that was pressed immediately.
+ *
+ * Returns null when no moment in the set can be tested at all, which is the
+ * difference between "none of them failed" and "this export cannot tell us".
+ * The caller has to say which it is rather than quietly showing everything.
+ */
+function faulty(
+  events: FeedEvent[],
+  test: (event: FeedEvent) => boolean | null,
+): FeedEvent[] | null {
+  let measured = 0;
+  const hit: FeedEvent[] = [];
+  for (const event of events) {
+    const result = test(event);
+    if (result === null) continue;
+    measured += 1;
+    if (result) hit.push(event);
+  }
+  return measured === 0 ? null : hit;
+}
+
+/** Clips carried per finding. Enough for the strip to expand into. */
+const CLIP_CAP = 60;
+
+function finding({
+  id,
+  headline,
+  value,
+  target,
+  unit,
+  higherIsWorse,
+  interpretation,
+  population,
+  moments,
+  rank,
+  evidenceNote,
+}: {
+  id: string;
+  headline: string;
+  value: number;
+  target: number;
+  unit: string;
+  higherIsWorse: boolean;
+  interpretation: string;
+  /** Every moment the figure was measured over. */
+  population: FeedEvent[];
+  /** The ones that show the fault, or null when the file cannot say. */
+  moments: FeedEvent[] | null;
+  /** Bigger is worse — used to put the most damning evidence first. */
+  rank?: (event: FeedEvent) => number | null;
+  /** Required when `moments` is null: why the clips are not the faulty ones. */
+  evidenceNote?: string;
+}): Finding {
+  const exact = moments !== null;
+  const chosen = [...(moments ?? population)];
+
+  // Worst first where there is a magnitude to sort by. Moments carrying no
+  // measurement go last: they prove nothing, so they are the weakest evidence,
+  // and leading with them was why the first clips matched the headline least.
+  chosen.sort((a, b) => {
+    if (rank) {
+      const av = rank(a);
+      const bv = rank(b);
+      if (av !== null && bv !== null && av !== bv) return bv - av;
+      if (av === null && bv !== null) return 1;
+      if (bv === null && av !== null) return -1;
+    }
+    return a.t - b.t;
+  });
+
   return {
     id,
     headline,
@@ -452,10 +513,13 @@ function finding(
     target,
     unit,
     higherIsWorse,
-    events: moments.length,
-    eventIds: moments.map((e) => e.id),
+    events: chosen.length,
+    population: population.length,
+    evidence: exact ? "exact" : "unfiltered",
+    ...(exact ? {} : { evidenceNote }),
+    eventIds: chosen.map((e) => e.id),
     interpretation,
-    timestamps: moments.slice(0, 6).map((e) => Math.round(e.t * 10) / 10),
+    timestamps: chosen.slice(0, CLIP_CAP).map((e) => Math.round(e.t * 10) / 10),
   };
 }
 
@@ -475,95 +539,134 @@ export function buildFindings(
   const pressed = num(row.pressed_within_2s_pct, 100);
   if (pressed < thresholds.pressWithin2s) {
     out.push(
-      finding(
-        "slow_press",
-        "Press faster when we lose the ball.",
-        pressed,
-        thresholds.pressWithin2s,
-        "%",
-        false,
-        `Of ${lost.length} balls lost, only ${pressed}% got pressure inside two seconds. In the rest the nearest player waited instead of stepping in.`,
-        pressSorted(lost),
-      ),
+      finding({
+        id: "slow_press",
+        headline: "Press faster when we lose the ball.",
+        value: pressed,
+        target: thresholds.pressWithin2s,
+        unit: "%",
+        higherIsWorse: false,
+        interpretation: `Of ${lost.length} balls lost, only ${pressed}% got pressure inside two seconds. In the rest the nearest player waited instead of stepping in.`,
+        population: lost,
+        // The claim is about the losses that were slow, so those are the clips.
+        moments: faulty(lost, (event) => {
+          const seconds = payloadNum(event, "time_to_press");
+          return seconds === null ? null : seconds > 2;
+        }),
+        rank: (event) => payloadNum(event, "time_to_press"),
+        evidenceNote:
+          "This export records no time to first pressure on individual losses, so these are all the losses rather than the slow ones.",
+      }),
     );
   }
 
   const regained = num(row.regained_within_5s_pct, 100);
   if (regained < thresholds.regainWithin5s) {
     out.push(
-      finding(
-        "no_regain",
-        "Win it back before they settle.",
-        regained,
-        thresholds.regainWithin5s,
-        "%",
-        false,
-        `${regained}% of losses were won back inside five seconds, so the opponent had time to settle after most turnovers.`,
-        lost.filter((e) => e.payload?.["regained_within_5s"] === false),
-      ),
+      finding({
+        id: "no_regain",
+        headline: "Win it back before they settle.",
+        value: regained,
+        target: thresholds.regainWithin5s,
+        unit: "%",
+        higherIsWorse: false,
+        interpretation: `${regained}% of losses were won back inside five seconds, so the opponent had time to settle after most turnovers.`,
+        population: lost,
+        moments: faulty(lost, (event) => {
+          const won = event.payload?.["regained_within_5s"];
+          return typeof won === "boolean" ? !won : null;
+        }),
+        evidenceNote:
+          "This export does not mark which losses were won back, so these are all the losses.",
+      }),
     );
   }
 
   const alone = num(row.near_at_2s_median, 9);
   if (alone < 2) {
     out.push(
-      finding(
-        "press_alone",
-        "Support the first presser.",
-        alone,
-        2,
-        "players",
-        false,
-        `Two seconds after losing the ball there were typically ${alone} team-mates within five metres, so the press could be played around.`,
-        pressSorted(lost),
-      ),
+      finding({
+        id: "press_alone",
+        headline: "Support the first presser.",
+        value: alone,
+        target: 2,
+        unit: "players",
+        higherIsWorse: false,
+        interpretation: `Two seconds after losing the ball there were typically ${alone} team-mates within five metres, so the press could be played around.`,
+        population: lost,
+        moments: faulty(lost, (event) => {
+          const near = payloadNum(event, "near_at_2s");
+          return near === null ? null : near < 2;
+        }),
+        rank: (event) => {
+          const near = payloadNum(event, "near_at_2s");
+          return near === null ? null : -near;
+        },
+        evidenceNote:
+          "This export carries no count of team-mates near the ball per loss, only a match median, so these are all the losses rather than the isolated ones.",
+      }),
     );
   }
 
   const forward = num(row.forward_within_3s_pct, 100);
   if (forward < 50) {
     out.push(
-      finding(
-        "slow_forward",
-        "Play forward after we win it.",
-        forward,
-        50,
-        "%",
-        false,
-        `After winning the ball, only ${forward}% of the time did a forward pass follow inside three seconds.`,
-        won,
-      ),
+      finding({
+        id: "slow_forward",
+        headline: "Play forward after we win it.",
+        value: forward,
+        target: 50,
+        unit: "%",
+        higherIsWorse: false,
+        interpretation: `After winning the ball, only ${forward}% of the time did a forward pass follow inside three seconds.`,
+        population: won,
+        moments: faulty(won, (event) => {
+          const played = event.payload?.["forward_within_3s"];
+          return typeof played === "boolean" ? !played : null;
+        }),
+        evidenceNote:
+          "This export does not mark which regains were followed by a forward pass, so these are all the balls won.",
+      }),
     );
   }
 
   const lostBack = num(row.lost_back_5s_pct, 0);
   if (lostBack > 40) {
     out.push(
-      finding(
-        "won_and_lost",
-        "Secure the first pass after regaining.",
-        lostBack,
-        40,
-        "%",
-        true,
-        `${lostBack}% of the balls won were lost again inside five seconds.`,
-        won,
-      ),
+      finding({
+        id: "won_and_lost",
+        headline: "Secure the first pass after regaining.",
+        value: lostBack,
+        target: 40,
+        unit: "%",
+        higherIsWorse: true,
+        interpretation: `${lostBack}% of the balls won were lost again inside five seconds.`,
+        population: won,
+        moments: faulty(won, (event) => {
+          const lostAgain = event.payload?.["lost_back_5s"] ?? event.payload?.["lost_within_5s"];
+          return typeof lostAgain === "boolean" ? lostAgain : null;
+        }),
+        evidenceNote:
+          "This export does not mark which regains were given away again, so these are all the balls won.",
+      }),
     );
   }
 
   if (better.length >= 3) {
     out.push(
-      finding(
-        "better_option",
-        "Look for the forward option.",
-        better.length,
-        1,
-        "times",
-        true,
-        `${better.length} times the ball went sideways or backwards while a better forward pass was open.`,
-        better,
-      ),
+      finding({
+        id: "better_option",
+        headline: "Look for the forward option.",
+        value: better.length,
+        target: 1,
+        unit: "times",
+        higherIsWorse: true,
+        interpretation: `${better.length} times the ball went sideways or backwards while a better forward pass was open.`,
+        // Every one of these events is itself an instance of the fault.
+        population: better,
+        moments: better,
+        rank: (event) => payloadNum(event, "best_gain_m"),
+      }),
     );
   }
 
@@ -574,64 +677,71 @@ export function buildFindings(
   const roughShare = passes.length ? Math.round((rough.length / passes.length) * 100) : 0;
   if (roughShare > 30) {
     out.push(
-      finding(
-        "risky_passing",
-        "Choose safer passes under pressure.",
-        roughShare,
-        30,
-        "%",
-        true,
-        `${rough.length} of ${passes.length} passes were risky or given away.`,
-        [],
-      ),
+      finding({
+        id: "risky_passing",
+        headline: "Choose safer passes under pressure.",
+        value: roughShare,
+        target: 30,
+        unit: "%",
+        higherIsWorse: true,
+        interpretation: `${rough.length} of ${passes.length} passes were risky or given away.`,
+        // Passes are not in the events list, so there is nothing to open.
+        population: [],
+        moments: [],
+      }),
     );
   }
 
   const block = num(row.block_length_median_m, 0);
   if (block > thresholds.blockCeilingM) {
     out.push(
-      finding(
-        "long_block",
-        "Stay connected from back to front.",
-        block,
-        thresholds.blockCeilingM,
-        "m",
-        true,
-        `Typical distance from the deepest to the highest player was ${block} m, above the ${thresholds.blockCeilingM} m ceiling you set.`,
-        [],
-      ),
+      finding({
+        id: "long_block",
+        headline: "Stay connected from back to front.",
+        value: block,
+        target: thresholds.blockCeilingM,
+        unit: "m",
+        higherIsWorse: true,
+        interpretation: `Typical distance from the deepest to the highest player was ${block} m, above the ${thresholds.blockCeilingM} m ceiling you set.`,
+        // A shape measured across the whole match has no single moment.
+        population: [],
+        moments: [],
+      }),
     );
   }
 
   const tilt = num(stats?.metrics?.["field"]?.[team]?.field_tilt_pct, 100);
   if (tilt < 30) {
     out.push(
-      finding(
-        "low_tilt",
-        "Move the game into their third.",
-        tilt,
-        30,
-        "%",
-        false,
-        `Only ${tilt}% of the play in the final thirds was in the opponent's third.`,
-        [],
-      ),
+      finding({
+        id: "low_tilt",
+        headline: "Move the game into their third.",
+        value: tilt,
+        target: 30,
+        unit: "%",
+        higherIsWorse: false,
+        interpretation: `Only ${tilt}% of the play in the final thirds was in the opponent's third.`,
+        population: [],
+        moments: [],
+      }),
     );
   }
 
   const highWon = num(stats?.metrics?.["high_turnover_counts"]?.[team], 0);
   if (highWon === 0 && won.length >= 5) {
     out.push(
-      finding(
-        "no_high_turnovers",
-        "Win the ball higher up.",
-        0,
-        1,
-        "times",
-        false,
-        `All ${won.length} balls won came in your own half, so nothing started close to their goal.`,
-        won,
-      ),
+      finding({
+        id: "no_high_turnovers",
+        headline: "Win the ball higher up.",
+        value: 0,
+        target: 1,
+        unit: "times",
+        higherIsWorse: false,
+        interpretation: `All ${won.length} balls won came in your own half, so nothing started close to their goal.`,
+        // None of them were high, so every ball won is an instance.
+        population: won,
+        moments: won,
+      }),
     );
   }
 

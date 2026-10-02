@@ -236,6 +236,7 @@ export function InsightsScreen({
               total={model.top.events}
               label={model.top.headline}
               videoUrl={videoUrl}
+              note={model.top.evidenceNote}
               bare
             />
           </Drawer>
