@@ -334,6 +334,10 @@ export function InsightsScreen({
           confirmed={confirmed}
           detected={Math.max(moments.length - confirmed, 0)}
         />
+
+        <div className="mt-4">
+          <MatchNumbersGrid cells={cells} matchId={matchId} />
+        </div>
       </Beat>
 
       <Beat
@@ -347,7 +351,7 @@ export function InsightsScreen({
               : `${strengths.length} things held up`
         }
       >
-        <WhatWorked strengths={strengths} />
+        <WhatWorked strengths={strengths} matchId={matchId} />
       </Beat>
 
       <Beat
@@ -421,13 +425,6 @@ export function InsightsScreen({
 
       {/* Everything below here is for checking, not for reading. */}
       <div className="flex flex-col gap-3">
-        <Drawer
-          label="The numbers behind it"
-          summary={`Six counts from this match file${possession === null ? ", one withheld" : ""}`}
-        >
-          <MatchNumbersGrid cells={cells} matchId={matchId} bare />
-        </Drawer>
-
         {model.top && model.top.timestamps.length > 0 && (
           <Drawer
             label={`Every moment behind "${model.top.headline.toLowerCase()}"`}

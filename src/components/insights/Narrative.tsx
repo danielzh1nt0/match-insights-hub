@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Check, ChevronDown } from "lucide-react";
+import { TileSheet } from "@/components/insights/StatTile";
 import type { Strength } from "@/lib/insights-model";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,7 @@ export function Beat({
  * file actually says. Every entry is a target that was met, measured the same
  * way the misses are.
  */
-export function WhatWorked({ strengths }: { strengths: Strength[] }) {
+export function WhatWorked({ strengths, matchId }: { strengths: Strength[]; matchId: string }) {
   if (strengths.length === 0)
     return (
       <p className="border border-wire bg-surface p-5 text-[13px] leading-relaxed text-text-dim">
@@ -62,28 +63,19 @@ export function WhatWorked({ strengths }: { strengths: Strength[] }) {
       </p>
     );
 
+  // The same tile as every other figure on the page: a target met is a number,
+  // not a different kind of object, so it is not a list row with a tick.
   return (
-    <ul className="rule-y border border-wire bg-surface">
-      {strengths.map((strength) => (
-        <li key={strength.id} className="flex items-start gap-3 p-4 sm:p-5">
-          <span
-            aria-hidden="true"
-            className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center border border-positive text-positive"
-          >
-            <Check size={12} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-baseline gap-x-2.5">
-              <span className="text-[14.5px] font-semibold text-text-bright">{strength.label}</span>
-              <span className="num text-[18px] leading-none text-positive">{strength.value}</span>
-            </span>
-            <span className="mt-1 block text-[12.5px] leading-snug text-text-dim">
-              {strength.basis}
-            </span>
-          </span>
-        </li>
-      ))}
-    </ul>
+    <TileSheet
+      matchId={matchId}
+      tiles={strengths.map((strength) => ({
+        label: strength.label,
+        value: strength.value,
+        basis: strength.basis,
+        icon: Check,
+        tone: "met" as const,
+      }))}
+    />
   );
 }
 
