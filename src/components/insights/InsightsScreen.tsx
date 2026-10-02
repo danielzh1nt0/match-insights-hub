@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { ArrowLeftRight, Goal, PieChart, Printer, Route, Ruler, Timer } from "lucide-react";
 import { ChapterRail, type ChapterCell } from "@/components/insights/ChapterRail";
+import { ClipStrip } from "@/components/insights/ClipStrip";
 import { VerdictBlock } from "@/components/insights/VerdictBlock";
 import { MatchFlow, type FlowGoal } from "@/components/insights/MatchFlow";
 import { MatchNumbersGrid, type NumberCell } from "@/components/insights/MatchNumbersGrid";
@@ -262,8 +263,11 @@ export function InsightsScreen({
 
   return (
     <>
-      <ChapterRail matchId={matchId} cells={chapterCells} />
-
+      {/* The verdict comes first, then the clips that prove it, then the rail.
+          The rail used to open the page, which put five ideas in front of a
+          coach before the one that matters — and retention falls as the number
+          of ideas rises. It is navigation, so it belongs under the thing it
+          navigates away from. */}
       <VerdictBlock
         teamA={identities.A}
         teamB={identities.B}
@@ -274,6 +278,17 @@ export function InsightsScreen({
         confirmed={confirmed}
         moments={moments.length}
       />
+
+      {model.top && model.top.timestamps.length > 0 && (
+        <ClipStrip
+          matchId={matchId}
+          timestamps={model.top.timestamps}
+          total={model.top.events}
+          label={model.top.headline}
+        />
+      )}
+
+      <ChapterRail matchId={matchId} cells={chapterCells} />
 
       <MatchFlow
         momentum={momentum}
