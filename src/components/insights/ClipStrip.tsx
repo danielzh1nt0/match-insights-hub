@@ -28,6 +28,7 @@ export function ClipStrip({
   timestamps,
   total,
   label,
+  bare = false,
 }: {
   matchId: string;
   /** Seconds from kick-off, in match order. */
@@ -35,19 +36,26 @@ export function ClipStrip({
   /** How many moments the finding rests on in all. */
   total: number;
   label: string;
+  /** Inside a drawer the section already has its own frame and heading. */
+  bare?: boolean;
 }) {
   const shown = timestamps.slice(0, 8);
   if (shown.length === 0) return null;
   const more = Math.max(total - shown.length, 0);
 
   return (
-    <section className="border border-wire bg-surface" aria-labelledby="verdict-clips">
-      <header className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-2 border-b border-wire px-4 py-3 sm:px-5">
-        <h2 id="verdict-clips" className="text-[14px] font-semibold text-text-bright">
-          The {total} {total === 1 ? "moment" : "moments"} behind it
-        </h2>
-        <span className="text-[12px] text-text-faint">{label}</span>
-      </header>
+    <section
+      className={bare ? "" : "border border-wire bg-surface"}
+      aria-labelledby="verdict-clips"
+    >
+      {!bare && (
+        <header className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-2 border-b border-wire px-4 py-3 sm:px-5">
+          <h2 id="verdict-clips" className="text-[14px] font-semibold text-text-bright">
+            The {total} {total === 1 ? "moment" : "moments"} behind it
+          </h2>
+          <span className="text-[12px] text-text-faint">{label}</span>
+        </header>
+      )}
 
       <ul className="flex gap-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {shown.map((t, i) => (

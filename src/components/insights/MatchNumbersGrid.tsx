@@ -26,20 +26,36 @@ export type NumberCell = {
  * behind it says "Withheld" and why — the certainty sits on the same card as
  * the number, which is the only way a coach can tell a measurement from a guess.
  */
-export function MatchNumbersGrid({ cells, matchId }: { cells: NumberCell[]; matchId: string }) {
+export function MatchNumbersGrid({
+  cells,
+  matchId,
+  bare = false,
+}: {
+  cells: NumberCell[];
+  matchId: string;
+  /** Inside a drawer the section already has its own frame and heading. */
+  bare?: boolean;
+}) {
   return (
     <section aria-labelledby="match-numbers">
-      <SectionHead
-        eyebrow="Counts"
-        title="Match numbers"
-        right={
-          <span className="text-[12px] text-text-faint">
-            Every figure comes from this match file
-          </span>
-        }
-      />
+      {!bare && (
+        <SectionHead
+          eyebrow="Counts"
+          title="Match numbers"
+          right={
+            <span className="text-[12px] text-text-faint">
+              Every figure comes from this match file
+            </span>
+          }
+        />
+      )}
 
-      <div className="rule-y mt-4 grid border border-wire bg-surface sm:grid-cols-2 xl:grid-cols-3">
+      <div
+        className={cn(
+          "rule-y grid bg-surface sm:grid-cols-2 xl:grid-cols-3",
+          bare ? "" : "mt-4 border border-wire",
+        )}
+      >
         {cells.map((cell, i) => (
           <div
             key={cell.label}

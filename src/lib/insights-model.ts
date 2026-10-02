@@ -120,3 +120,112 @@ export function guardState(
   const missed = higherIsBetter ? value < target : value > target;
   return missed ? "watch" : state;
 }
+
+/* ---------------- What went right ---------------- */
+
+export type Strength = {
+  id: string;
+  /** What the team did, in the coach's words. */
+  label: string;
+  /** The figure behind it. */
+  value: string;
+  /** What it was measured against. */
+  basis: string;
+};
+
+/**
+ * The things that worked.
+ *
+ * The findings engine only ever produces problems — a finding exists because a
+ * threshold was crossed — so a debrief built from findings alone tells a coach
+ * nothing but what he got wrong. That is not how anyone runs a review, and it
+ * is not what the match data says either: the same file that shows a missed
+ * target shows every target that was met.
+ *
+ * Each entry has to clear the same bar as a finding: a real number, measured
+ * against something, with nothing inferred. A target met is a strength; a
+ * target absent is not.
+ */
+export function buildStrengths({
+  row,
+  thresholds,
+  shots,
+  otherShots,
+  goals,
+  highTurnovers,
+}: {
+  row: Record<string, unknown> | null;
+  thresholds: { pressWithin2s: number; regainWithin5s: number; blockCeilingM: number };
+  shots: number;
+  otherShots: number;
+  goals: number;
+  highTurnovers: number;
+}): Strength[] {
+  const num = (key: string) => {
+    const value = row?.[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  };
+  const out: Strength[] = [];
+
+  const press = num("pressed_within_2s_pct");
+  if (press !== null && press >= thresholds.pressWithin2s)
+    out.push({
+      id: "press_met",
+      label: "We pressed on time",
+      value: `${Math.round(press)}%`,
+      basis: `inside two seconds, against a ${thresholds.pressWithin2s}% target`,
+    });
+
+  const regain = num("regained_within_5s_pct");
+  if (regain !== null && regain >= thresholds.regainWithin5s)
+    out.push({
+      id: "regain_met",
+      label: "We won it back quickly",
+      value: `${Math.round(regain)}%`,
+      basis: `back inside five seconds, against a ${thresholds.regainWithin5s}% target`,
+    });
+
+  const block = num("block_length_median_m");
+  if (block !== null && block <= thresholds.blockCeilingM)
+    out.push({
+      id: "block_met",
+      label: "We stayed compact",
+      value: `${Math.round(block)} m`,
+      basis: `back to front, under your ${thresholds.blockCeilingM} m ceiling`,
+    });
+
+  if (shots > otherShots)
+    out.push({
+      id: "shots_won",
+      label: "We made the better chances",
+      value: `${shots}–${otherShots}`,
+      basis: "shots, us against them",
+    });
+
+  if (goals > 0)
+    out.push({
+      id: "scored",
+      label: goals === 1 ? "We took our chance" : "We took our chances",
+      value: `${goals}`,
+      basis: goals === 1 ? "goal scored" : "goals scored",
+    });
+
+  if (highTurnovers > 2)
+    out.push({
+      id: "high_wins",
+      label: "We won it high up the pitch",
+      value: `${highTurnovers}`,
+      basis: "balls won in their half",
+    });
+
+  const completion = num("pass_completion_pct");
+  if (completion !== null && completion >= 75)
+    out.push({
+      id: "passing",
+      label: "We kept the ball well",
+      value: `${Math.round(completion)}%`,
+      basis: "of our passes found a team-mate",
+    });
+
+  return out;
+}

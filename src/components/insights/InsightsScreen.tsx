@@ -1,17 +1,27 @@
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowLeftRight, Goal, PieChart, Printer, Route, Ruler, Timer } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CalendarCheck,
+  Goal,
+  PieChart,
+  Route,
+  Ruler,
+  Scissors,
+  Timer,
+} from "lucide-react";
 import { ChapterRail, type ChapterCell } from "@/components/insights/ChapterRail";
 import { ClipStrip } from "@/components/insights/ClipStrip";
 import { VerdictBlock } from "@/components/insights/VerdictBlock";
 import { MatchFlow, type FlowGoal } from "@/components/insights/MatchFlow";
 import { MatchNumbersGrid, type NumberCell } from "@/components/insights/MatchNumbersGrid";
 import { FindingsList } from "@/components/insights/FindingsList";
-import { actionLinkClass, SectionHead } from "@/components/ip/touchline";
+import { Beat, Drawer, WhatWorked } from "@/components/insights/Narrative";
+import { actionLinkClass } from "@/components/ip/touchline";
 import type { TeamIdentity } from "@/components/team/TeamToken";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import type { Finding } from "@/lib/match-data";
-import { buildInsightsModel, verdict } from "@/lib/insights-model";
+import { buildInsightsModel, buildStrengths, verdict } from "@/lib/insights-model";
 import { teamRow, type StatsFile, type TeamKey, type Thresholds } from "@/lib/match-analysis";
 import type { ChapterId } from "@/lib/story-chapters";
 import type { LibraryMatch } from "@/lib/sample-data";
@@ -172,6 +182,35 @@ export function InsightsScreen({
 
   const scoreLine = `${match.teamA} ${match.scoreA}-${match.scoreB} ${match.teamB}`;
 
+  const strengths = useMemo(
+    () =>
+      buildStrengths({
+        row,
+        thresholds,
+        shots,
+        otherShots,
+        goals: goals.filter((goal) => goal.team === ownTeam).length,
+        highTurnovers: moments.filter(
+          (event) => event.team === ownTeam && event.type === "high_turnover",
+        ).length,
+      }),
+    [row, thresholds, shots, otherShots, goals, moments, ownTeam],
+  );
+
+  /** How the match went, in one line, from the result and the shape of it. */
+  const ourGoals = goals.filter((goal) => goal.team === ownTeam).length;
+  const theirGoals = goals.length - ourGoals;
+  const flowTitle =
+    goals.length === 0
+      ? "No goals tracked in this match"
+      : ourGoals > theirGoals
+        ? pressureWindow
+          ? "We won it, but gave them a way back"
+          : "We won it and held them off"
+        : ourGoals < theirGoals
+          ? "They found the gap we left"
+          : "Even on the scoreline";
+
   const chapterCells: Partial<Record<ChapterId, ChapterCell>> = {
     score: {
       title: `The result (${match.scoreA}-${match.scoreB})`,
@@ -263,11 +302,12 @@ export function InsightsScreen({
 
   return (
     <>
-      {/* The verdict comes first, then the clips that prove it, then the rail.
-          The rail used to open the page, which put five ideas in front of a
-          coach before the one that matters — and retention falls as the number
-          of ideas rises. It is navigation, so it belongs under the thing it
-          navigates away from. */}
+      {/* The page is a debrief, in the order a coach gives one: how it went,
+          what we got right, what we got wrong and why, what we do about it.
+          The counts and the full list of moments are what he reaches for once
+          he disagrees with something, so they fold away at the bottom rather
+          than opening the page. */}
+
       <VerdictBlock
         teamA={identities.A}
         teamB={identities.B}
@@ -275,78 +315,137 @@ export function InsightsScreen({
         headline={headline}
         finding={model.top}
         matchId={matchId}
-        confirmed={confirmed}
-        moments={moments.length}
       />
 
-      {model.top && model.top.timestamps.length > 0 && (
-        <ClipStrip
-          matchId={matchId}
-          timestamps={model.top.timestamps}
-          total={model.top.events}
-          label={model.top.headline}
+      <Beat
+        step={1}
+        question="How did the match go?"
+        title={flowTitle}
+        aside={`${confirmed} of ${moments.length} moments confirmed`}
+      >
+        <MatchFlow
+          momentum={momentum}
+          durationS={duration}
+          goals={goals}
+          turnovers={lossEvents.map((event) => event.t)}
+          window={pressureWindow}
+          teamA={identities.A}
+          teamB={identities.B}
+          confirmed={confirmed}
+          detected={Math.max(moments.length - confirmed, 0)}
         />
-      )}
+      </Beat>
 
-      <ChapterRail matchId={matchId} cells={chapterCells} />
+      <Beat
+        step={2}
+        question="What did we get right?"
+        title={
+          strengths.length === 0
+            ? "Nothing cleared a target"
+            : strengths.length === 1
+              ? "One thing held up"
+              : `${strengths.length} things held up`
+        }
+      >
+        <WhatWorked strengths={strengths} />
+      </Beat>
 
-      <MatchFlow
-        momentum={momentum}
-        durationS={duration}
-        goals={goals}
-        turnovers={lossEvents.map((event) => event.t)}
-        window={pressureWindow}
-        teamA={identities.A}
-        teamB={identities.B}
-        confirmed={confirmed}
-        detected={Math.max(moments.length - confirmed, 0)}
-      />
-
-      <MatchNumbersGrid cells={cells} matchId={matchId} />
-
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] lg:gap-8">
+      <Beat
+        step={3}
+        question="What went wrong, and why?"
+        title={
+          findings.length === 0
+            ? "Every target was met"
+            : findings.length === 1
+              ? "One thing to fix"
+              : `${findings.length} things to fix, worst first`
+        }
+        aside="Each one carries the moments behind it"
+      >
         <FindingsList findings={findings} matchId={matchId} />
+      </Beat>
 
-        {players.length > 0 && (
-          <section aria-labelledby="players-to-talk-to">
-            <SectionHead eyebrow="Conversations" title="Players to talk to" />
-            <div className="mt-4 border border-wire bg-surface">
+      <Beat
+        step={4}
+        question="What do we do about it?"
+        title={model.top ? "Tuesday, built from the finding above" : "Keep what worked"}
+      >
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start">
+          <div className="flex flex-col gap-3 border border-wire bg-surface p-5">
+            <p className="text-[14px] leading-relaxed text-text-dim">
+              {model.top
+                ? `The session is built from "${model.top.headline.toLowerCase()}" — the drills, their durations and the pitch diagrams all come from that finding and the ${model.top.events} moments behind it.`
+                : "No threshold was crossed in this match, so there is nothing to build a corrective session from. The plan keeps what already works."}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/match/$matchId/session" params={{ matchId }} className="btn btn-primary">
+                <CalendarCheck size={16} aria-hidden="true" />
+                Build Tuesday session
+              </Link>
+              <Link to="/match/$matchId/reel" params={{ matchId }} className="btn btn-secondary">
+                <Scissors size={15} aria-hidden="true" />
+                Cut a reel to share
+              </Link>
+            </div>
+          </div>
+
+          {players.length > 0 && (
+            <div className="border border-wire bg-surface">
               <p className="border-b border-wire px-4 py-3 text-[11.5px] leading-snug text-text-faint sm:px-5">
                 Shirt numbers from the tracking file. Match them to your own team sheet — the
                 pipeline does not know who wears what.
               </p>
               <ul className="rule-y">
                 {players.map((player) => (
-                  <li key={player.shirtNumber} className="px-4 py-3.5 sm:px-5">
+                  <li key={player.shirtNumber} className="px-4 py-3 sm:px-5">
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="flex items-baseline gap-2">
-                        <span className="num text-[19px] leading-none text-text-dim">
+                        <span className="num text-[18px] leading-none text-text-dim">
                           #{player.shirtNumber}
                         </span>
-                        <span className="text-[14px] font-semibold text-text-bright">
+                        <span className="text-[13.5px] font-semibold text-text-bright">
                           {player.descriptor}
                         </span>
                       </span>
                       <span className="num-flat shrink-0 text-[11.5px] text-text-faint">
-                        {player.count} {player.count === 1 ? "moment" : "moments"}
+                        {player.count}
                       </span>
                     </div>
                   </li>
                 ))}
               </ul>
-              <div className="border-t border-wire p-4 sm:p-5">
-                <Link
-                  to="/match/$matchId/session"
-                  params={{ matchId }}
-                  className="btn btn-secondary w-full"
-                >
-                  <Printer size={15} aria-hidden="true" />
-                  Print touchline cards
-                </Link>
-              </div>
             </div>
-          </section>
+          )}
+        </div>
+      </Beat>
+
+      {/* Everything below here is for checking, not for reading. */}
+      <div className="flex flex-col gap-3">
+        <Drawer
+          label="The numbers behind it"
+          summary={`Six counts from this match file${possession === null ? ", one withheld" : ""}`}
+        >
+          <MatchNumbersGrid cells={cells} matchId={matchId} bare />
+        </Drawer>
+
+        {model.top && model.top.timestamps.length > 0 && (
+          <Drawer
+            label={`Every moment behind "${model.top.headline.toLowerCase()}"`}
+            summary={`${model.top.events} moments, each opening the video at its own second`}
+          >
+            <ClipStrip
+              matchId={matchId}
+              timestamps={model.top.timestamps}
+              total={model.top.events}
+              label={model.top.headline}
+              bare
+            />
+          </Drawer>
         )}
+
+        <Drawer label="The match as a story" summary="Five chapters, for showing the squad">
+          <ChapterRail matchId={matchId} cells={chapterCells} bare />
+        </Drawer>
       </div>
 
       <p className="sr-only">

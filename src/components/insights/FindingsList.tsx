@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { actionLinkClass, SectionHead } from "@/components/ip/touchline";
+import { ClipStrip } from "@/components/insights/ClipStrip";
+import { actionLinkClass } from "@/components/ip/touchline";
 import type { Finding } from "@/lib/match-data";
 import { cn } from "@/lib/utils";
 
@@ -17,18 +18,6 @@ import { cn } from "@/lib/utils";
 export function FindingsList({ findings, matchId }: { findings: Finding[]; matchId: string }) {
   return (
     <section aria-labelledby="all-findings">
-      <SectionHead
-        eyebrow="Findings"
-        title="Findings in order of impact"
-        right={
-          <span className="text-[12px] text-text-faint">
-            {findings.length === 0
-              ? "Nothing crossed a threshold"
-              : `${findings.length} ${findings.length === 1 ? "finding" : "findings"}`}
-          </span>
-        }
-      />
-
       {findings.length === 0 ? (
         <p className="mt-4 border border-wire bg-surface p-5 text-[13px] leading-relaxed text-text-dim">
           Every target you set was met in this match. Nothing here is hidden — the analysis simply
@@ -62,6 +51,21 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
                 <blockquote className="mt-4 border border-wire bg-bg p-3.5 text-[13.5px] leading-snug text-text sm:p-4">
                   {finding.interpretation}
                 </blockquote>
+
+                {/* The moments sit with the claim they prove rather than in a
+                    strip at the top of the page, so the evidence is attached to
+                    the thing it is evidence for. */}
+                {finding.timestamps.length > 0 && (
+                  <div className="mt-4 border border-wire">
+                    <ClipStrip
+                      matchId={matchId}
+                      timestamps={finding.timestamps}
+                      total={finding.events}
+                      label={finding.headline}
+                      bare
+                    />
+                  </div>
+                )}
 
                 <footer className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
                   <Link

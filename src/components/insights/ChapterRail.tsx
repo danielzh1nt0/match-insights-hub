@@ -32,14 +32,20 @@ const ICONS: Record<ChapterId, ComponentType<{ size?: number; strokeWidth?: numb
 export function ChapterRail({
   matchId,
   cells,
+  bare = false,
 }: {
   matchId: string;
   cells: Partial<Record<ChapterId, ChapterCell>>;
+  /** Inside a drawer the section already has its own frame. */
+  bare?: boolean;
 }) {
   return (
     <nav
       aria-label="Match story chapters"
-      className="rule-x -mx-4 grid grid-flow-col auto-cols-[minmax(230px,1fr)] overflow-x-auto border-y border-wire [scrollbar-width:none] md:mx-0 md:auto-cols-auto md:grid-flow-row md:grid-cols-5 md:border-x [&::-webkit-scrollbar]:hidden"
+      className={cn(
+        "rule-x grid grid-flow-col auto-cols-[minmax(230px,1fr)] overflow-x-auto [scrollbar-width:none] md:auto-cols-auto md:grid-flow-row md:grid-cols-5 [&::-webkit-scrollbar]:hidden",
+        bare ? "" : "-mx-4 border-y border-wire md:mx-0 md:border-x",
+      )}
     >
       {STORY_CHAPTERS.map((chapter, i) => {
         const cell = cells[chapter.id];
