@@ -5,6 +5,7 @@ import {
   Maximize2,
   Minimize2,
   Pause,
+  Pencil,
   Play,
   Rewind,
   SkipBack,
@@ -49,6 +50,8 @@ export function PlayerOverlay({
   onMode,
   onOverlays,
   overlaysOpen,
+  onDraw,
+  drawingOpen,
   fullscreen,
   onFullscreen,
   hasEvents,
@@ -68,6 +71,8 @@ export function PlayerOverlay({
   onMode: (mode: ViewMode) => void;
   onOverlays: () => void;
   overlaysOpen: boolean;
+  onDraw: () => void;
+  drawingOpen: boolean;
   fullscreen: boolean;
   onFullscreen: () => void;
   hasEvents: boolean;
@@ -211,6 +216,9 @@ export function PlayerOverlay({
           {MODE_LABEL[mode]}
         </button>
 
+        <Ctrl label="Draw on this frame" onClick={onDraw} pressed={drawingOpen}>
+          <Pencil size={17} aria-hidden="true" />
+        </Ctrl>
         <Ctrl label="Overlays" onClick={onOverlays} pressed={overlaysOpen}>
           <Layers size={17} aria-hidden="true" />
         </Ctrl>

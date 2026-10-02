@@ -5,6 +5,7 @@ import { MatchShell } from "@/components/ip/match-shell";
 import { Chip } from "@/components/ip/primitives";
 import { StatsVisuals } from "@/components/ip/stats-visuals";
 import { ScopeChips } from "@/components/ip/scope-chips";
+import { HeadToHeadBand } from "@/components/ip/head-to-head-band";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import { useAnalysis } from "@/hooks/use-match";
 import { crestForTeam } from "@/lib/team-crests";
@@ -46,7 +47,9 @@ function Stats() {
     lineDefending,
     territory,
   } = useAnalysis(matchId, scope);
-  const [tab, setTab] = useState("ball");
+  // Ball opens with possession, which is the least actionable number in the
+  // product. Pressing is where the findings come from, so it leads.
+  const [tab, setTab] = useState("pressing");
 
   const active = sections.find((t) => t.key === tab);
 
@@ -116,6 +119,10 @@ function Stats() {
 
           <p className="text-[12px] text-text-faint">{active.caption}</p>
 
+          {teamA && teamB && active.rows.length > 0 && (
+            <HeadToHeadBand rows={active.rows} teamA={teamA} teamB={teamB} title={active.label} />
+          )}
+
           {teamA && teamB && (
             <StatsVisuals
               tab={active.key}
@@ -138,23 +145,6 @@ function Stats() {
                   { possession_ok?: boolean; events_ok?: boolean } | undefined) ?? null
               }
             />
-          )}
-          {import.meta.env.DEV && (
-            <section
-              className="border border-dashed border-wire bg-surface px-4 py-4"
-              aria-label="Stats screen anatomy reference"
-            >
-              <p className="section-kicker">Team reference</p>
-              <h2 className="display mt-2 text-[17px] text-cream">Stats screen anatomy</h2>
-              <ol className="mt-3 grid gap-2 text-[12px] text-text-dim sm:grid-cols-3">
-                <li>1. Team pill</li>
-                <li>2. Chart title</li>
-                <li>3. Subtitle</li>
-                <li>4. Visual</li>
-                <li>5. Comparison row</li>
-                <li>6. Honesty marker</li>
-              </ol>
-            </section>
           )}
         </>
       )}

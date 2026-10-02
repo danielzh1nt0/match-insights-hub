@@ -21,6 +21,7 @@ import {
   type EventFilterValue,
 } from "@/components/ip/event-filter";
 import { PlayerOverlay } from "@/components/match/PlayerOverlay";
+import { Telestration } from "@/components/match/Telestration";
 import { EventRow } from "@/components/match/EventRow";
 import { MatchSide, FeedHeading, type SideTab } from "@/components/match/MatchSide";
 import { MomentumStrip } from "@/components/match/MomentumStrip";
@@ -140,6 +141,7 @@ function MatchScreen() {
   const [layerSheet, setLayerSheet] = useState(false);
   const [controlsAwake, setControlsAwake] = useState(true);
   const [fullscreen, setFullscreen] = useState(false);
+  const [drawing, setDrawing] = useState(false);
   const mediaRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const seededRef = useRef(false);
@@ -461,9 +463,7 @@ function MatchScreen() {
               onPointerMove={wakeControls}
               className={cn(
                 "relative w-full select-none overflow-hidden border border-wire bg-black",
-                fullscreen
-                  ? "h-dvh w-dvw max-w-none rounded-none border-0"
-                  : "aspect-[16/9]",
+                fullscreen ? "h-dvh w-dvw max-w-none rounded-none border-0" : "aspect-[16/9]",
               )}
             >
               <video
@@ -559,6 +559,13 @@ function MatchScreen() {
                   </div>
                 </div>
               )}
+              <Telestration
+                open={drawing}
+                onClose={() => setDrawing(false)}
+                videoRef={videoRef}
+                frameLabel={`${Math.floor(clock / 60)}-${String(Math.floor(clock % 60)).padStart(2, "0")}`}
+              />
+
               <PlayerOverlay
                 playing={playing}
                 currentTime={clock}
@@ -574,6 +581,13 @@ function MatchScreen() {
                 onMode={setMode}
                 onOverlays={() => setLayerSheet((v) => !v)}
                 overlaysOpen={layerSheet}
+                onDraw={() => {
+                  // Drawing is for a still frame — starting it pauses the match.
+                  const video = videoRef.current;
+                  if (video && !video.paused) video.pause();
+                  setDrawing((v) => !v);
+                }}
+                drawingOpen={drawing}
                 fullscreen={fullscreen}
                 onFullscreen={toggleFullscreen}
                 hasEvents={ticks.length > 0}

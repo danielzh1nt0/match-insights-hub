@@ -1,18 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { motion } from "motion/react";
-import { ArrowRight, Check, Play, Target } from "lucide-react";
+import type { ComponentType } from "react";
+import { ClipboardList, Pencil, Play, Plus } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
-import { Wordmark, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
-import bvbCrest from "@/assets/bvb-crest.png.asset.json";
-import bayernCrest from "@/assets/bayern-crest.png.asset.json";
+import { Wordmark } from "@/components/ip/primitives";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Ipanema — Football match analysis for coaches" },
-      { name: "description", content: "Turn match footage into clear coaching findings, reviewable clips, and Tuesday's training session." },
-      { property: "og:title", content: "Ipanema — Football match analysis for coaches" },
-      { property: "og:description", content: "Findings, not dashboards. Every number has a clip. It writes the session." },
+      {
+        name: "description",
+        content:
+          "Upload the match. Get back the three things that decided it, the clips that prove each one, and a session plan built from them.",
+      },
+      { property: "og:title", content: "From final whistle to Tuesday's session" },
+      {
+        property: "og:description",
+        content: "Findings, not dashboards. Every number has a clip. It writes the session.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -20,126 +25,340 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function TacticalPreview() {
+/* ---------------- The product, drawn rather than screenshotted ---------------- */
+
+/**
+ * A simplified Insights screen for the hero.
+ *
+ * Drawn in markup rather than shipped as a screenshot so it stays in the
+ * system's colours, stays sharp on any display, and cannot go stale when the
+ * product moves. Every figure on it is one the pipeline really produces.
+ */
+function HeroPanel() {
   return (
-    <div className="overflow-hidden border border-wire bg-workspace">
-      <div className="flex min-h-14 items-center justify-between border-b border-wire-2 px-4">
-        <span className="section-kicker">Match review · Full time</span>
-        <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
-          <span className="h-1.5 w-1.5 rounded-full bg-quality-good" /> Analysis ready
-        </span>
+    <div className="border border-wire bg-surface">
+      <div className="flex items-center justify-between gap-3 border-b border-wire px-4 py-3">
+        <span className="label-xs text-text-faint">Match debrief · U16</span>
+        <span className="label-xs text-positive">9 of 22 confirmed</span>
       </div>
-      <div className="grid lg:grid-cols-[180px_minmax(0,1fr)_220px]">
-        <aside className="hidden border-r border-wire-2 p-4 lg:block">
-          <p className="section-kicker text-cream">Coach summary</p>
-          <div className="mt-4 space-y-2">
-            {["Insights", "Match", "Territory", "Stats"].map((item, index) => (
-              <div key={item} className={`flex min-h-10 items-center gap-3 px-3 text-[11px] font-bold uppercase ${index === 0 ? "bg-surface-2 text-cream" : "text-text-faint"}`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${index === 0 ? "bg-cream" : "bg-wire"}`} />{item}
-              </div>
-            ))}
-          </div>
-          <div className="mt-8 border-t border-wire-2 pt-4">
-            <p className="text-[10px] uppercase text-text-faint">Next session</p>
-            <p className="display mt-1 text-[16px] text-text">Tuesday · 18:30</p>
-            <p className="mt-1 text-[11px] text-text-dim">3 drills · 68 min</p>
-          </div>
-        </aside>
 
-        <div className="p-4 md:p-6">
-          <div className="flex items-center justify-center gap-5 border-b border-wire-2 pb-5 md:gap-10">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <img src={bvbCrest.url} alt="Borussia Dortmund" className="h-10 w-10 object-contain md:h-12 md:w-12" />
-              <span className="display hidden text-[15px] text-text sm:block">Dortmund</span>
-            </div>
-            <span className="display-i text-[40px] leading-none text-cream md:text-[52px]">2 : 1</span>
-            <div className="flex min-w-0 items-center gap-2.5">
-              <span className="display hidden text-[15px] text-text sm:block">FC Bayern</span>
-              <img src={bayernCrest.url} alt="FC Bayern München" className="h-10 w-10 object-contain md:h-12 md:w-12" />
-            </div>
-          </div>
+      <div className="p-4 sm:p-5">
+        <p className="display-i text-[clamp(15px,1.5vw,19px)] leading-tight text-text-bright">
+          &ldquo;We won it twice. They walked back in once.&rdquo;
+        </p>
 
-          <div className="mt-4 border border-wire bg-surface p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="section-kicker">01 · Defensive transition</p>
-                <h3 className="display-i mt-2 max-w-[420px] text-[26px] leading-[.95] text-cream md:text-[32px]">The first pressure arrived too late</h3>
-              </div>
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-wire text-text-faint"><Target size={15} /></span>
+        <div className="rule-x mt-4 grid grid-cols-3 border border-wire">
+          {[
+            { value: "42%", label: "Pressed under 2s", tone: "text-text-bright" },
+            { value: "14–8", label: "Shots", tone: "text-accent-sea" },
+            { value: "2.1s", label: "Reaction time", tone: "text-positive" },
+          ].map((figure) => (
+            <div key={figure.label} className="p-3">
+              <p className={`num text-[clamp(20px,2.4vw,28px)] leading-none ${figure.tone}`}>
+                {figure.value}
+              </p>
+              <p className="label-xs mt-1.5 text-text-faint">{figure.label}</p>
             </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_124px]">
-              <div className="tactical-grid relative min-h-[166px] overflow-hidden border border-wire-2 bg-surface-2">
-                <svg viewBox="0 0 100 58" className="absolute inset-0 h-full w-full" role="img" aria-label="Tactical pitch showing a late defensive pressure">
-                  <g fill="none" stroke="var(--cream)" strokeOpacity=".18" strokeWidth=".35"><rect x="3" y="3" width="94" height="52"/><line x1="50" y1="3" x2="50" y2="55"/><circle cx="50" cy="29" r="8"/><rect x="3" y="17" width="13" height="24"/><rect x="84" y="17" width="13" height="24"/></g>
-                  <path d="M26 40 C40 30 54 35 70 18" fill="none" stroke="var(--cream)" strokeWidth="1.1" strokeDasharray="2 2"/>
-                  {[{x:25,y:40,c:"var(--club-bvb)"},{x:39,y:34,c:"var(--club-bvb)"},{x:57,y:31,c:"var(--club-bvb)"},{x:69,y:18,c:"var(--club-bayern)"},{x:75,y:34,c:"var(--club-bayern)"}].map((p,i)=><circle key={i} cx={p.x} cy={p.y} r="2.4" fill={p.c}/>) }
-                  <circle cx="66" cy="21" r="1.1" fill="var(--cream)"/>
-                </svg>
-                <span className="absolute bottom-3 left-3 inline-flex items-center gap-2 bg-bg/90 px-2.5 py-1.5 text-[10px] font-bold text-cream"><Play size={11} fill="currentColor"/> 64:18</span>
-              </div>
-              <div className="grid grid-cols-2 gap-px border border-wire-2 bg-wire-2 sm:grid-cols-1">
-                <div className="bg-surface-2 p-3"><strong className="display-i text-[31px] leading-none text-cream">4.8s</strong><span className="mt-1 block text-[9px] uppercase text-text-faint">Reaction</span></div>
-                <div className="bg-surface-2 p-3"><strong className="display-i text-[31px] leading-none text-cream">7</strong><span className="mt-1 block text-[9px] uppercase text-text-faint">Moments</span></div>
-              </div>
-            </div>
-            <p className="mt-4 border-l-2 border-cream pl-3 text-[12px] leading-relaxed text-text-dim">When possession turned over, the nearest player delayed instead of closing the first pass.</p>
-          </div>
+          ))}
         </div>
 
-        <aside className="hidden border-l border-wire-2 p-4 lg:flex lg:flex-col">
-          <p className="section-kicker">Match facts</p>
-          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden border border-wire-2 bg-wire-2">
-            {[['61%','Ball'],['9','Regains'],['4.8s','Reaction'],['3','Findings']].map(([value,label]) => (
-              <div key={label} className="bg-surface-2 p-3"><strong className="num text-[24px] text-cream">{value}</strong><span className="block text-[9px] uppercase text-text-faint">{label}</span></div>
+        {/* The territory line: ours above the axis, theirs filled below. */}
+        <div className="mt-4 border border-wire bg-surface-2 p-3">
+          <p className="label-xs text-text-faint">Territory through the match</p>
+          <svg
+            viewBox="0 0 400 90"
+            preserveAspectRatio="none"
+            className="mt-2 h-[90px] w-full"
+            role="img"
+            aria-label="Territory swung to the opponent before half-time and back after it"
+          >
+            <defs>
+              <clipPath id="hero-below">
+                <rect x="0" y="45" width="400" height="45" />
+              </clipPath>
+            </defs>
+            <line x1="0" y1="45" x2="400" y2="45" stroke="var(--wire)" strokeWidth="1" />
+            <path
+              d="M0 48 C 40 30, 70 22, 100 34 C 130 46, 150 72, 190 70 C 230 68, 250 40, 290 30 C 330 20, 360 34, 400 40 L 400 45 L 0 45 Z"
+              fill="var(--team-b)"
+              opacity="0.45"
+              clipPath="url(#hero-below)"
+            />
+            <path
+              d="M0 48 C 40 30, 70 22, 100 34 C 130 46, 150 72, 190 70 C 230 68, 250 40, 290 30 C 330 20, 360 34, 400 40"
+              fill="none"
+              stroke="var(--cream)"
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1="200"
+              y1="0"
+              x2="200"
+              y2="90"
+              stroke="var(--text-faint)"
+              strokeWidth="1"
+              strokeDasharray="3 3"
+            />
+          </svg>
+          <div className="flex justify-between">
+            {["0'", "Half-time", "90'"].map((t) => (
+              <span key={t} className="num-flat text-[10px] text-text-faint">
+                {t}
+              </span>
             ))}
           </div>
-          <div className="mt-auto border-t border-wire-2 pt-4 text-[11px] text-text-dim">
-            <p className="inline-flex items-center gap-2"><Check size={13} className="text-quality-good" /> Evidence checked</p>
-            <p className="mt-2 inline-flex items-center gap-2"><Check size={13} className="text-quality-good" /> Session ready</p>
-          </div>
-        </aside>
+        </div>
       </div>
     </div>
   );
 }
 
+/* ---------------- Page ---------------- */
+
 function Landing() {
   const { session } = useSession();
   const signedIn = Boolean(session);
+
   return (
-    <div className="min-h-screen bg-bg">
-      <header className="border-b border-wire-2">
-        <div className="mx-auto flex min-h-16 max-w-[1440px] items-center justify-between px-4 md:px-7">
-          <div className="flex items-center gap-3"><span className="display-i grid h-9 w-9 place-items-center border border-cream text-[21px] text-cream">I</span><Wordmark size="sm" /></div>
-          <nav className="flex items-center gap-2">
-            {!signedIn && <Link to="/signin"><SecondaryButton>Sign in</SecondaryButton></Link>}
-            <Link to={signedIn ? "/library" : "/signup"}><PrimaryButton>{signedIn ? "Open library" : "Request access"}</PrimaryButton></Link>
+    <div className="min-h-screen">
+      <header className="border-b border-wire">
+        <div className="mx-auto flex min-h-[64px] max-w-[1440px] items-center gap-4 px-4 md:px-7">
+          <Link to="/" aria-label="Ipanema" className="flex items-center gap-2.5">
+            <Wordmark size="sm" />
+            <span className="label-xs border border-wire px-1.5 py-1 text-text-faint">
+              Tactical
+            </span>
+          </Link>
+
+          <nav className="ml-auto flex items-center gap-2 sm:gap-4">
+            {signedIn ? (
+              <Link to="/library" className="btn btn-primary">
+                Your matches
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/signin"
+                  className="label-sm px-2 text-text-dim transition-colors hover:text-text"
+                >
+                  Sign in
+                </Link>
+                <Link to="/signup" className="btn btn-primary">
+                  Start free
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>
-      <main>
-        <section className="tactical-grid border-b border-wire-2">
-          <div className="mx-auto max-w-[1440px] px-4 pb-12 pt-12 md:px-7 md:pb-20 md:pt-20">
-            <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.28,ease:"easeOut"}} className="max-w-[850px]">
-              <p className="section-kicker">Match intelligence for football coaches</p>
-              <h1 className="display-i mt-4 text-[54px] leading-[.86] text-cream sm:text-[72px] lg:text-[96px]">FROM FINAL WHISTLE<br/>TO TUESDAY’S SESSION.</h1>
-              <p className="mt-5 max-w-[620px] text-[15px] leading-relaxed text-text-dim md:text-[17px]">Ipanema turns your match footage into clear findings, reviewable moments, and a training plan your staff can use.</p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link to={signedIn ? "/library" : "/signup"}><PrimaryButton className="h-12 px-6">{signedIn ? "Open your library" : "Request access"}<ArrowRight size={16}/></PrimaryButton></Link>
-                {!signedIn && <Link to="/signin"><SecondaryButton className="h-12 px-6">Sign in</SecondaryButton></Link>}
-              </div>
-            </motion.div>
-            <div className="mt-10 lg:mt-14"><TacticalPreview /></div>
+
+      {/* ---------------- Hero ---------------- */}
+      <section className="relative z-[1] mx-auto max-w-[1440px] px-4 py-14 md:px-7 md:py-20">
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:gap-14">
+          <div className="min-w-0">
+            <p className="label-sm text-accent-sea">For youth football coaches</p>
+            <h1 className="display-i mt-4 text-[clamp(32px,4.4vw,54px)] leading-[0.94] text-text-bright">
+              From final whistle
+              <br />
+              to Tuesday&rsquo;s session
+            </h1>
+            <p className="mt-5 max-w-[52ch] text-[16px] leading-relaxed text-text-dim md:text-[17px]">
+              Upload the match. Get back the three things that decided it, the clips that prove each
+              one, and a session plan built from them.
+            </p>
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link to="/signup" className="btn btn-primary">
+                Start free with one match
+              </Link>
+              <Link to="/glossary" className="btn btn-secondary">
+                See what you get back
+              </Link>
+            </div>
+            <p className="mt-4 text-[12.5px] text-text-faint">
+              No card. One match, free, start to finish.
+            </p>
           </div>
-        </section>
-        <section className="mx-auto grid max-w-[1440px] gap-px border-x border-wire-2 bg-wire-2 md:grid-cols-3">
+
+          <HeroPanel />
+        </div>
+      </section>
+
+      {/* ---------------- What it gives back ---------------- */}
+      <section className="border-y border-wire" aria-labelledby="what-you-get">
+        <h2 id="what-you-get" className="sr-only">
+          What you get back
+        </h2>
+        <div className="rule-x mx-auto grid max-w-[1440px] md:grid-cols-2 xl:grid-cols-4">
+          <Feature
+            icon={Plus}
+            title="The one thing to fix"
+            body="Every match returns a single headline finding, with the number behind it and the target you set. Not a dashboard of forty metrics."
+          />
+          <Feature
+            icon={Play}
+            title="The clips that prove it"
+            body="Each finding carries its moments. Tap one and the video is already at the right second, ready to share to your staff group."
+          />
+          <Feature
+            icon={Pencil}
+            title="Telestration on every clip"
+            body="Draw straight onto the video before you send it. Circle a player, mark the run, or point an arrow at the space they missed."
+          />
+          <Feature
+            icon={ClipboardList}
+            title="Tuesday's session"
+            body="The finding becomes a session plan with drills, durations and pitch diagrams you can print and take out with you."
+          />
+        </div>
+      </section>
+
+      {/* ---------------- How it works ---------------- */}
+      <section className="mx-auto max-w-[1440px] px-4 py-14 md:px-7 md:py-20" aria-labelledby="how">
+        <p className="label-sm text-accent-sea">Methodology</p>
+        <h2
+          id="how"
+          className="display-i mt-2 text-[clamp(26px,3.6vw,40px)] leading-none text-text-bright"
+        >
+          From file to the grass
+        </h2>
+
+        <ol className="rule-x mt-7 grid border border-wire sm:grid-cols-2 xl:grid-cols-4">
           {[
-            ["01", "Find the pattern", "Three to five coaching findings, ranked by what changes the next performance."],
-            ["02", "Watch the evidence", "Every claim opens the exact match moment, ready for your review."],
-            ["03", "Train the response", "Turn confirmed findings into drills, timings, cues, and progressions."],
-          ].map(([number,title,body])=><article key={number} className="bg-bg p-6 md:p-8"><span className="num text-[12px] text-text-faint">{number}</span><h2 className="display-i mt-5 text-[27px] text-cream">{title}</h2><p className="mt-2 max-w-[360px] text-[13px] leading-relaxed text-text-dim">{body}</p></article>)}
-        </section>
-      </main>
+            ["Upload", "One video file from any fixed camera. MP4 or MOV."],
+            [
+              "We watch it",
+              "Players, ball and every turnover, tracked. About thirty minutes for a half.",
+            ],
+            [
+              "You read it",
+              "Three findings, the clips behind them, and the tools to mark up what you want them to see.",
+            ],
+            [
+              "You coach it",
+              "Build Tuesday's session and share the marked-up clips to your squad.",
+            ],
+          ].map(([title, body], i) => (
+            <li key={title} className="p-5">
+              <span className="num block text-[32px] leading-none text-text-faint">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-3 text-[15px] font-semibold text-text-bright">{title}</h3>
+              <p className="mt-2 text-[13px] leading-snug text-text-dim">{body}</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* ---------------- The honesty position ---------------- */}
+      <section
+        className="mx-auto max-w-[1440px] px-4 pb-14 md:px-7 md:pb-20"
+        aria-labelledby="honesty"
+      >
+        <div className="border border-wire bg-surface p-6 sm:p-8 md:p-10">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] lg:items-center">
+            <div>
+              <p className="label-sm text-accent-sea">What we will not do</p>
+              <h2
+                id="honesty"
+                className="display-i mt-3 text-[clamp(26px,3.4vw,38px)] leading-none text-text-bright"
+              >
+                We don&rsquo;t invent numbers
+              </h2>
+              <p className="mt-4 max-w-[62ch] text-[14.5px] leading-relaxed text-text-dim">
+                When the camera loses the ball, we say so. A figure we can&rsquo;t stand behind is
+                marked withheld, with the reason next to it. You will never take a number into a
+                dressing room that we made up.
+              </p>
+            </div>
+
+            {/* The real withheld treatment, exactly as it appears in the product. */}
+            <div className="border border-wire bg-surface-2 p-4 sm:p-5">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="text-[14px] font-semibold text-text-bright">Block length</span>
+                <span className="text-[15px] font-medium text-text-dim">Withheld</span>
+              </div>
+              <p className="mt-2 text-[12.5px] leading-snug text-text-faint">
+                Ball tracking below threshold in the second half.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------- Who it is for ---------------- */}
+      <section className="border-y border-wire" aria-label="Who Ipanema is for">
+        <ul className="rule-x mx-auto grid max-w-[1440px] sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            "Youth and academy coaches, from U13 up",
+            "Clubs filming on a tripod, a club camera or a phone",
+            "Anyone who runs the session as well as the analysis",
+            "Coaches who want to draw on a clip in seconds, not hours",
+          ].map((line) => (
+            <li key={line} className="flex items-start gap-2.5 p-5">
+              <span
+                aria-hidden="true"
+                className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-positive"
+              />
+              <span className="text-[13.5px] leading-snug text-text">{line}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ---------------- Closing ---------------- */}
+      <section className="mx-auto max-w-[1440px] px-4 py-16 text-center md:px-7 md:py-24">
+        <h2 className="display-i mx-auto max-w-[20ch] text-[clamp(30px,5vw,54px)] leading-[0.95] text-text-bright">
+          Your next match is Tuesday&rsquo;s session
+        </h2>
+        <div className="mt-8 flex justify-center">
+          <Link to="/signup" className="btn btn-primary">
+            Start free with one match
+          </Link>
+        </div>
+        <p className="mt-4 text-[12.5px] text-text-faint">One match, free. No card.</p>
+      </section>
+
+      <footer className="border-t border-wire">
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-4 px-4 py-6 md:px-7">
+          <Wordmark size="sm" />
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Link
+              to="/signin"
+              className="text-[12.5px] text-text-dim transition-colors hover:text-text"
+            >
+              Sign in
+            </Link>
+            <Link
+              to="/glossary"
+              className="text-[12.5px] text-text-dim transition-colors hover:text-text"
+            >
+              Glossary
+            </Link>
+          </nav>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function Feature({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: ComponentType<{ size?: number; strokeWidth?: number; "aria-hidden"?: boolean }>;
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="p-6 md:p-7">
+      <span className="grid h-10 w-10 place-items-center border border-wire text-accent-sea">
+        <Icon size={18} strokeWidth={1.75} aria-hidden={true} />
+      </span>
+      <h3 className="display-i mt-4 text-[19px] leading-none text-text-bright">{title}</h3>
+      <p className="mt-3 text-[13.5px] leading-snug text-text-dim">{body}</p>
     </div>
   );
 }
