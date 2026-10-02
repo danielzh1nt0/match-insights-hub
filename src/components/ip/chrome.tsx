@@ -39,63 +39,73 @@ export type HeaderMatch = {
 /**
  * The bar at the top of every screen.
  *
- * On a desktop it is the whole chrome: wordmark, the fixture under review and
- * the sections, in one row, so everything below belongs to the match itself. On
- * a phone it keeps only the scoreline and hands the sections to the bar at the
- * bottom, where a thumb can reach them.
+ * The wordmark is on it at every width — it used to be hidden below the medium
+ * breakpoint, which took the logo off the product entirely on a phone — and the
+ * way back to the match library is always a visible, labelled control rather
+ * than an unlabelled arrow or a logo you have to guess is a link.
+ *
+ * On a desktop everything sits in one row. On a phone the fixture takes a
+ * second row, because a scoreline squeezed between a back control and an avatar
+ * is unreadable at 390px.
  */
 export function AppHeader({
   backTo,
   onBack,
   match,
   matchId,
+  /** Set on the library itself, where a link back to it would be a loop. */
+  atLibrary = false,
 }: {
   backTo?: string;
   onBack?: () => void;
   match?: HeaderMatch | undefined;
   /** Given on a match screen, the sections appear in the bar on a desktop. */
   matchId?: string | undefined;
+  atLibrary?: boolean;
 }) {
-  const back = backTo ? (
-    <Link
-      to={backTo}
-      aria-label="Go back"
-      className="tap flex items-center justify-center text-text-dim hover:text-text"
-    >
-      <ArrowLeft size={18} />
-    </Link>
-  ) : onBack ? (
-    <button
-      type="button"
-      aria-label="Go back"
-      onClick={onBack}
-      className="tap flex items-center justify-center text-text-dim hover:text-text"
-    >
-      <ArrowLeft size={18} />
+  const backClass =
+    "tap label-sm flex shrink-0 items-center gap-1.5 pr-1 text-text-dim transition-colors hover:text-text";
+
+  const back = onBack ? (
+    <button type="button" aria-label="Go back" onClick={onBack} className={backClass}>
+      <ArrowLeft size={16} aria-hidden="true" />
+      <span className="hidden sm:inline">Back</span>
     </button>
-  ) : null;
+  ) : atLibrary ? null : (
+    <Link to={backTo ?? "/library"} className={backClass}>
+      <ArrowLeft size={16} aria-hidden="true" />
+      <span>Matches</span>
+    </Link>
+  );
+
+  const wordmark = (
+    <Link
+      to="/library"
+      aria-label="Ipanema match library"
+      className="flex shrink-0 items-center gap-2.5"
+    >
+      <Wordmark size="sm" />
+      <span className="label-xs hidden border border-wire px-1.5 py-1 text-text-faint sm:block">
+        Tactical
+      </span>
+    </Link>
+  );
 
   return (
     <header className="sticky top-0 z-40 border-b border-wire bg-bg">
       <div className="mx-auto max-w-[1440px] px-4 md:px-7">
         <div className="flex min-h-[56px] items-center gap-3 md:min-h-[64px] md:gap-5">
-          <div className="flex shrink-0 items-center gap-2.5">
-            <span className="md:hidden">{back}</span>
-            <Link
-              to="/library"
-              aria-label="Ipanema match library"
-              className="hidden items-center gap-2.5 md:flex"
-            >
-              <Wordmark size="sm" />
-              <span className="label-xs border border-wire px-1.5 py-1 text-text-faint">
-                Tactical
-              </span>
-            </Link>
-          </div>
+          {wordmark}
 
-          {match && <FixtureBlock match={match} />}
+          {/* On a desktop the way back sits beside the wordmark; on a phone it
+              moves down to the fixture row so the logo keeps the corner. */}
+          <span className="hidden items-center md:flex">{back}</span>
 
-          {matchId && <SectionNav matchId={matchId} className="hidden shrink-0 xl:flex" />}
+          {match && <FixtureBlock match={match} className="hidden md:flex" />}
+
+          {matchId && (
+            <SectionNav matchId={matchId} className="hidden shrink-0 min-[1400px]:flex" />
+          )}
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
             <ThemeToggle />
@@ -103,12 +113,27 @@ export function AppHeader({
           </div>
         </div>
 
+        {/* The fixture, and the way out of it, on a phone. */}
+        {match && (
+          <div className="-mx-4 flex items-center gap-3 border-t border-wire px-4 py-2 md:hidden">
+            {back}
+            <FixtureBlock match={match} className="min-w-0 flex-1" />
+          </div>
+        )}
+
+        {/* With no fixture to show, a phone still needs the way back. */}
+        {!match && !atLibrary && (
+          <div className="-mx-4 flex items-center border-t border-wire px-4 py-2 md:hidden">
+            {back}
+          </div>
+        )}
+
         {/* Under 1280px the sections no longer fit beside the fixture, so they
             take their own scrollable row rather than being cut off. */}
         {matchId && (
           <SectionNav
             matchId={matchId}
-            className="-mx-4 hidden border-t border-wire px-4 md:flex xl:hidden"
+            className="-mx-4 hidden border-t border-wire px-4 md:flex min-[1400px]:hidden"
           />
         )}
       </div>
@@ -123,14 +148,17 @@ export function AppHeader({
  * season on file needs to know at a glance which match he is reading — and it
  * is the way back to the library.
  */
-function FixtureBlock({ match }: { match: HeaderMatch }) {
+function FixtureBlock({ match, className }: { match: HeaderMatch; className?: string }) {
   const played = match.scoreA !== null && match.scoreB !== null;
   const score = played ? `${match.scoreA}-${match.scoreB}` : null;
   return (
     <Link
       to="/library"
       title="Switch match"
-      className="group flex min-w-0 items-center gap-2.5 border border-wire px-2.5 py-1.5 transition-colors hover:border-cream/50 md:gap-3 md:px-3"
+      className={cn(
+        "group flex min-w-0 items-center gap-2.5 border border-wire px-2.5 py-1.5 transition-colors hover:border-cream/50 md:gap-3 md:px-3",
+        className,
+      )}
     >
       <HeaderCrest
         name={match.teamA}

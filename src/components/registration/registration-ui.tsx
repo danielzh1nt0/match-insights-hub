@@ -1,19 +1,43 @@
 import { type ReactNode, useEffect, useRef } from "react";
-import { Camera, ChevronDown, FileImage, Grid2X2, Image, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Camera, ChevronDown, FileImage, Grid2X2, Image, X } from "lucide-react";
 import { Wordmark } from "@/components/ip/primitives";
 import { cn } from "@/lib/utils";
 
 export function RegistrationShell({
   children,
   footer,
+  /** Where this screen goes back to. Without it there is no way out. */
+  backTo,
+  backLabel = "Back",
 }: {
   children: ReactNode;
   footer?: ReactNode;
+  backTo?: string;
+  backLabel?: string;
 }) {
   return (
     <main className="min-h-screen bg-bg">
       <div className="mx-auto flex min-h-[100svh] w-full max-w-[560px] flex-col px-6 pt-6 md:py-10">
-        <Wordmark size="sm" className="mx-auto opacity-60" />
+        {/* The wordmark used to sit here alone and faded, which left these
+            screens with no way back at all. */}
+        <div className="flex min-h-11 items-center justify-between gap-3">
+          {backTo ? (
+            <Link
+              to={backTo}
+              className="tap label-sm flex items-center gap-1.5 text-text-dim transition-colors hover:text-text"
+            >
+              <ArrowLeft size={16} aria-hidden="true" />
+              {backLabel}
+            </Link>
+          ) : (
+            <span />
+          )}
+          <Link to="/" aria-label="Ipanema home">
+            <Wordmark size="sm" />
+          </Link>
+          <span className="w-[72px]" aria-hidden="true" />
+        </div>
         <div className="flex-1 pb-6">{children}</div>
         {footer && (
           <div className="sticky bottom-0 z-10 -mx-6 border-t border-wire-2 bg-bg/95 px-6 pb-[max(16px,env(safe-area-inset-bottom))] pt-4 backdrop-blur">

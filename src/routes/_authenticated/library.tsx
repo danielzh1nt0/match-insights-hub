@@ -110,7 +110,7 @@ function LibraryPage() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader />
+      <AppHeader atLibrary />
       <Screen className="pb-16 pt-6">
         <p className="label-sm flex flex-wrap items-center gap-x-2 text-text-faint">
           {clubName && (
@@ -154,7 +154,7 @@ function LibraryPage() {
                   aria-selected={tab === key}
                   onClick={() => setTab(key)}
                   className={cn(
-                    "label-sm flex h-11 items-center gap-1.5 px-4 transition-colors",
+                    "label-sm flex h-11 shrink-0 flex-1 items-center justify-center gap-1.5 px-4 transition-colors sm:flex-none sm:justify-start",
                     tab === key
                       ? "bg-surface-2 text-text-bright"
                       : "text-text-faint hover:bg-surface hover:text-text",
@@ -166,8 +166,8 @@ function LibraryPage() {
               ))}
             </div>
 
-            <Link to="/upload">
-              <PrimaryButton>
+            <Link to="/upload" className="shrink-0">
+              <PrimaryButton block className="sm:w-auto">
                 <Plus size={15} aria-hidden="true" />
                 Upload a match
               </PrimaryButton>
@@ -195,9 +195,9 @@ function LibraryPage() {
           <EmptyState />
         ) : (
           <>
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-y border-wire py-3">
-              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">
-                <div className="relative w-full max-w-[260px]">
+            <div className="mt-6 flex flex-col gap-3 border-y border-wire py-3 lg:flex-row lg:items-center lg:justify-between lg:gap-x-6">
+              <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-x-4">
+                <div className="relative w-full sm:max-w-[260px]">
                   <Search
                     size={15}
                     className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-faint"
@@ -212,8 +212,8 @@ function LibraryPage() {
                   />
                 </div>
                 {competitions.length > 1 && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="label-xs text-text-faint">Filter by</span>
+                  <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden">
+                    <span className="label-xs shrink-0 text-text-faint">Filter by</span>
                     {competitions.map((name) => (
                       <button
                         key={name}
@@ -221,7 +221,7 @@ function LibraryPage() {
                         aria-pressed={competition === name}
                         onClick={() => setCompetition(competition === name ? null : name)}
                         className={cn(
-                          "label-xs border px-2 py-1.5 transition-colors",
+                          "label-xs shrink-0 whitespace-nowrap border px-2.5 py-2 transition-colors",
                           competition === name
                             ? "border-cream bg-surface-2 text-text-bright"
                             : "border-wire text-text-dim hover:text-text",
@@ -235,7 +235,7 @@ function LibraryPage() {
               </div>
 
               {record.won + record.drawn + record.lost > 0 && (
-                <p className="flex shrink-0 items-center gap-4">
+                <p className="flex shrink-0 items-center gap-4 border-t border-wire pt-3 lg:border-0 lg:pt-0">
                   <RecordChip letter="W" count={record.won} label="won" />
                   <RecordChip letter="D" count={record.drawn} label="drawn" />
                   <RecordChip letter="L" count={record.lost} label="lost" />
