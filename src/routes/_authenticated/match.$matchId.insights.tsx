@@ -4,6 +4,7 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { InsightsScreen } from "@/components/insights/InsightsScreen";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useAnalysis } from "@/hooks/use-match";
+import { useMatchVideo } from "@/hooks/use-match-video";
 import { teamIdentities } from "@/lib/team-identity";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/insights")({
@@ -27,8 +28,20 @@ function Insights() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, colours, findings, summary, loading, events, review, stats, team, thresholds } =
-    useAnalysis(matchId, scope);
+  const {
+    match,
+    row,
+    colours,
+    findings,
+    summary,
+    loading,
+    events,
+    review,
+    stats,
+    team,
+    thresholds,
+  } = useAnalysis(matchId, scope);
+  const videoUrl = useMatchVideo(row);
   const identities = teamIdentities(match, colours);
 
   return (
@@ -62,6 +75,7 @@ function Insights() {
           thresholds={thresholds}
           identities={identities}
           iconColour={scope === "b" ? colours.B : colours.A}
+          videoUrl={videoUrl}
           onReview={(input) => review.setVerdict.mutate(input)}
         />
       )}

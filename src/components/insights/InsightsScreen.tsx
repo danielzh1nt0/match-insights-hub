@@ -54,6 +54,7 @@ export function InsightsScreen({
   team,
   thresholds,
   identities,
+  videoUrl,
 }: {
   matchId: string;
   match: LibraryMatch;
@@ -65,6 +66,8 @@ export function InsightsScreen({
   thresholds: Thresholds;
   iconColour: string;
   identities: { A: TeamIdentity; B: TeamIdentity };
+  /** The signed match video, so clips play on this page rather than linking away. */
+  videoUrl?: string | undefined;
   onReview: (input: {
     eventId: string;
     verdict: "confirmed" | "deleted" | "retimed";
@@ -366,7 +369,7 @@ export function InsightsScreen({
         }
         aside="Each one carries the moments behind it"
       >
-        <FindingsList findings={findings} matchId={matchId} />
+        <FindingsList findings={findings} matchId={matchId} videoUrl={videoUrl} />
       </Beat>
 
       <Beat
@@ -428,13 +431,14 @@ export function InsightsScreen({
         {model.top && model.top.timestamps.length > 0 && (
           <Drawer
             label={`Every moment behind "${model.top.headline.toLowerCase()}"`}
-            summary={`${model.top.events} moments, each opening the video at its own second`}
+            summary={`${model.top.events} moments, each playable where it sits`}
           >
             <ClipStrip
               matchId={matchId}
               timestamps={model.top.timestamps}
               total={model.top.events}
               label={model.top.headline}
+              videoUrl={videoUrl}
               bare
             />
           </Drawer>

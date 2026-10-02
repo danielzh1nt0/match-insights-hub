@@ -15,7 +15,16 @@ import { cn } from "@/lib/utils";
  * A finding exists only because a real number crossed a threshold the coach
  * set, so there is no empty-list filler: when nothing fired, the list says so.
  */
-export function FindingsList({ findings, matchId }: { findings: Finding[]; matchId: string }) {
+export function FindingsList({
+  findings,
+  matchId,
+  videoUrl,
+}: {
+  findings: Finding[];
+  matchId: string;
+  /** Absent until the match video is signed; the clip tiles then link out. */
+  videoUrl?: string | undefined;
+}) {
   return (
     <section aria-labelledby="all-findings">
       {findings.length === 0 ? (
@@ -62,6 +71,7 @@ export function FindingsList({ findings, matchId }: { findings: Finding[]; match
                       timestamps={finding.timestamps}
                       total={finding.events}
                       label={finding.headline}
+                      videoUrl={videoUrl}
                       bare
                     />
                   </div>

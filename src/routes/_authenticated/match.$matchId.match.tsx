@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useFrameChunks } from "@/hooks/use-frame-chunks";
@@ -27,10 +26,11 @@ import { MatchSide, FeedHeading, type SideTab } from "@/components/match/MatchSi
 import { MomentumStrip } from "@/components/match/MomentumStrip";
 import type { StatIconName } from "@/components/match/StatIcon";
 import { useAnalysis } from "@/hooks/use-match";
+import { useMatchVideo } from "@/hooks/use-match-video";
 import { buildClips } from "@/lib/clips";
 import { formatClock } from "@/lib/sample-data";
 import { countEvents, downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
-import { feedLabel, videoSrc, type Frame } from "@/lib/match-source";
+import { feedLabel, type Frame } from "@/lib/match-source";
 import { teamRow } from "@/lib/match-analysis";
 import { cn } from "@/lib/utils";
 import { crestForTeam } from "@/lib/team-crests";
@@ -178,12 +178,7 @@ function MatchScreen() {
       return next;
     });
 
-  const { data: videoUrl } = useQuery({
-    queryKey: ["match-video", matchId],
-    queryFn: () => videoSrc(row!),
-    enabled: Boolean(row),
-    staleTime: 30 * 60_000,
-  });
+  const videoUrl = useMatchVideo(row);
 
   const total = row?.duration_s ?? match?.durationS ?? 1;
   const verdict = ballVerdict(row?.summary);
