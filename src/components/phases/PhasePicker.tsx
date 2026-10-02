@@ -51,7 +51,7 @@ export function PhasePicker({
             className={cn(
               "h-2.5 w-2.5 shrink-0 rounded-full",
               phase.status === "on"
-                ? "bg-reaction-good"
+                ? "bg-positive"
                 : phase.status === "off"
                   ? "bg-reaction-warn"
                   : "bg-text-faint",

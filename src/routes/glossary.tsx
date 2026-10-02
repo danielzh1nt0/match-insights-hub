@@ -51,7 +51,7 @@ function Glossary() {
       <dl className="mt-5 flex flex-col gap-3">
         {GLOSSARY.map((t) => (
           <Card key={t.id} id={t.id} className="scroll-mt-20">
-            <dt className="display text-[17px] uppercase text-cream">{t.term}</dt>
+            <dt className="text-[17px] font-semibold text-text-bright">{t.term}</dt>
             <dd className="mt-2">
               <p className="text-[13.5px] leading-relaxed text-text">{t.plain}</p>
               <p className="mt-1.5 text-[11.5px] leading-relaxed text-text-faint">{t.why}</p>

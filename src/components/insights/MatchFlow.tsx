@@ -77,7 +77,7 @@ export function MatchFlow({
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <Key swatch={<Crest team={teamA} size={16} />}>{teamA.shortCode} territory</Key>
           <Key swatch={<Crest team={teamB} size={16} />}>{teamB.shortCode} territory</Key>
-          <Key swatch={<span className="h-2 w-2 rounded-full bg-cream" />}>
+          <Key swatch={<span className="h-2 w-2 rounded-full bg-positive" />}>
             Confirmed turnover ({confirmed})
           </Key>
           <Key swatch={<span className="h-2 w-2 rounded-full bg-text-faint" />}>
@@ -97,6 +97,9 @@ export function MatchFlow({
           {/* Their half of the chart, filled; ours is drawn as a line, because
               the two kits must not both become blocks of colour. */}
           <defs>
+            <clipPath id="flow-above">
+              <rect x="0" y="0" width={W} height={mid} />
+            </clipPath>
             <clipPath id="flow-below">
               <rect x="0" y={mid} width={W} height={mid} />
             </clipPath>
@@ -108,13 +111,19 @@ export function MatchFlow({
               y="0"
               width={Math.max(xOf(window.toS) - xOf(window.fromS), 2)}
               height={H}
-              fill="var(--cream)"
-              opacity="0.07"
+              fill="var(--reaction-bad)"
+              opacity="0.09"
             />
           )}
 
           <line x1="0" y1={mid} x2={W} y2={mid} stroke="var(--wire)" strokeWidth="1" />
 
+          <path
+            d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
+            fill={teamA.kitColour}
+            opacity="0.14"
+            clipPath="url(#flow-above)"
+          />
           <path
             d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
             fill={teamB.kitColour}
@@ -142,7 +151,15 @@ export function MatchFlow({
           />
 
           {turnovers.map((t, i) => (
-            <circle key={`${t}-${i}`} cx={xOf(t)} cy={mid} r="3" fill="var(--text-faint)" />
+            <circle
+              key={`${t}-${i}`}
+              cx={xOf(t)}
+              cy={mid}
+              r="3"
+              fill="var(--text-faint)"
+              stroke="var(--kit-outline)"
+              strokeWidth="1"
+            />
           ))}
 
           {goals.map((goal, i) => (

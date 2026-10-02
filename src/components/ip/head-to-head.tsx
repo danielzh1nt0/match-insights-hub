@@ -83,10 +83,38 @@ export function HeadToHead({
   const scoreB = headline(goalsB) || match.scoreB;
 
   const rows: Row[] = [
-    { key: "goals", label: "Goals", a: headline(goalsA), b: headline(goalsB), counts: { a: goalsA, b: goalsB }, types: ["goal"] },
-    { key: "shots", label: "Shots", a: headline(shotsA), b: headline(shotsB), counts: { a: shotsA, b: shotsB }, types: ["shot"] },
-    { key: "corners", label: "Corners", a: headline(cornersA), b: headline(cornersB), counts: { a: cornersA, b: cornersB }, types: ["set_piece"] },
-    { key: "free", label: "Free kicks", a: headline(freeA), b: headline(freeB), counts: { a: freeA, b: freeB }, types: ["set_piece"] },
+    {
+      key: "goals",
+      label: "Goals",
+      a: headline(goalsA),
+      b: headline(goalsB),
+      counts: { a: goalsA, b: goalsB },
+      types: ["goal"],
+    },
+    {
+      key: "shots",
+      label: "Shots",
+      a: headline(shotsA),
+      b: headline(shotsB),
+      counts: { a: shotsA, b: shotsB },
+      types: ["shot"],
+    },
+    {
+      key: "corners",
+      label: "Corners",
+      a: headline(cornersA),
+      b: headline(cornersB),
+      counts: { a: cornersA, b: cornersB },
+      types: ["set_piece"],
+    },
+    {
+      key: "free",
+      label: "Free kicks",
+      a: headline(freeA),
+      b: headline(freeB),
+      counts: { a: freeA, b: freeB },
+      types: ["set_piece"],
+    },
     {
       key: "attempts",
       label: "Total attempts",
@@ -108,8 +136,22 @@ export function HeadToHead({
 
   const moreRows: Row[] = ours
     ? [
-        { key: "won", label: "Turnovers won", a: headline(wonA), b: headline(wonB), counts: { a: wonA, b: wonB }, types: ["turnover_won"] },
-        { key: "high", label: "High turnovers", a: headline(highA), b: headline(highB), counts: { a: highA, b: highB }, types: ["high_turnover"] },
+        {
+          key: "won",
+          label: "Turnovers won",
+          a: headline(wonA),
+          b: headline(wonB),
+          counts: { a: wonA, b: wonB },
+          types: ["turnover_won"],
+        },
+        {
+          key: "high",
+          label: "High turnovers",
+          a: headline(highA),
+          b: headline(highB),
+          counts: { a: highA, b: highB },
+          types: ["high_turnover"],
+        },
       ]
     : [];
 
@@ -126,7 +168,9 @@ export function HeadToHead({
             <span className="px-1.5 text-cream-dim">–</span>
             {scoreB}
           </p>
-          <p className="num mt-1 text-[10.5px] uppercase tracking-[0.08em] text-text-faint">{match.date}</p>
+          <p className="num mt-1 text-[10.5px] uppercase tracking-[0.08em] text-text-faint">
+            {match.date}
+          </p>
         </div>
         <Side name={match.teamB} colour={colours.B} crest={crestB} align="right" />
       </div>
@@ -152,7 +196,10 @@ export function HeadToHead({
               className={cn("transition-transform", more && "rotate-180")}
             />
           </button>
-          {more && moreRows.map((r) => <Bar key={r.key} row={r} colours={colours} onFilterTypes={onFilterTypes} />)}
+          {more &&
+            moreRows.map((r) => (
+              <Bar key={r.key} row={r} colours={colours} onFilterTypes={onFilterTypes} />
+            ))}
         </div>
       )}
     </Card>
@@ -246,7 +293,8 @@ function Bar({
     </>
   );
 
-  if (!clickable) return <div className="border-b border-wire-2 py-2.5 last:border-0">{content}</div>;
+  if (!clickable)
+    return <div className="border-b border-wire-2 py-2.5 last:border-0">{content}</div>;
 
   return (
     <button

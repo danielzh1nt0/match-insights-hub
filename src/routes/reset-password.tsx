@@ -29,7 +29,7 @@ function ResetPassword() {
     return (
       <AuthShell title="Password updated" sub="You can sign in with your new password now.">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
-          <h1 className="display text-[20px] text-text">You're all set</h1>
+          <h1 className="display-i text-[22px] text-text-bright">You're all set</h1>
           <p className="text-[13px] text-text-dim">Your password has been changed.</p>
           <Link to="/library" className="tap text-[12.5px] text-cream hover:underline">
             Open your library

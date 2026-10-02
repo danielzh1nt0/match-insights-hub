@@ -29,7 +29,6 @@ export type VisualComparison = {
   tone?: "good" | "bad" | "neutral";
 };
 
-
 function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -56,7 +55,7 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
         className="relative w-full max-w-[520px] border border-wire bg-surface p-4 pb-6"
       >
         <div className="flex items-start justify-between gap-3">
-          <h2 className="display text-[17px] uppercase text-cream">{info.title}</h2>
+          <h2 className="text-[17px] font-semibold text-text-bright">{info.title}</h2>
           <button
             type="button"
             aria-label="Close"
@@ -73,7 +72,9 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
               className="flex items-baseline justify-between gap-4 border-b border-wire-2 py-2.5 last:border-0"
             >
               <dt className="text-[12.5px] text-text-dim">{row.label}</dt>
-              <dd className={cn("num text-[13px]", row.cream ? "text-cream" : "text-text")}>{row.value}</dd>
+              <dd className={cn("num text-[13px]", row.cream ? "text-cream" : "text-text")}>
+                {row.value}
+              </dd>
             </div>
           ))}
         </dl>
@@ -97,9 +98,7 @@ function InfoSheet({ info, onClose }: { info: StatInfo; onClose: () => void }) {
           >
             Glossary
           </Link>
-
         </div>
-
       </motion.div>
     </div>
   );
@@ -158,7 +157,9 @@ export function Visual({
               {shownTakeaway.value}
             </strong>
             {shownTakeaway.unit && (
-              <span className="pb-1 text-[12px] font-semibold text-cream-dim">{shownTakeaway.unit}</span>
+              <span className="pb-1 text-[12px] font-semibold text-cream-dim">
+                {shownTakeaway.unit}
+              </span>
             )}
           </div>
           {shownTakeaway.label && (
@@ -183,7 +184,9 @@ export function Visual({
       )}
       {honesty && (
         <div className="flex min-h-9 items-center justify-between gap-3 border-t border-wire-2 px-4 py-2 text-[10.5px] font-medium text-text-faint">
-          <span className="inline-flex items-center gap-1.5 before:h-[5px] before:w-[5px] before:shrink-0 before:rounded-full before:bg-text-faint">{honesty}</span>
+          <span className="inline-flex items-center gap-1.5 before:h-[5px] before:w-[5px] before:shrink-0 before:rounded-full before:bg-text-faint">
+            {honesty}
+          </span>
           {footerNote && <span className="text-right">{footerNote}</span>}
         </div>
       )}
@@ -207,19 +210,19 @@ export function Pitch({
   return (
     <div className={cn("w-full", className)}>
       <div className="mx-auto w-full max-w-[640px] overflow-hidden bg-surface-2">
-      <svg viewBox="0 0 100 64" className="block h-auto w-full" role="img" aria-label="Pitch">
-        <rect x="0" y="0" width="100" height="64" fill="var(--surface-2)" />
-        <g stroke="var(--wire)" strokeWidth="0.4" fill="none">
-          <rect x="2" y="2" width="96" height="60" />
-          <line x1="50" y1="2" x2="50" y2="62" />
-          <circle cx="50" cy="32" r="9" />
-          <rect x="2" y="14" width="12" height="36" />
-          <rect x="86" y="14" width="12" height="36" />
-          <rect x="2" y="24" width="5" height="16" />
-          <rect x="93" y="24" width="5" height="16" />
-        </g>
-        {children}
-      </svg>
+        <svg viewBox="0 0 100 64" className="block h-auto w-full" role="img" aria-label="Pitch">
+          <rect x="0" y="0" width="100" height="64" fill="var(--surface-2)" />
+          <g stroke="var(--wire)" strokeWidth="0.4" fill="none">
+            <rect x="2" y="2" width="96" height="60" />
+            <line x1="50" y1="2" x2="50" y2="62" />
+            <circle cx="50" cy="32" r="9" />
+            <rect x="2" y="14" width="12" height="36" />
+            <rect x="86" y="14" width="12" height="36" />
+            <rect x="2" y="24" width="5" height="16" />
+            <rect x="93" y="24" width="5" height="16" />
+          </g>
+          {children}
+        </svg>
       </div>
       {arrowLabel && (
         <span className="mt-1 block text-right text-[10px] uppercase tracking-[0.08em] text-text-faint">
@@ -239,7 +242,12 @@ export function PortraitPitch({
 }) {
   return (
     <div className="mx-auto w-full max-w-[300px]">
-      <svg viewBox="0 0 64 100" className="block h-auto w-full bg-surface-2" role="img" aria-label="Pitch">
+      <svg
+        viewBox="0 0 64 100"
+        className="block h-auto w-full bg-surface-2"
+        role="img"
+        aria-label="Pitch"
+      >
         <rect x="0" y="0" width="64" height="100" fill="var(--surface-2)" />
         <g stroke="var(--cream)" strokeOpacity=".28" strokeWidth=".45" fill="none">
           <rect x="2" y="2" width="60" height="96" />
@@ -252,7 +260,11 @@ export function PortraitPitch({
         </g>
         {children}
       </svg>
-      {arrowLabel && <span className="mt-1.5 block text-center text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">↑ {arrowLabel}</span>}
+      {arrowLabel && (
+        <span className="mt-1.5 block text-center text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
+          ↑ {arrowLabel}
+        </span>
+      )}
     </div>
   );
 }
@@ -306,7 +318,14 @@ export function HeatBlobs({
   return (
     <g>
       {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={(p.y / 100) * 64} r={4 + p.w * 6} fill={color} opacity={0.06 + p.w * 0.16} />
+        <circle
+          key={i}
+          cx={p.x}
+          cy={(p.y / 100) * 64}
+          r={4 + p.w * 6}
+          fill={color}
+          opacity={0.06 + p.w * 0.16}
+        />
       ))}
     </g>
   );

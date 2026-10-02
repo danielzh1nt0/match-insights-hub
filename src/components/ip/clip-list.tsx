@@ -12,7 +12,10 @@ export function ClipList({ clips, matchId }: { clips: ReelClip[]; matchId?: stri
   if (clips.length === 0) {
     return (
       <Card>
-        <p className="text-[13px] text-text-dim">No moments in this match file are worth a clip yet. Confirm some events on the match screen and they will appear here.</p>
+        <p className="text-[13px] text-text-dim">
+          No moments in this match file are worth a clip yet. Confirm some events on the match
+          screen and they will appear here.
+        </p>
       </Card>
     );
   }

@@ -441,11 +441,11 @@ function MatchScreen() {
 
       {loading && (
         <div
-          className="h-1 w-full overflow-hidden rounded-full bg-surface-2"
+          className="h-[3px] w-full overflow-hidden bg-surface-2"
           role="status"
           aria-label="Loading match data"
         >
-          <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
+          <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] bg-cream" />
         </div>
       )}
 
@@ -520,7 +520,7 @@ function MatchScreen() {
                   </span>
                 )}
                 <span
-                  className="flex min-w-0 items-center gap-1.5 truncate rounded-full bg-black/60 py-1 pl-1.5 pr-2.5 text-[11.5px] font-semibold text-white"
+                  className="flex min-w-0 items-center gap-1.5 truncate bg-black/60 py-1 pl-1.5 pr-2.5 text-[11.5px] font-semibold text-white"
                   role="status"
                   aria-live="polite"
                 >
@@ -595,7 +595,7 @@ function MatchScreen() {
                     onPointerDown={(event) => event.stopPropagation()}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <h2 className="display text-[17px] uppercase text-cream">Overlays</h2>
+                      <h2 className="text-[17px] font-semibold text-text-bright">Overlays</h2>
                       <button
                         type="button"
                         onClick={() => setLayerSheet(false)}
@@ -843,7 +843,7 @@ function MatchScreen() {
                       </span>
                       <span
                         className={cn(
-                          "shrink-0 rounded-full px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.06em]",
+                          "shrink-0 border px-2 py-[3px] text-[10px] font-bold uppercase tracking-[0.06em]",
                           clip.confirmed
                             ? "bg-reaction-good/15 text-reaction-good"
                             : "border border-wire text-text-faint",

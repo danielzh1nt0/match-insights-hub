@@ -30,8 +30,16 @@ export const LAYERS: { key: LayerKey; label: string; needs: null | "possession" 
 ];
 
 export const NO_LAYERS: Record<LayerKey, boolean> = {
-  players: false, ball: false, carrier: false, shapes: false, lanes: false,
-  line: false, units: false, block: false, trails: false, space: false,
+  players: false,
+  ball: false,
+  carrier: false,
+  shapes: false,
+  lanes: false,
+  line: false,
+  units: false,
+  block: false,
+  trails: false,
+  space: false,
 };
 
 export type PresetKey = "clean" | "defending" | "building" | "transitions";
@@ -149,7 +157,9 @@ function interpolatePlayers(
     // A marker must survive into the next data frame before it first appears.
     if (!existing && !hasPair) continue;
 
-    const targetM = hasPair ? lerpPoint(beforePlayer.m, afterPlayer.m, bracket.mix) : beforePlayer.m;
+    const targetM = hasPair
+      ? lerpPoint(beforePlayer.m, afterPlayer.m, bracket.mix)
+      : beforePlayer.m;
     const targetPx =
       hasPair && beforePlayer.px && afterPlayer.px
         ? lerpPoint(beforePlayer.px, afterPlayer.px, bracket.mix)
@@ -197,8 +207,10 @@ function interpolateBall(
   const hasPair = pairedM || pairedPx;
 
   if (hasBefore && (previous || hasPair)) {
-    const targetM = pairedM && beforeM && afterM ? lerpPoint(beforeM, afterM, bracket.mix) : beforeM;
-    const targetPx = pairedPx && beforePx && afterPx ? lerpPoint(beforePx, afterPx, bracket.mix) : beforePx;
+    const targetM =
+      pairedM && beforeM && afterM ? lerpPoint(beforeM, afterM, bracket.mix) : beforeM;
+    const targetPx =
+      pairedPx && beforePx && afterPx ? lerpPoint(beforePx, afterPx, bracket.mix) : beforePx;
     return {
       m: smoothPoint(previous?.m ?? null, targetM),
       px: smoothPoint(previous?.px ?? null, targetPx),
@@ -213,11 +225,7 @@ function interpolateBall(
   return null;
 }
 
-function updateCarrier(
-  bracket: FrameBracket,
-  t: number,
-  previous: CarrierMemory,
-): CarrierMemory {
+function updateCarrier(bracket: FrameBracket, t: number, previous: CarrierMemory): CarrierMemory {
   const candidate = bracket.before.carrier ?? null;
   if (candidate === previous.id && candidate !== null) {
     return {
@@ -274,41 +282,65 @@ function convexHull(points: Point[]): Point[] {
 /** 1-D k-means with k=3 on attack-relative x; returns groups sorted from own goal outward. */
 function threeUnits(xs: number[]): number[][] {
   const sorted = [...xs].sort((a, b) => a - b);
-  const q = (f: number) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(f * (sorted.length - 1))))] ?? 0;
+  const q = (f: number) =>
+    sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(f * (sorted.length - 1))))] ?? 0;
   let c = [q(0.2), q(0.5), q(0.8)];
   let groups: number[][] = [[], [], []];
   for (let it = 0; it < 12; it++) {
     groups = [[], [], []];
     for (const x of sorted) {
       let best = 0;
-      for (let k = 1; k < 3; k++) if (Math.abs(x - (c[k] ?? 0)) < Math.abs(x - (c[best] ?? 0))) best = k;
+      for (let k = 1; k < 3; k++)
+        if (Math.abs(x - (c[k] ?? 0)) < Math.abs(x - (c[best] ?? 0))) best = k;
       groups[best]?.push(x);
     }
-    c = groups.map((g, k) => (g.length ? g.reduce((a, b) => a + b, 0) / g.length : c[k] ?? 0));
+    c = groups.map((g, k) => (g.length ? g.reduce((a, b) => a + b, 0) / g.length : (c[k] ?? 0)));
   }
   return groups.filter((g) => g.length > 0);
 }
 
-
 /** Veo panorama: a fixed curved (cylindrical) camera, sent once per match. Mirrors ipanema/cylcam.py `project`. */
-type CylCamera = { camera: string; params: Record<string, number>; pitch_transform?: number[][] | null };
+type CylCamera = {
+  camera: string;
+  params: Record<string, number>;
+  pitch_transform?: number[][] | null;
+};
 export function projectCylinder(cam: CylCamera, x0: number, y0: number): [number, number] | null {
   const M = cam.pitch_transform;
-  let x = x0, y = y0;
+  let x = x0,
+    y = y0;
   if (M && M.length === 3) {
     const w = (M[2]?.[0] ?? 0) * x0 + (M[2]?.[1] ?? 0) * y0 + (M[2]?.[2] ?? 1);
     x = ((M[0]?.[0] ?? 1) * x0 + (M[0]?.[1] ?? 0) * y0 + (M[0]?.[2] ?? 0)) / w;
     y = ((M[1]?.[0] ?? 0) * x0 + (M[1]?.[1] ?? 1) * y0 + (M[1]?.[2] ?? 0)) / w;
   }
   const p = cam.params;
-  const cx = p["cx"] ?? 0, cy = p["cy"] ?? 0, h = p["h"] ?? 1, yaw = p["yaw"] ?? 0, fu = p["fu"] ?? 1, fv = p["fv"] ?? 1;
-  const u0 = p["u0"] ?? 0, v0 = p["v0"] ?? 0, tilt = p["tilt"] ?? 0, roll = p["roll"] ?? 0;
-  const dx = x - cx, dy = y - cy, dz = h;
-  const ct = Math.cos(tilt), st = Math.sin(tilt), cr = Math.cos(roll), sr = Math.sin(roll);
-  const t1 = ct * dy - st * dz, t2 = st * dy + ct * dz;                 // tilt about x
-  const ex = cr * dx - sr * t1, ey = sr * dx + cr * t1, ez = t2;        // then roll about z
-  let az = Math.atan2(ey, ex) - yaw; az = ((az + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
-  const rho = Math.hypot(ex, ey); if (rho < 1e-9) return null;
+  const cx = p["cx"] ?? 0,
+    cy = p["cy"] ?? 0,
+    h = p["h"] ?? 1,
+    yaw = p["yaw"] ?? 0,
+    fu = p["fu"] ?? 1,
+    fv = p["fv"] ?? 1;
+  const u0 = p["u0"] ?? 0,
+    v0 = p["v0"] ?? 0,
+    tilt = p["tilt"] ?? 0,
+    roll = p["roll"] ?? 0;
+  const dx = x - cx,
+    dy = y - cy,
+    dz = h;
+  const ct = Math.cos(tilt),
+    st = Math.sin(tilt),
+    cr = Math.cos(roll),
+    sr = Math.sin(roll);
+  const t1 = ct * dy - st * dz,
+    t2 = st * dy + ct * dz; // tilt about x
+  const ex = cr * dx - sr * t1,
+    ey = sr * dx + cr * t1,
+    ez = t2; // then roll about z
+  let az = Math.atan2(ey, ex) - yaw;
+  az = ((((az + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
+  const rho = Math.hypot(ex, ey);
+  if (rho < 1e-9) return null;
   return [u0 + fu * az, v0 + fv * (ez / rho)];
 }
 
@@ -340,7 +372,9 @@ function cssColour(colour: string): string {
   for (let i = 0; i < 3; i++) {
     const m = c.match(/^var\(\s*(--[^,\s)]+)\s*(?:,\s*([^)]+))?\)$/);
     if (!m || typeof document === "undefined") break;
-    const v = getComputedStyle(document.documentElement).getPropertyValue(m[1] ?? "").trim();
+    const v = getComputedStyle(document.documentElement)
+      .getPropertyValue(m[1] ?? "")
+      .trim();
     c = v || (m[2] ?? "").trim() || "#ede6d6";
   }
   return c;
@@ -353,8 +387,18 @@ function rgbOf(colour: string): [number, number, number] {
   const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);
   if (hex) {
     const h = hex[1] ?? "";
-    const full = h.length === 3 ? h.split("").map((x) => x + x).join("") : h;
-    rgb = [parseInt(full.slice(0, 2), 16), parseInt(full.slice(2, 4), 16), parseInt(full.slice(4, 6), 16)];
+    const full =
+      h.length === 3
+        ? h
+            .split("")
+            .map((x) => x + x)
+            .join("")
+        : h;
+    rgb = [
+      parseInt(full.slice(0, 2), 16),
+      parseInt(full.slice(2, 4), 16),
+      parseInt(full.slice(4, 6), 16),
+    ];
   } else if (typeof document !== "undefined") {
     colourProbe ??= document.createElement("canvas").getContext("2d");
     if (colourProbe) {
@@ -363,7 +407,12 @@ function rgbOf(colour: string): [number, number, number] {
       const out = String(colourProbe.fillStyle);
       const h6 = /^#([0-9a-f]{6})$/i.exec(out);
       const rgba = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i.exec(out);
-      if (h6 && out !== "#010203") rgb = [parseInt(out.slice(1, 3), 16), parseInt(out.slice(3, 5), 16), parseInt(out.slice(5, 7), 16)];
+      if (h6 && out !== "#010203")
+        rgb = [
+          parseInt(out.slice(1, 3), 16),
+          parseInt(out.slice(3, 5), 16),
+          parseInt(out.slice(5, 7), 16),
+        ];
       else if (rgba) rgb = [Number(rgba[1]), Number(rgba[2]), Number(rgba[3])];
     }
   }
@@ -416,7 +465,8 @@ export function MatchCanvas({
       const prev = eased.get(key);
       const lastT = eased.get(`${key}@t`) ?? t;
       const dt = Math.max(0, Math.min(0.25, t - lastT));
-      const value = prev === undefined ? target : prev + (target - prev) * (1 - Math.exp(-rate * dt));
+      const value =
+        prev === undefined ? target : prev + (target - prev) * (1 - Math.exp(-rate * dt));
       eased.set(key, value);
       eased.set(`${key}@t`, t);
       return value;
@@ -444,8 +494,10 @@ export function MatchCanvas({
       const rect = canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
-      if (canvas.width !== Math.round(rect.width * dpr)) canvas.width = Math.round(rect.width * dpr);
-      if (canvas.height !== Math.round(rect.height * dpr)) canvas.height = Math.round(rect.height * dpr);
+      if (canvas.width !== Math.round(rect.width * dpr))
+        canvas.width = Math.round(rect.width * dpr);
+      if (canvas.height !== Math.round(rect.height * dpr))
+        canvas.height = Math.round(rect.height * dpr);
 
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
@@ -454,7 +506,7 @@ export function MatchCanvas({
 
       const t = videoRef.current?.currentTime ?? 0;
       if (
-        lastFrames !== data.frames ||   // only a real change of frame data resets smoothing (not a rebuilt wrapper object)
+        lastFrames !== data.frames || // only a real change of frame data resets smoothing (not a rebuilt wrapper object)
         lastTime === null ||
         t < lastTime - 0.05 ||
         Math.abs(t - lastTime) > SEEK_RESET_S
@@ -493,11 +545,18 @@ export function MatchCanvas({
         const cam = (data as unknown as { camera?: CylCamera | null }).camera;
         if (cam && cam.camera === "cylindrical") {
           // the pipeline flips pitch coordinates in later halves; the per-frame matrices carried that flip, the curved camera is sent once
-          const periods = ((data as unknown as { periods?: { t_start: number; t_end: number; mirrored?: boolean }[] }).periods) ?? [];
+          const periods =
+            (
+              data as unknown as {
+                periods?: { t_start: number; t_end: number; mirrored?: boolean }[];
+              }
+            ).periods ?? [];
           const tt = bracket.before.t;
           const flipped = periods.some((pd) => pd.mirrored && tt >= pd.t_start && tt <= pd.t_end);
           metres = (point) => {
-            const px = flipped ? projectCylinder(cam, length - point[0], width - point[1]) : projectCylinder(cam, point[0], point[1]);
+            const px = flipped
+              ? projectCylinder(cam, length - point[0], width - point[1])
+              : projectCylinder(cam, point[0], point[1]);
             return px ? map(px) : null;
           };
         } else {
@@ -580,7 +639,10 @@ export function MatchCanvas({
                 let bd = Infinity;
                 for (const p of pts) {
                   const d = (p.m[0] - cx) ** 2 + (p.m[1] - cy) ** 2;
-                  if (d < bd) { bd = d; best = p; }
+                  if (d < bd) {
+                    bd = d;
+                    best = p;
+                  }
                 }
                 if (best) cells.push({ x, y, team: best.team });
               }
@@ -613,12 +675,23 @@ export function MatchCanvas({
           if (ps.length < 5) continue;
           const xs = ps.map((p) => p.m[0]);
           const ys = ps.map((p) => p.m[1]);
-          const x0 = ease(`box${key}x0`, Math.min(...xs), t), x1 = ease(`box${key}x1`, Math.max(...xs), t);
-          const y0 = ease(`box${key}y0`, Math.min(...ys), t), y1 = ease(`box${key}y1`, Math.max(...ys), t);
-          const corners = ([[x0, y0], [x1, y0], [x1, y1], [x0, y1]] as Point[]).map(metres);
+          const x0 = ease(`box${key}x0`, Math.min(...xs), t),
+            x1 = ease(`box${key}x1`, Math.max(...xs), t);
+          const y0 = ease(`box${key}y0`, Math.min(...ys), t),
+            y1 = ease(`box${key}y1`, Math.max(...ys), t);
+          const corners = (
+            [
+              [x0, y0],
+              [x1, y0],
+              [x1, y1],
+              [x0, y1],
+            ] as Point[]
+          ).map(metres);
           if (corners.some((q) => !q)) continue;
           ctx.beginPath();
-          (corners as Point[]).forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+          (corners as Point[]).forEach(([x, y], i) =>
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y),
+          );
           ctx.closePath();
           ctx.fillStyle = withAlpha(teamColour(key), 0.1);
           ctx.fill();
@@ -626,7 +699,12 @@ export function MatchCanvas({
           ctx.lineWidth = stroke;
           ctx.stroke();
           const top = metres([(x0 + x1) / 2, y0]);
-          if (top) label(`Length ${Math.round(x1 - x0)} m · Width ${Math.round(y1 - y0)} m`, top[0], top[1] - 6);
+          if (top)
+            label(
+              `Length ${Math.round(x1 - x0)} m · Width ${Math.round(y1 - y0)} m`,
+              top[0],
+              top[1] - 6,
+            );
         }
       }
 
@@ -643,7 +721,12 @@ export function MatchCanvas({
           if (groups.length < 3) continue;
           const means: number[] = [];
           groups.forEach((g, gi) => {
-            const meanRel = ease(`unit${key}${gi}`, g.reduce((a, b) => a + b, 0) / g.length, t, 2.0);
+            const meanRel = ease(
+              `unit${key}${gi}`,
+              g.reduce((a, b) => a + b, 0) / g.length,
+              t,
+              2.0,
+            );
             means.push(meanRel);
             const members = ps.filter((p) => g.includes(rel(p.m[0])));
             const ys = members.map((p) => p.m[1]);
@@ -653,7 +736,8 @@ export function MatchCanvas({
             segment([x, yA], [x, yB], withAlpha(teamColour(key), 0.9), stroke * 1.5);
           });
           for (let i = 1; i < means.length; i++) {
-            const a = means[i - 1] ?? 0, b = means[i] ?? 0;
+            const a = means[i - 1] ?? 0,
+              b = means[i] ?? 0;
             const mid = (a + b) / 2;
             const pos = metres([right ? mid : length - mid, width * 0.08]);
             if (pos) label(`gap ${Math.round(b - a)} m`, pos[0], pos[1]);
@@ -671,12 +755,19 @@ export function MatchCanvas({
           const opp: TeamKey = key === "A" ? "B" : "A";
           // "in behind" only counts with a 1 m margin, and only when the team shown is the one defending
           const beyond = cfg.team
-            ? drawnPlayers.filter((p) => p.team === opp && !p.gk && (right ? p.m[0] < lineX - 1 : p.m[0] > lineX + 1))
+            ? drawnPlayers.filter(
+                (p) => p.team === opp && !p.gk && (right ? p.m[0] < lineX - 1 : p.m[0] > lineX + 1),
+              )
             : [];
           segment([lineX, 0], [lineX, width], withAlpha(teamColour(key), 0.95), stroke * 2);
           const height = right ? lineX : length - lineX;
           const near = metres([lineX, width * 0.94]);
-          if (near) label(`Line ${Math.round(height)} m${beyond.length ? ` · ${beyond.length} in behind` : ""}`, near[0], near[1]);
+          if (near)
+            label(
+              `Line ${Math.round(height)} m${beyond.length ? ` · ${beyond.length} in behind` : ""}`,
+              near[0],
+              near[1],
+            );
           for (const p of beyond) {
             const q = at(p);
             if (!q) continue;
@@ -705,12 +796,15 @@ export function MatchCanvas({
           const sprint = speed >= SPRINT_MS;
           const pts = list.map((e) => metres(e.m));
           for (let i = 1; i < pts.length; i++) {
-            const a = pts[i - 1], b = pts[i];
+            const a = pts[i - 1],
+              b = pts[i];
             if (!a || !b) continue;
             ctx.beginPath();
             ctx.moveTo(a[0], a[1]);
             ctx.lineTo(b[0], b[1]);
-            ctx.strokeStyle = sprint ? withAlpha(teamColour(p.team), (0.7 * i) / pts.length) : `rgba(237,230,214,${(0.45 * i) / pts.length})`;
+            ctx.strokeStyle = sprint
+              ? withAlpha(teamColour(p.team), (0.7 * i) / pts.length)
+              : `rgba(237,230,214,${(0.45 * i) / pts.length})`;
             ctx.lineWidth = sprint ? stroke * 2 : stroke;
             ctx.stroke();
           }
@@ -736,8 +830,9 @@ export function MatchCanvas({
         }
       }
 
-      const carrierFound = carrier.id === null ? null : players.get(carrier.id) ?? null;
-      const carrierPlayer = carrierFound && (!cfg.team || carrierFound.team === cfg.team) ? carrierFound : null;
+      const carrierFound = carrier.id === null ? null : (players.get(carrier.id) ?? null);
+      const carrierPlayer =
+        carrierFound && (!cfg.team || carrierFound.team === cfg.team) ? carrierFound : null;
       const carrierAt = carrierPlayer ? at(carrierPlayer) : null;
       const carrierStable = carrier.id !== null && t - carrier.stableSince >= LANE_STABLE_S;
       if (cfg.layers.lanes && carrierStable && carrierAt) {
@@ -764,9 +859,11 @@ export function MatchCanvas({
           if (!point) continue;
           // opacity follows how long ago the player was last detected, eased, so one-frame misses don't blink
           const age = Math.max(0, t - player.lastSeen);
-          const fade = age <= 0.12 ? 1 : Math.max(0.25, 1 - ((age - 0.12) / (PLAYER_HOLD_S - 0.12)) * 0.75);
+          const fade =
+            age <= 0.12 ? 1 : Math.max(0.25, 1 - ((age - 0.12) / (PLAYER_HOLD_S - 0.12)) * 0.75);
           const target = Math.min(fade, player.sourcePredicted ? 0.55 : 1);
-          player.alpha = player.alpha === undefined ? target : player.alpha + (target - player.alpha) * 0.25;
+          player.alpha =
+            player.alpha === undefined ? target : player.alpha + (target - player.alpha) * 0.25;
           const predicted = player.sourcePredicted || age > 0.25;
           const radius = Math.max(4, rect.height * 0.014);
           ctx.globalAlpha = player.alpha;
@@ -806,7 +903,8 @@ export function MatchCanvas({
         if (typeof bracket.before.pressure_m === "number") {
           bits.push(`${bracket.before.pressure_m.toFixed(1)} m pressure`);
         }
-        if (typeof bracket.before.near_opps === "number") bits.push(`${bracket.before.near_opps} near`);
+        if (typeof bracket.before.near_opps === "number")
+          bits.push(`${bracket.before.near_opps} near`);
         if (bits.length) {
           ctx.font = '600 11px "Hanken Grotesk", sans-serif';
           ctx.textAlign = "left";
@@ -820,7 +918,8 @@ export function MatchCanvas({
       }
 
       if (cfg.layers.ball && ball) {
-        const point = cfg.mode === "video" ? (ball.px ? map(ball.px) : null) : ball.m ? metres(ball.m) : null;
+        const point =
+          cfg.mode === "video" ? (ball.px ? map(ball.px) : null) : ball.m ? metres(ball.m) : null;
         if (point) {
           const radius = Math.max(3, rect.height * 0.009);
           ctx.globalAlpha = ball.gapPredicted ? 0.6 : 1;

@@ -25,12 +25,24 @@ function TeamTile({ team }: { team: Team }) {
           team.id
         )}
       </div>
-      <div className="text-[9px] font-bold uppercase tracking-[0.08em] text-text-faint">{team.shortName}</div>
+      <div className="text-[9px] font-bold uppercase tracking-[0.08em] text-text-faint">
+        {team.shortName}
+      </div>
     </div>
   );
 }
 
-export function MatchHeader({ home, away, scoreHome, scoreAway, periodLabel, attackDirection, attackTeam, durationSeconds, onSettingsTap }: {
+export function MatchHeader({
+  home,
+  away,
+  scoreHome,
+  scoreAway,
+  periodLabel,
+  attackDirection,
+  attackTeam,
+  durationSeconds,
+  onSettingsTap,
+}: {
   home: Team;
   away: Team;
   scoreHome: number;
@@ -41,7 +53,9 @@ export function MatchHeader({ home, away, scoreHome, scoreAway, periodLabel, att
   durationSeconds: number;
   onSettingsTap: () => void;
 }) {
-  const duration = `${Math.floor(durationSeconds / 60)}:${Math.floor(durationSeconds % 60).toString().padStart(2, "0")}`;
+  const duration = `${Math.floor(durationSeconds / 60)}:${Math.floor(durationSeconds % 60)
+    .toString()
+    .padStart(2, "0")}`;
 
   return (
     <div className="border-b border-wire-2 bg-surface px-5 pb-3 pt-4">
@@ -55,9 +69,15 @@ export function MatchHeader({ home, away, scoreHome, scoreAway, periodLabel, att
 
       <div className="mt-2.5 flex items-center justify-center gap-1.5 text-[11.5px] text-text-dim">
         <strong className="font-semibold">{periodLabel}</strong>
-        <span className="opacity-50" aria-hidden="true">·</span>
-        <span>{attackTeam} attack {attackDirection}</span>
-        <span className="opacity-50" aria-hidden="true">·</span>
+        <span className="opacity-50" aria-hidden="true">
+          ·
+        </span>
+        <span>
+          {attackTeam} attack {attackDirection}
+        </span>
+        <span className="opacity-50" aria-hidden="true">
+          ·
+        </span>
         <span className="num">{duration}</span>
         <button
           type="button"

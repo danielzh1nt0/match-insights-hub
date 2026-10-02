@@ -35,6 +35,9 @@
   --color-wire-2: var(--wire-2);
   --color-text: var(--text);
   --color-text-bright: var(--text-bright);
+  --color-accent-sea: var(--accent);
+  --color-positive: var(--positive);
+  --color-kit-outline: var(--kit-outline);
   --color-text-dim: var(--text-dim);
   --color-text-faint: var(--text-faint);
   --color-cream: var(--cream);
@@ -101,56 +104,134 @@
   --sect: 40px;
   --shell: 1440px;
 
-  /* The neutral ramp: pitch slate under warm chalk. */
+  /* ===== The ground: deep purple bleeding into navy =====
+     The gradient belongs to the page and never to a card, or the stacking
+     stops reading. Surfaces are flat, tinted planes that sit on it. */
+  --bg: #15121f;
+  --bg-gradient: linear-gradient(165deg, #15121f 0%, #110f1c 45%, #0c1018 100%);
+  --surface: #1a1726;
+  --surface-2: #221e30;
+  --surface-3: #2a2539;
+  --wire: #332c45;
+  --wire-2: #251f33;
+
+  --text: #ece7f2;
+  --text-bright: #f6f3fa;
+  --text-dim: #a39db8;
+  /* 5.1:1 on --bg. Anything darker fails AA at body size. */
+  --text-faint: #8982a0;
+  --cream: #efe8da;
+  --cream-dim: #ccc6b7;
+  /* What sits on a chalk fill. */
+  --ink: #15121f;
+
+  /* ===== Three accents, each with one job =====
+     Colour encodes state here; it never decorates. Cream is the single focal
+     point per view — the one action, or the one number the page is about.
+     Accent carries interaction and the second series in a chart. Positive
+     means measured and met: confirmed moments, a target reached. Warn and
+     alarm mean short of target and breached. Nothing is coloured for cheer. */
+  --accent: #6fa8ff;
+  --accent-dim: #4a7fd1;
+  --positive: #46d894;
+  --positive-dim: #2f9c6a;
+
+  /* Kit colours. Defaults only — every match overrides these from its own
+     file, because the two shirts on the day are the data. A kit mark always
+     carries a 1px outline of the ground so it cannot be confused with the
+     accents above, which belong to the interface. */
+  --team-a: #ffffff;
+  --team-b: #6fa8ff;
+  --team-gk: #e8a93c;
+  --kit-outline: #15121f;
+
+  --reaction-bad: #ff6b6b;
+  --reaction-warn: #e8a93c;
+  --reaction-good: #46d894;
+  --quality-bad: #ff6b6b;
+  --quality-risky: #e8a93c;
+  --quality-good: #46d894;
+
+  /* Pitch boards: dark turf, chalk lines. */
+  --pitch-top: #1b3326;
+  --pitch-bottom: #122419;
+  --pitch-line: rgba(239, 232, 218, 0.5);
+  --pitch-control: rgba(0, 0, 0, 0.5);
+  --pitch-insight: #182d1b;
+  --ball-detail: #15121f;
+
+  --club-bvb: #fde100;
+  --club-bayern: #dc052d;
+  --story-ink: #15121f;
+  --story-paper: #efe8da;
+  --workspace: #15121f;
+  --graphite: #3a3d38;
+  --radius: 0px;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg-gradient) fixed;
+}
+
+/* One atmospheric effect, and no more: a soft violet glow behind the hero. */
+body::before {
+  content: "";
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  height: 520px;
+  background: radial-gradient(900px 320px at 50% 0%, rgba(124, 92, 255, 0.12), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===== Slate: the same system with the colour taken out =====
+   The original Touchline ground. Kept because a near-monochrome screen is
+   easier to read in bright sun on a touchline, which is where half of this
+   gets used. */
+:root[data-theme="slate"] {
   --bg: #0d0e11;
+  --bg-gradient: none;
   --surface: #16181d;
   --surface-2: #1f2229;
   --surface-3: #282b33;
   --wire: #2b2f38;
   --wire-2: #23262e;
-  /* Chalk is the reading colour, not a decoration. Bright chalk is for
-     scoreboard values and headlines only. */
   --text: #ede6d6;
   --text-bright: #f7f5f0;
   --text-dim: #8b92a0;
-  /* 5.4:1 on --bg. Anything darker fails AA at body size. */
   --text-faint: #7f8896;
   --cream: #ede6d6;
-  --cream-dim: #ccc6b7;
-  /* What sits on a chalk fill. */
   --ink: #0d0e11;
-
-  /* Kit colours. Defaults only — every match overrides these from its own
-     file, because the two shirts on the day are the data. */
+  --accent: #8b92a0;
+  --accent-dim: #6b7280;
+  --positive: #ede6d6;
+  --positive-dim: #8b92a0;
   --team-a: #ede6d6;
   --team-b: #d03b3b;
-  --team-gk: #e8b53a;
-
-  /* Alarm. Fired when a number breaches the coach's envelope, never as
-     decoration. Success is silent: it is chalk, or it is nothing. */
+  --kit-outline: #0d0e11;
   --reaction-bad: #d03b3b;
   --reaction-warn: #c98a2e;
   --reaction-good: #ede6d6;
   --quality-bad: #d03b3b;
   --quality-risky: #c98a2e;
   --quality-good: #ede6d6;
-
-  /* Pitch boards: dark turf, chalk lines. */
   --pitch-top: #1a2a1d;
   --pitch-bottom: #141f17;
   --pitch-line: rgba(237, 230, 214, 0.5);
-  --pitch-control: rgba(0, 0, 0, 0.5);
-  --pitch-insight: #182d1b;
-  --ball-detail: #0d0e11;
-
-  --club-bvb: #fde100;
-  --club-bayern: #dc052d;
   --story-ink: #0d0e11;
   --story-paper: #ede6d6;
   --workspace: #0d0e11;
-  --graphite: #3a3d38;
-  --radius: 0px;
   color-scheme: dark;
+}
+
+:root[data-theme="slate"] body {
+  background: var(--bg);
+}
+
+:root[data-theme="slate"] body::before {
+  display: none;
 }
 
 /* ===== Light: the same system, inverted =====

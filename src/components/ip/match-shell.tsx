@@ -113,7 +113,9 @@ export function MatchShell({
           </>
         ) : (
           <Card className="mt-2">
-            <h1 className="display text-[19px] text-text">That match isn't in your library</h1>
+            <h1 className="display-i text-[21px] text-text-bright">
+              That match isn't in your library
+            </h1>
             <p className="mt-2 text-[13px] text-text-dim">
               It may have been removed.{" "}
               <Link to="/library" className="text-cream underline">

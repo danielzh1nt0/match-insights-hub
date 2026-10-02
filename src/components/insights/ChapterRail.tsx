@@ -52,18 +52,20 @@ export function ChapterRail({
             params={{ matchId }}
             search={{ chapter: chapter.id }}
             className={cn(
-              "group flex min-w-0 flex-col gap-1 p-4 transition-colors",
-              cell.flagged ? "bg-surface-2" : "bg-surface hover:bg-surface-2",
+              "group flex min-w-0 flex-col gap-1 border-t-2 p-4 transition-colors",
+              cell.flagged
+                ? "border-t-reaction-bad bg-surface-2"
+                : "border-t-transparent bg-surface hover:bg-surface-2",
             )}
           >
-            <span className="flex items-center justify-between gap-2 text-text-faint">
+            <span className="flex items-center justify-between gap-2 text-accent-sea">
               <span className="label-xs text-text-faint">
                 {String(i + 1).padStart(2, "0")} · {chapter.kind}
               </span>
               {cell.flagged ? (
                 <span
                   aria-label="Needs attention"
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-cream"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-reaction-bad"
                 />
               ) : (
                 <Icon size={15} strokeWidth={1.75} aria-hidden="true" />

@@ -6,7 +6,13 @@ import { cn } from "@/lib/utils";
 
 type Point = { x: number; y: number };
 type Player = { number: number; team: "a" | "b" | "gk"; from: Point; to: Point; delay?: number };
-type Template = { label: string; players: Player[]; ball: Point[]; zones?: boolean; goals?: boolean };
+type Template = {
+  label: string;
+  players: Player[];
+  ball: Point[];
+  zones?: boolean;
+  goals?: boolean;
+};
 
 const templates: Record<DrillTemplateId, Template> = {
   passing: {
@@ -18,7 +24,13 @@ const templates: Record<DrillTemplateId, Template> = {
       { number: 8, team: "a", from: { x: 19, y: 47 }, to: { x: 28, y: 39 }, delay: 0.6 },
       { number: 5, team: "b", from: { x: 50, y: 31 }, to: { x: 62, y: 22 }, delay: 0.5 },
     ],
-    ball: [{ x: 21, y: 20 }, { x: 76, y: 20 }, { x: 76, y: 45 }, { x: 23, y: 44 }, { x: 21, y: 20 }],
+    ball: [
+      { x: 21, y: 20 },
+      { x: 76, y: 20 },
+      { x: 76, y: 45 },
+      { x: 23, y: 44 },
+      { x: 21, y: 20 },
+    ],
   },
   rondo: {
     label: "Small-sided possession game with a neutral player and two mini-goals",
@@ -32,7 +44,13 @@ const templates: Record<DrillTemplateId, Template> = {
       { number: 5, team: "b", from: { x: 61, y: 29 }, to: { x: 51, y: 20 }, delay: 0.6 },
       { number: 6, team: "b", from: { x: 50, y: 41 }, to: { x: 62, y: 39 }, delay: 0.8 },
     ],
-    ball: [{ x: 22, y: 18 }, { x: 49, y: 14 }, { x: 76, y: 31 }, { x: 49, y: 49 }, { x: 22, y: 18 }],
+    ball: [
+      { x: 22, y: 18 },
+      { x: 49, y: 14 },
+      { x: 76, y: 31 },
+      { x: 49, y: 49 },
+      { x: 22, y: 18 },
+    ],
     goals: true,
   },
   positional: {
@@ -46,7 +64,13 @@ const templates: Record<DrillTemplateId, Template> = {
       { number: 5, team: "b", from: { x: 55, y: 18 }, to: { x: 64, y: 23 }, delay: 0.5 },
       { number: 7, team: "b", from: { x: 62, y: 46 }, to: { x: 70, y: 40 }, delay: 0.7 },
     ],
-    ball: [{ x: 19, y: 18 }, { x: 45, y: 24 }, { x: 74, y: 31 }, { x: 45, y: 40 }, { x: 19, y: 18 }],
+    ball: [
+      { x: 19, y: 18 },
+      { x: 45, y: 24 },
+      { x: 74, y: 31 },
+      { x: 45, y: 40 },
+      { x: 19, y: 18 },
+    ],
     zones: true,
   },
   match: {
@@ -62,7 +86,12 @@ const templates: Record<DrillTemplateId, Template> = {
       { number: 6, team: "b", from: { x: 79, y: 18 }, to: { x: 68, y: 23 }, delay: 0.4 },
       { number: 1, team: "gk", from: { x: 91, y: 32 }, to: { x: 90, y: 32 } },
     ],
-    ball: [{ x: 28, y: 45 }, { x: 46, y: 32 }, { x: 63, y: 18 }, { x: 84, y: 31 }],
+    ball: [
+      { x: 28, y: 45 },
+      { x: 46, y: 32 },
+      { x: 63, y: 18 },
+      { x: 84, y: 31 },
+    ],
     goals: true,
   },
 };
@@ -75,19 +104,52 @@ function DrillInfo({ name, onClose }: { name: string; onClose: () => void }) {
   }, [onClose]);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
-      <button type="button" aria-label="Close drill glossary" onClick={onClose} className="absolute inset-0 bg-pitch-control backdrop-blur-sm" />
-      <motion.section role="dialog" aria-modal="true" aria-label={`${name} drill glossary`} initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="relative w-full max-w-[520px] border border-wire bg-surface p-5 pb-7">
+      <button
+        type="button"
+        aria-label="Close drill glossary"
+        onClick={onClose}
+        className="absolute inset-0 bg-pitch-control backdrop-blur-sm"
+      />
+      <motion.section
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${name} drill glossary`}
+        initial={{ y: 24, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="relative w-full max-w-[520px] border border-wire bg-surface p-5 pb-7"
+      >
         <div className="flex items-start justify-between gap-3">
-          <div><p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-faint">Drill glossary</p><h3 className="display-i mt-1 text-[20px] text-cream">{name}</h3></div>
-          <button type="button" aria-label="Close drill glossary" onClick={onClose} className="tap -mr-2 -mt-2 flex items-center justify-center text-text-faint hover:text-text"><X size={18} /></button>
+          <div>
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-faint">
+              Drill glossary
+            </p>
+            <h3 className="display-i mt-1 text-[20px] text-cream">{name}</h3>
+          </div>
+          <button
+            type="button"
+            aria-label="Close drill glossary"
+            onClick={onClose}
+            className="tap -mr-2 -mt-2 flex items-center justify-center text-text-faint hover:text-text"
+          >
+            <X size={18} />
+          </button>
         </div>
-        <p className="mt-3 text-[12.5px] leading-[1.6] text-text-dim">The pitch shows the intended player movement, ball route and working area. Pause it whenever you need to explain a coaching point.</p>
+        <p className="mt-3 text-[12.5px] leading-[1.6] text-text-dim">
+          The pitch shows the intended player movement, ball route and working area. Pause it
+          whenever you need to explain a coaching point.
+        </p>
       </motion.section>
     </div>
   );
 }
 
-export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplateId; drillName: string }) {
+export function DrillPitch({
+  templateId,
+  drillName,
+}: {
+  templateId: DrillTemplateId;
+  drillName: string;
+}) {
   const reducedMotion = useReducedMotion();
   const [playing, setPlaying] = useState(true);
   const [replay, setReplay] = useState(0);
@@ -102,34 +164,144 @@ export function DrillPitch({ templateId, drillName }: { templateId: DrillTemplat
     <div className="relative aspect-[16/10] overflow-hidden border border-wire bg-pitch-bottom">
       <svg viewBox="0 0 100 62.5" className="h-full w-full" role="img" aria-label={template.label}>
         <defs>
-          <marker id={`arrow-${templateId}`} markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="var(--cream)" /></marker>
+          <marker
+            id={`arrow-${templateId}`}
+            markerWidth="5"
+            markerHeight="5"
+            refX="4"
+            refY="2.5"
+            orient="auto"
+          >
+            <path d="M0,0 L5,2.5 L0,5 Z" fill="var(--cream)" />
+          </marker>
         </defs>
-        {template.zones && <g fill="var(--cream)" opacity="0.07"><rect x="2" y="2" width="32" height="58.5" /><rect x="66" y="2" width="32" height="58.5" /></g>}
+        {template.zones && (
+          <g fill="var(--cream)" opacity="0.07">
+            <rect x="2" y="2" width="32" height="58.5" />
+            <rect x="66" y="2" width="32" height="58.5" />
+          </g>
+        )}
         <g fill="none" stroke="var(--pitch-line)" strokeWidth="0.55">
-          <rect x="2" y="2" width="96" height="58.5" /><line x1="50" y1="2" x2="50" y2="60.5" /><circle cx="50" cy="31.25" r="8" />
-          {(templateId === "match" || template.goals) && <><rect x="2" y="17" width="14" height="28" /><rect x="84" y="17" width="14" height="28" /></>}
-          {template.goals && <><rect x="0.5" y="25" width="2" height="12" /><rect x="97.5" y="25" width="2" height="12" /></>}
+          <rect x="2" y="2" width="96" height="58.5" />
+          <line x1="50" y1="2" x2="50" y2="60.5" />
+          <circle cx="50" cy="31.25" r="8" />
+          {(templateId === "match" || template.goals) && (
+            <>
+              <rect x="2" y="17" width="14" height="28" />
+              <rect x="84" y="17" width="14" height="28" />
+            </>
+          )}
+          {template.goals && (
+            <>
+              <rect x="0.5" y="25" width="2" height="12" />
+              <rect x="97.5" y="25" width="2" height="12" />
+            </>
+          )}
         </g>
-        <motion.path key={`path-${replay}`} d="M21 20 Q49 8 76 20 Q88 32 76 44" fill="none" stroke="var(--cream)" strokeWidth="0.7" strokeDasharray="2.2 2.2" markerEnd={`url(#arrow-${templateId})`} initial={{ pathLength: reducedMotion ? 1 : 0, opacity: 0 }} animate={{ pathLength: shouldAnimate ? [0, 1, 1] : 1, opacity: shouldAnimate ? [0, 0.65, 0.25] : 0.45 }} transition={{ duration, repeat: shouldAnimate ? Infinity : 0, ease: "easeInOut", times: [0, 0.35, 1] }} />
+        <motion.path
+          key={`path-${replay}`}
+          d="M21 20 Q49 8 76 20 Q88 32 76 44"
+          fill="none"
+          stroke="var(--cream)"
+          strokeWidth="0.7"
+          strokeDasharray="2.2 2.2"
+          markerEnd={`url(#arrow-${templateId})`}
+          initial={{ pathLength: reducedMotion ? 1 : 0, opacity: 0 }}
+          animate={{
+            pathLength: shouldAnimate ? [0, 1, 1] : 1,
+            opacity: shouldAnimate ? [0, 0.65, 0.25] : 0.45,
+          }}
+          transition={{
+            duration,
+            repeat: shouldAnimate ? Infinity : 0,
+            ease: "easeInOut",
+            times: [0, 0.35, 1],
+          }}
+        />
         {template.players.map((player, index) => {
-          const fill = player.team === "a" ? "var(--team-a)" : player.team === "b" ? "var(--team-b)" : "var(--team-gk)";
+          const fill =
+            player.team === "a"
+              ? "var(--team-a)"
+              : player.team === "b"
+                ? "var(--team-b)"
+                : "var(--team-gk)";
           return (
-            <motion.g key={`${player.team}-${player.number}-${index}-${replay}`} initial={{ x: player.from.x, y: player.from.y }} animate={{ x: shouldAnimate ? [player.from.x, player.to.x, player.from.x] : player.to.x, y: shouldAnimate ? [player.from.y, player.to.y, player.from.y] : player.to.y }} transition={{ duration, delay: player.delay ?? 0, repeat: shouldAnimate ? Infinity : 0, ease: "easeInOut" }}>
+            <motion.g
+              key={`${player.team}-${player.number}-${index}-${replay}`}
+              initial={{ x: player.from.x, y: player.from.y }}
+              animate={{
+                x: shouldAnimate ? [player.from.x, player.to.x, player.from.x] : player.to.x,
+                y: shouldAnimate ? [player.from.y, player.to.y, player.from.y] : player.to.y,
+              }}
+              transition={{
+                duration,
+                delay: player.delay ?? 0,
+                repeat: shouldAnimate ? Infinity : 0,
+                ease: "easeInOut",
+              }}
+            >
               <circle r="3.45" fill={fill} stroke="var(--pitch-line)" strokeWidth="0.5" />
-              <text y="1.25" textAnchor="middle" fill="var(--text)" fontFamily="var(--font-display)" fontSize="3.2" fontWeight="800" fontStyle="italic">{player.number}</text>
+              <text
+                y="1.25"
+                textAnchor="middle"
+                fill="var(--text)"
+                fontFamily="var(--font-display)"
+                fontSize="3.2"
+                fontWeight="800"
+                fontStyle="italic"
+              >
+                {player.number}
+              </text>
             </motion.g>
           );
         })}
-        <motion.g key={`ball-${replay}`} initial={{ x: template.ball[0]?.x ?? 50, y: template.ball[0]?.y ?? 31 }} animate={{ x: shouldAnimate ? template.ball.map((p) => p.x) : finalBall.x, y: shouldAnimate ? template.ball.map((p, i) => p.y - (i % 2 ? 2 : 0)) : finalBall.y }} transition={{ duration, repeat: shouldAnimate ? Infinity : 0, ease: "easeInOut" }}>
-          <circle r="1.65" fill="var(--text)" /><path d="M0 -0.8 .8 -.2 .5 .8 -.5 .8 -.8 -.2Z" fill="var(--ball-detail)" />
+        <motion.g
+          key={`ball-${replay}`}
+          initial={{ x: template.ball[0]?.x ?? 50, y: template.ball[0]?.y ?? 31 }}
+          animate={{
+            x: shouldAnimate ? template.ball.map((p) => p.x) : finalBall.x,
+            y: shouldAnimate ? template.ball.map((p, i) => p.y - (i % 2 ? 2 : 0)) : finalBall.y,
+          }}
+          transition={{ duration, repeat: shouldAnimate ? Infinity : 0, ease: "easeInOut" }}
+        >
+          <circle r="1.65" fill="var(--text)" />
+          <path d="M0 -0.8 .8 -.2 .5 .8 -.5 .8 -.8 -.2Z" fill="var(--ball-detail)" />
         </motion.g>
       </svg>
-      <button type="button" aria-label={`Open ${drillName} glossary entry`} onClick={() => setInfoOpen(true)} className="tap absolute right-1 top-1 flex items-center justify-center text-text hover:text-cream"><span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-pitch-control backdrop-blur-md"><Info size={13} /></span></button>
+      <button
+        type="button"
+        aria-label={`Open ${drillName} glossary entry`}
+        onClick={() => setInfoOpen(true)}
+        className="tap absolute right-1 top-1 flex items-center justify-center text-text hover:text-cream"
+      >
+        <span className="flex h-[22px] w-[22px] items-center justify-center rounded-full bg-pitch-control backdrop-blur-md">
+          <Info size={13} />
+        </span>
+      </button>
       <div className="absolute bottom-2 right-2 flex gap-1.5">
-        <button type="button" aria-label={showPause ? `Pause ${drillName} animation` : `Play ${drillName} animation`} onClick={() => setPlaying((value) => !value)} className="tap flex items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream">{showPause ? <Pause size={14} /> : <Play size={14} />}</button>
-        <button type="button" aria-label={`Replay ${drillName} animation`} onClick={() => { setReplay((value) => value + 1); setPlaying(true); }} className="tap flex items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream"><RotateCcw size={14} /></button>
+        <button
+          type="button"
+          aria-label={showPause ? `Pause ${drillName} animation` : `Play ${drillName} animation`}
+          onClick={() => setPlaying((value) => !value)}
+          className="tap flex items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream"
+        >
+          {showPause ? <Pause size={14} /> : <Play size={14} />}
+        </button>
+        <button
+          type="button"
+          aria-label={`Replay ${drillName} animation`}
+          onClick={() => {
+            setReplay((value) => value + 1);
+            setPlaying(true);
+          }}
+          className="tap flex items-center justify-center rounded-full bg-pitch-control text-text backdrop-blur-md hover:text-cream"
+        >
+          <RotateCcw size={14} />
+        </button>
       </div>
-      <AnimatePresence>{infoOpen && <DrillInfo name={drillName} onClose={() => setInfoOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>
+        {infoOpen && <DrillInfo name={drillName} onClose={() => setInfoOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 }

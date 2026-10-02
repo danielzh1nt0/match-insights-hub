@@ -96,7 +96,7 @@ export function VerdictBlock({
           </Panel>
 
           <Panel label="Model standard">
-            <p className="num text-[clamp(32px,4vw,44px)] leading-none text-text-dim">
+            <p className="num text-[clamp(32px,4vw,44px)] leading-none text-accent-sea">
               {finding ? `${finding.target}${unit}` : "—"}
             </p>
             <p className="mt-3 text-[12px] text-text-faint">
@@ -106,7 +106,7 @@ export function VerdictBlock({
 
           <Panel label="Video evidence">
             <p className="flex items-baseline gap-2">
-              <span className="num text-[clamp(32px,4vw,44px)] leading-none text-text-bright">
+              <span className="num text-[clamp(32px,4vw,44px)] leading-none text-positive">
                 {confirmed} of {moments}
               </span>
               <span className="text-[12px] text-text-dim">moments</span>

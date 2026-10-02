@@ -82,7 +82,9 @@ export function AccountMenu() {
           >
             <Avatar url={profile?.avatarUrl} name={name} email={email} size={34} />
             <span className="min-w-0">
-              <span className="block truncate text-[13px] font-semibold text-text">{name || "Coach"}</span>
+              <span className="block truncate text-[13px] font-semibold text-text">
+                {name || "Coach"}
+              </span>
               <span className="block truncate text-[11.5px] text-text-faint">
                 {profile?.role || email}
               </span>
@@ -91,10 +93,20 @@ export function AccountMenu() {
 
           <div className="my-1 h-px bg-wire-2" />
 
-          <button type="button" role="menuitem" onClick={() => go("/settings/profile")} className={itemClass}>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => go("/settings/profile")}
+            className={itemClass}
+          >
             Edit profile
           </button>
-          <button type="button" role="menuitem" onClick={() => go("/signup/club")} className={itemClass}>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => go("/signup/club")}
+            className={itemClass}
+          >
             Add a team
           </button>
           <button type="button" role="menuitem" onClick={() => go("/upload")} className={itemClass}>
@@ -103,13 +115,28 @@ export function AccountMenu() {
 
           <div className="my-1 h-px bg-wire-2" />
 
-          <button type="button" role="menuitem" onClick={() => go("/settings/club")} className={itemClass}>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => go("/settings/club")}
+            className={itemClass}
+          >
             Club setup
           </button>
-          <button type="button" role="menuitem" onClick={() => go("/settings/account")} className={itemClass}>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => go("/settings/account")}
+            className={itemClass}
+          >
             Account
           </button>
-          <button type="button" role="menuitem" onClick={() => go("/glossary")} className={itemClass}>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => go("/glossary")}
+            className={itemClass}
+          >
             Glossary
           </button>
 

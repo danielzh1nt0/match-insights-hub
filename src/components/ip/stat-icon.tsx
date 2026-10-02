@@ -86,13 +86,15 @@ export function StatIcon({
       )}
       {name === "shots" && (
         <>
-          <circle cx="14" cy="17" r="9" /><circle cx="14" cy="17" r="4" />
+          <circle cx="14" cy="17" r="9" />
+          <circle cx="14" cy="17" r="4" />
           <path d="m19 12 8-8m-3 0h3v3m-11 10 8-8" />
         </>
       )}
       {name === "on-target" && (
         <>
-          <circle cx="16" cy="16" r="10" /><circle cx="16" cy="16" r="5" fill="currentColor" stroke="none" />
+          <circle cx="16" cy="16" r="10" />
+          <circle cx="16" cy="16" r="5" fill="currentColor" stroke="none" />
           <circle cx="16" cy="16" r="1.6" fill="var(--surface)" stroke="none" />
         </>
       )}
@@ -110,19 +112,22 @@ export function StatIcon({
       )}
       {name === "offsides" && (
         <>
-          <path d="M4 18h24" strokeDasharray="3 3" /><path d="M8 11h13m0 0-4-4m4 4-4 4" />
+          <path d="M4 18h24" strokeDasharray="3 3" />
+          <path d="M8 11h13m0 0-4-4m4 4-4 4" />
           <circle cx="9" cy="23" r="2" />
         </>
       )}
       {name === "fouls" && <path d="m18 3-11 15h8l-1 11 11-16h-8l1-10Z" />}
       {name === "attempts" && (
         <>
-          <path d="M7 25 24 8m-9 0h9v9" /><path d="M7 11v14h14" opacity=".45" />
+          <path d="M7 25 24 8m-9 0h9v9" />
+          <path d="M7 11v14h14" opacity=".45" />
         </>
       )}
       {name === "possession" && (
         <>
-          <circle cx="16" cy="16" r="11" /><path d="M16 16V5a11 11 0 0 1 9.5 16.5L16 16Z" fill="currentColor" stroke="none" />
+          <circle cx="16" cy="16" r="11" />
+          <path d="M16 16V5a11 11 0 0 1 9.5 16.5L16 16Z" fill="currentColor" stroke="none" />
         </>
       )}
       {name === "passes" && (
@@ -139,15 +144,24 @@ export function StatIcon({
       )}
       {name === "better-option" && (
         <>
-          <path d="M3 21c4.5 0 6-1.7 8-6l2-5 3.5 2-1 4c1.7 2.3 3.6 3.4 6.5 4l-1.5 5H7c-2.5 0-4-1.5-4-4Z" strokeDasharray="3 2" />
+          <path
+            d="M3 21c4.5 0 6-1.7 8-6l2-5 3.5 2-1 4c1.7 2.3 3.6 3.4 6.5 4l-1.5 5H7c-2.5 0-4-1.5-4-4Z"
+            strokeDasharray="3 2"
+          />
           <path d="M19 9h9m0 0-3.5-3.5M28 9l-3.5 3.5" />
         </>
       )}
       {name === "turnovers-won" && (
-        <><circle cx="16" cy="16" r="11" /><path d="M16 23V9m0 0-5 5m5-5 5 5" /></>
+        <>
+          <circle cx="16" cy="16" r="11" />
+          <path d="M16 23V9m0 0-5 5m5-5 5 5" />
+        </>
       )}
       {name === "turnovers-lost" && (
-        <><circle cx="16" cy="16" r="11" /><path d="M16 9v14m0 0-5-5m5 5 5-5" /></>
+        <>
+          <circle cx="16" cy="16" r="11" />
+          <path d="M16 9v14m0 0-5-5m5 5 5-5" />
+        </>
       )}
       {name === "high-turnovers" && (
         <>
@@ -157,7 +171,8 @@ export function StatIcon({
       )}
       {name === "field-tilt" && (
         <>
-          <path d="M4 6h24v20H4zM16 6v20m0-7h7m0 0-3-3m3 3-3 3" /><path d="M4 11h5v10H4" />
+          <path d="M4 6h24v20H4zM16 6v20m0-7h7m0 0-3-3m3 3-3 3" />
+          <path d="M4 11h5v10H4" />
         </>
       )}
       {name === "pressing-intensity" && (
@@ -173,12 +188,14 @@ export function StatIcon({
       )}
       {name === "block-length" && (
         <>
-          <path d="M5 16h22M5 16l5-5m-5 5 5 5m17-5-5-5m5 5-5 5" /><path d="M5 7v18m22-18v18" opacity=".45" />
+          <path d="M5 16h22M5 16l5-5m-5 5 5 5m17-5-5-5m5 5-5 5" />
+          <path d="M5 7v18m22-18v18" opacity=".45" />
         </>
       )}
       {name === "line-height" && (
         <>
-          <path d="M16 5v22m0-22-5 5m5-5 5 5m-5 17-5-5m5 5 5-5" /><path d="M7 5h18M7 27h18" opacity=".45" />
+          <path d="M16 5v22m0-22-5 5m5-5 5 5m-5 17-5-5m5 5 5-5" />
+          <path d="M7 5h18M7 27h18" opacity=".45" />
         </>
       )}
     </svg>

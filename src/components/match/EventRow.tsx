@@ -4,7 +4,19 @@ import { StatIcon } from "./StatIcon";
 import { TeamToken, type TeamIdentity } from "@/components/team/TeamToken";
 import { cn } from "@/lib/utils";
 
-export function EventRow({ time, icon, iconTint = "default", identity, title, subtitle, state, focused, onPlay, onConfirm, onHide }: {
+export function EventRow({
+  time,
+  icon,
+  iconTint = "default",
+  identity,
+  title,
+  subtitle,
+  state,
+  focused,
+  onPlay,
+  onConfirm,
+  onHide,
+}: {
   time: string;
   icon: StatIconName;
   iconTint?: "default" | "good" | "warn" | "bad";
@@ -19,10 +31,13 @@ export function EventRow({ time, icon, iconTint = "default", identity, title, su
   onHide: () => void;
 }) {
   const tint =
-    iconTint === "good" ? "var(--reaction-good)"
-    : iconTint === "warn" ? "var(--reaction-warn)"
-    : iconTint === "bad" ? "var(--reaction-bad)"
-    : "var(--cream)";
+    iconTint === "good"
+      ? "var(--reaction-good)"
+      : iconTint === "warn"
+        ? "var(--reaction-warn)"
+        : iconTint === "bad"
+          ? "var(--reaction-bad)"
+          : "var(--cream)";
 
   return (
     <div
@@ -52,7 +67,9 @@ export function EventRow({ time, icon, iconTint = "default", identity, title, su
           <TeamToken identity={identity} size="sm" state="compare" />
           {title}
         </div>
-        {subtitle && <div className="mt-[3px] truncate text-[11px] text-text-faint">{subtitle}</div>}
+        {subtitle && (
+          <div className="mt-[3px] truncate text-[11px] text-text-faint">{subtitle}</div>
+        )}
       </div>
 
       <div className="flex gap-1">

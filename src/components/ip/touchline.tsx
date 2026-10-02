@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 /** The small archival label that names a region of the page. */
 export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cn("label-sm text-text-faint", className)}>{children}</p>;
+  return <p className={cn("label-sm text-accent-sea", className)}>{children}</p>;
 }
 
 export function SectionHead({
@@ -55,7 +55,7 @@ export function IconSquare({
   return (
     <span
       className={cn(
-        "grid h-9 w-9 shrink-0 place-items-center border border-wire text-text-dim",
+        "grid h-9 w-9 shrink-0 place-items-center border border-wire text-accent-sea",
         className,
       )}
     >
@@ -187,7 +187,7 @@ export function TargetBar({
     <div className="mt-4">
       <div className="relative h-[10px] w-full bg-surface-3">
         <span
-          className={cn("absolute inset-y-0 left-0", short ? "bg-text-dim" : "bg-cream")}
+          className={cn("absolute inset-y-0 left-0", short ? "bg-text-dim" : "bg-positive")}
           style={{ width: `${pct}%` }}
         />
         {targetPct !== null && (
@@ -258,7 +258,7 @@ export function DotPlot({
           <span
             key={`${v}-${i}`}
             aria-hidden="true"
-            className="absolute top-1/2 h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cream"
+            className="absolute top-1/2 h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent-sea ring-1 ring-kit-outline"
             style={{ left: `${x(v)}%` }}
           />
         ))}
@@ -356,7 +356,7 @@ export function Crest({
 /** The quiet way out of a card. Underlined, never shouted in capitals. */
 export function actionLinkClass(className?: string) {
   return cn(
-    "text-[12.5px] font-semibold text-text underline decoration-wire underline-offset-[3px] transition-colors hover:decoration-cream hover:text-text-bright",
+    "text-[12.5px] font-semibold text-accent-sea underline decoration-accent-sea/40 underline-offset-[3px] transition-colors hover:decoration-accent-sea",
     className,
   );
 }

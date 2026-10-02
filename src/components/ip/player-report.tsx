@@ -24,15 +24,21 @@ export function PlayerReport({
   matchId?: string;
 }) {
   const shirtOf = (event: ReviewedEvent) => {
-    const raw = event.payload?.["shirt"] ?? event.payload?.["shirt_number"] ?? event.payload?.["player_shirt"];
+    const raw =
+      event.payload?.["shirt"] ??
+      event.payload?.["shirt_number"] ??
+      event.payload?.["player_shirt"];
     const shirt = typeof raw === "number" ? raw : Number(raw);
     return Number.isFinite(shirt) ? shirt : null;
   };
 
   const own = events.filter((event) => event.status !== "deleted" && shirtOf(event) === player.id);
   const losses = own.filter((event) => event.type === "turnover_lost").length;
-  const regains = own.filter((event) => event.type === "turnover_won" || event.type === "high_turnover").length;
-  const completion = player.passes > 0 ? Math.round((player.passesCompleted / player.passes) * 100) : null;
+  const regains = own.filter(
+    (event) => event.type === "turnover_won" || event.type === "high_turnover",
+  ).length;
+  const completion =
+    player.passes > 0 ? Math.round((player.passesCompleted / player.passes) * 100) : null;
   const distanceKm = Math.round((player.distanceM / 1000) * 100) / 100;
 
   const stats: { label: string; value: string }[] = [
@@ -62,8 +68,8 @@ export function PlayerReport({
       </Card>
 
       <p className="px-1 text-[11.5px] leading-relaxed text-text-faint">
-        The tracking file records shirt numbers, not names. Match this number to your own team sheet before sharing
-        these numbers with anyone.
+        The tracking file records shirt numbers, not names. Match this number to your own team sheet
+        before sharing these numbers with anyone.
       </p>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -93,17 +99,29 @@ export function PlayerReport({
       >
         {own.length === 0 ? (
           <p className="py-2 text-[13px] text-text-dim">
-            No tracked moment in this match names shirt {player.id}. Their totals above still come from the tracking
-            file.
+            No tracked moment in this match names shirt {player.id}. Their totals above still come
+            from the tracking file.
           </p>
         ) : (
           <ul>
             {own.map((event) => {
               const row = (
                 <>
-                  <span className="num w-12 shrink-0 text-[12.5px] text-cream">{formatClock(event.t)}</span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] text-text">{event.title}</span>
-                  <Pill tone={event.type === "turnover_lost" ? "bad" : event.type === "turnover_won" ? "good" : "neutral"}>
+                  <span className="num w-12 shrink-0 text-[12.5px] text-cream">
+                    {formatClock(event.t)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] text-text">
+                    {event.title}
+                  </span>
+                  <Pill
+                    tone={
+                      event.type === "turnover_lost"
+                        ? "bad"
+                        : event.type === "turnover_won"
+                          ? "good"
+                          : "neutral"
+                    }
+                  >
                     {event.status === "confirmed" ? "Confirmed" : "Detected"}
                   </Pill>
                 </>

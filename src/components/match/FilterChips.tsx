@@ -39,11 +39,7 @@ export function FilterChips({ chips, activeId, onSelect, onMore, moreActiveCount
             More
             <span aria-hidden="true">▾</span>
             {moreActiveCount > 0 && (
-              <span
-                className={cn(
-                  " bg-cream px-1.5 text-[10px] font-extrabold text-ink",
-                )}
-              >
+              <span className={cn(" bg-cream px-1.5 text-[10px] font-extrabold text-ink")}>
                 {moreActiveCount}
               </span>
             )}

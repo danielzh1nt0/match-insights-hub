@@ -34,16 +34,41 @@ export function StoryLauncher({
       )}
       style={{ background: "linear-gradient(135deg, var(--cream) 0%, #d9d0bb 100%)" }}
     >
-      <span className={cn("grid shrink-0 place-items-center rounded-full bg-[#111111]", small ? "h-6 w-6" : "h-9 w-9")} aria-hidden="true">
-        <svg width={small ? 9 : 12} height={small ? 10 : 14} viewBox="0 0 12 14" fill="var(--cream)">
+      <span
+        className={cn(
+          "grid shrink-0 place-items-center rounded-full bg-[#111111]",
+          small ? "h-6 w-6" : "h-9 w-9",
+        )}
+        aria-hidden="true"
+      >
+        <svg
+          width={small ? 9 : 12}
+          height={small ? 10 : 14}
+          viewBox="0 0 12 14"
+          fill="var(--cream)"
+        >
           <path d="M1 1l10 6-10 6z" />
         </svg>
       </span>
       <span className="min-w-0 flex-1">
-        <span className={cn("display-i block leading-[1.1] text-[#111111]", small ? "truncate text-[12.5px]" : "text-[16px]")}>{label}</span>
-        {!small && <span className="mt-0.5 block text-[11.5px] font-semibold text-[rgba(17,17,17,0.65)]">{sub}</span>}
+        <span
+          className={cn(
+            "display-i block leading-[1.1] text-[#111111]",
+            small ? "truncate text-[12.5px]" : "text-[16px]",
+          )}
+        >
+          {label}
+        </span>
+        {!small && (
+          <span className="mt-0.5 block text-[11.5px] font-semibold text-[rgba(17,17,17,0.65)]">
+            {sub}
+          </span>
+        )}
       </span>
-      <span className={cn("display-i shrink-0 text-[#111111]", small ? "text-[15px]" : "text-[20px]")} aria-hidden="true">
+      <span
+        className={cn("display-i shrink-0 text-[#111111]", small ? "text-[15px]" : "text-[20px]")}
+        aria-hidden="true"
+      >
         →
       </span>
     </Link>

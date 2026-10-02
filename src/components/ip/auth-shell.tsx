@@ -45,10 +45,13 @@ export function AuthShell({
               {title}
             </h1>
           )}
-          <p className="mt-3 max-w-[38ch] text-[14px] leading-relaxed text-cream/70 md:text-[15px]">{sub}</p>
+          <p className="mt-3 max-w-[38ch] text-[14px] leading-relaxed text-cream/70 md:text-[15px]">
+            {sub}
+          </p>
         </div>
         <p className="relative mt-6 hidden text-[11.5px] leading-relaxed text-cream/60 md:block">
-          Every number in Ipanema comes from your own match file. Where the file does not say, neither do we.
+          Every number in Ipanema comes from your own match file. Where the file does not say,
+          neither do we.
         </p>
       </aside>
 
@@ -60,7 +63,9 @@ export function AuthShell({
           className="w-full max-w-[400px]"
         >
           <div className="flex flex-col gap-4">{children}</div>
-          {note && <p className="mt-5 text-center text-[11.5px] leading-relaxed text-text-faint">{note}</p>}
+          {note && (
+            <p className="mt-5 text-center text-[11.5px] leading-relaxed text-text-faint">{note}</p>
+          )}
           {foot && <div className="mt-6 text-center text-[12.5px] text-text-dim">{foot}</div>}
         </motion.div>
       </main>

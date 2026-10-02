@@ -44,7 +44,7 @@ function SignUp() {
       <AuthShell title="Check your email" sub="We have sent you a link to confirm your address. Open it and you are in.">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <Mail size={30} className="text-cream" aria-hidden="true" />
-          <h1 className="display text-[20px] text-text">Your account is ready</h1>
+          <h1 className="display-i text-[22px] text-text-bright">Your account is ready</h1>
           <p className="text-[13px] text-text-dim">
             Signed up as <strong className="text-text">{email}</strong>.
           </p>

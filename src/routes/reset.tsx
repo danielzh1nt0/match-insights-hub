@@ -30,7 +30,7 @@ function Reset() {
       <AuthShell title="Check your email" sub="If that address has an account, a reset link is on its way.">
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <Mail size={30} className="text-cream" aria-hidden="true" />
-          <h1 className="display text-[20px] text-text">Check your email</h1>
+          <h1 className="display-i text-[22px] text-text-bright">Check your email</h1>
           <p className="text-[13px] text-text-dim">
             We sent a reset link to <strong className="text-text">{email}</strong>. Open it on this device to
             set a new password.

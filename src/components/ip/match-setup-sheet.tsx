@@ -120,11 +120,19 @@ export function MatchSetupSheet({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div>
             <Label>Team A name</Label>
-            <Input value={nameA} onChange={(e) => setNameA(e.target.value)} aria-label="Team A name" />
+            <Input
+              value={nameA}
+              onChange={(e) => setNameA(e.target.value)}
+              aria-label="Team A name"
+            />
           </div>
           <div>
             <Label>Team B name</Label>
-            <Input value={nameB} onChange={(e) => setNameB(e.target.value)} aria-label="Team B name" />
+            <Input
+              value={nameB}
+              onChange={(e) => setNameB(e.target.value)}
+              aria-label="Team B name"
+            />
           </div>
           <div>
             <Label>Team A kit</Label>
@@ -178,7 +186,12 @@ export function MatchSetupSheet({
           </div>
           <div>
             <Label>Date</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Match date" />
+            <Input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              aria-label="Match date"
+            />
           </div>
           <div>
             <Label>Competition</Label>

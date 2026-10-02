@@ -55,14 +55,23 @@ function payloadText(event: ReviewedEvent, keys: string[]) {
 }
 
 function eventPlayer(event: ReviewedEvent) {
-  return payloadText(event, ["shirt", "shirt_number", "player", "player_id", "carrier", "carrier_id"]);
+  return payloadText(event, [
+    "shirt",
+    "shirt_number",
+    "player",
+    "player_id",
+    "carrier",
+    "carrier_id",
+  ]);
 }
 
 function eventX(event: ReviewedEvent) {
   const payload = event.payload ?? {};
-  const direct = [payload["x"], payload["x_pct"], payload["start_x"], payload["ball_x"]]
-    .find((value) => typeof value === "number");
-  if (typeof direct === "number") return direct <= 1 ? direct * 100 : direct <= 105 ? (direct / 105) * 100 : direct;
+  const direct = [payload["x"], payload["x_pct"], payload["start_x"], payload["ball_x"]].find(
+    (value) => typeof value === "number",
+  );
+  if (typeof direct === "number")
+    return direct <= 1 ? direct * 100 : direct <= 105 ? (direct / 105) * 100 : direct;
   const location = payload["location"] ?? payload["start"] ?? payload["position"];
   if (Array.isArray(location) && typeof location[0] === "number") {
     const x = location[0];
@@ -82,7 +91,8 @@ function eventQuality(event: ReviewedEvent) {
 export function eventMatchesFilter(event: ReviewedEvent, value: EventFilterValue) {
   const types = eventTypeKey(value.type);
   if (types && !types.includes(event.type)) return false;
-  if (value.player && `${event.team ?? "?"}:${eventPlayer(event) ?? ""}` !== value.player) return false;
+  if (value.player && `${event.team ?? "?"}:${eventPlayer(event) ?? ""}` !== value.player)
+    return false;
   if (value.quality && eventQuality(event) !== value.quality) return false;
   if (value.zone) {
     const x = eventX(event);
@@ -94,7 +104,13 @@ export function eventMatchesFilter(event: ReviewedEvent, value: EventFilterValue
   return true;
 }
 
-function FilterChip({ label, active, onClick, expanded, badge }: {
+function FilterChip({
+  label,
+  active,
+  onClick,
+  expanded,
+  badge,
+}: {
   label: string;
   active: boolean;
   onClick: () => void;
@@ -111,12 +127,21 @@ function FilterChip({ label, active, onClick, expanded, badge }: {
       className={cn("fchip", active && "fchip-active")}
     >
       <span>{label}</span>
-      {badge ? <span className="fchip-badge" aria-label={`${badge} extra filters`}>· {badge}</span> : null}
+      {badge ? (
+        <span className="fchip-badge" aria-label={`${badge} extra filters`}>
+          · {badge}
+        </span>
+      ) : null}
     </button>
   );
 }
 
-function PlayerSection({ events, value, onChange, teamNames }: {
+function PlayerSection({
+  events,
+  value,
+  onChange,
+  teamNames,
+}: {
   events: ReviewedEvent[];
   value: string | null;
   onChange: (value: string | null) => void;
@@ -138,12 +163,25 @@ function PlayerSection({ events, value, onChange, teamNames }: {
     <div className="space-y-3">
       {(["A", "B"] as const).map((team) => (
         <div key={team} className="grid grid-cols-[88px_1fr] items-start gap-3">
-          <p className="truncate pt-2 text-[11.5px] font-semibold text-text-dim">{teamNames[team]}</p>
+          <p className="truncate pt-2 text-[11.5px] font-semibold text-text-dim">
+            {teamNames[team]}
+          </p>
           <div className="flex flex-wrap gap-1.5">
-            {players[team].length > 0 ? players[team].map((shirt) => {
-              const key = `${team}:${shirt}`;
-              return <FilterChip key={key} label={shirt} active={value === key} onClick={() => onChange(value === key ? null : key)} />;
-            }) : <span className="py-2 text-[11.5px] text-text-faint">No shirt numbers detected</span>}
+            {players[team].length > 0 ? (
+              players[team].map((shirt) => {
+                const key = `${team}:${shirt}`;
+                return (
+                  <FilterChip
+                    key={key}
+                    label={shirt}
+                    active={value === key}
+                    onClick={() => onChange(value === key ? null : key)}
+                  />
+                );
+              })
+            ) : (
+              <span className="py-2 text-[11.5px] text-text-faint">No shirt numbers detected</span>
+            )}
           </div>
         </div>
       ))}
@@ -151,7 +189,12 @@ function PlayerSection({ events, value, onChange, teamNames }: {
   );
 }
 
-export function EventFilter({ value, onChange, events, teamNames }: {
+export function EventFilter({
+  value,
+  onChange,
+  events,
+  teamNames,
+}: {
   value: EventFilterValue;
   onChange: (value: EventFilterValue) => void;
   events: ReviewedEvent[];
@@ -159,7 +202,8 @@ export function EventFilter({ value, onChange, events, teamNames }: {
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(value);
-  const extraCount = Number(Boolean(value.zone)) + Number(Boolean(value.player)) + Number(Boolean(value.quality));
+  const extraCount =
+    Number(Boolean(value.zone)) + Number(Boolean(value.player)) + Number(Boolean(value.quality));
 
   const openSheet = () => {
     setDraft(value);
@@ -177,7 +221,13 @@ export function EventFilter({ value, onChange, events, teamNames }: {
             onClick={() => onChange({ ...value, type: option.key })}
           />
         ))}
-        <FilterChip label="More ▾" active={false} expanded={open} badge={extraCount || undefined} onClick={openSheet} />
+        <FilterChip
+          label="More ▾"
+          active={false}
+          expanded={open}
+          badge={extraCount || undefined}
+          onClick={openSheet}
+        />
       </div>
 
       <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -188,10 +238,21 @@ export function EventFilter({ value, onChange, events, teamNames }: {
             className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto border border-b-0 border-wire bg-surface p-5 pb-[max(24px,env(safe-area-inset-bottom))] shadow-lg outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom md:inset-y-0 md:left-auto md:right-0 md:h-dvh md:max-h-none md:w-[420px] md:rounded-none md:border-y-0 md:border-r-0 md:p-7 md:data-[state=open]:slide-in-from-right md:data-[state=closed]:slide-out-to-right"
           >
             <header className="flex items-center justify-between gap-4 border-b border-wire-2 pb-4">
-              <Dialog.Title className="display text-[20px] uppercase text-text">Filters</Dialog.Title>
+              <Dialog.Title className="display text-[20px] uppercase text-text">
+                Filters
+              </Dialog.Title>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setDraft(DEFAULT_EVENT_FILTER)} className="tap px-2 text-[12px] font-semibold text-text-dim hover:text-cream">Reset</button>
-                <Dialog.Close className="tap grid place-items-center text-text-faint hover:text-text" aria-label="Close filters">
+                <button
+                  type="button"
+                  onClick={() => setDraft(DEFAULT_EVENT_FILTER)}
+                  className="tap px-2 text-[12px] font-semibold text-text-dim hover:text-cream"
+                >
+                  Reset
+                </button>
+                <Dialog.Close
+                  className="tap grid place-items-center text-text-faint hover:text-text"
+                  aria-label="Close filters"
+                >
                   <X size={18} aria-hidden="true" />
                 </Dialog.Close>
               </div>
@@ -199,33 +260,83 @@ export function EventFilter({ value, onChange, events, teamNames }: {
 
             <div className="space-y-6 py-5">
               <section>
-                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">Type</h3>
+                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
+                  Type
+                </h3>
                 <div className="flex flex-wrap gap-1.5">
-                  {TYPE_OPTIONS.map((option) => <FilterChip key={option.key} label={option.label} active={draft.type === option.key} onClick={() => setDraft({ ...draft, type: option.key })} />)}
+                  {TYPE_OPTIONS.map((option) => (
+                    <FilterChip
+                      key={option.key}
+                      label={option.label}
+                      active={draft.type === option.key}
+                      onClick={() => setDraft({ ...draft, type: option.key })}
+                    />
+                  ))}
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">Zone</h3>
+                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
+                  Zone
+                </h3>
                 <div className="flex flex-wrap gap-1.5">
-                  {ZONE_OPTIONS.map((option) => <FilterChip key={option.key} label={option.label} active={draft.zone === option.key} onClick={() => setDraft({ ...draft, zone: draft.zone === option.key ? null : option.key })} />)}
+                  {ZONE_OPTIONS.map((option) => (
+                    <FilterChip
+                      key={option.key}
+                      label={option.label}
+                      active={draft.zone === option.key}
+                      onClick={() =>
+                        setDraft({ ...draft, zone: draft.zone === option.key ? null : option.key })
+                      }
+                    />
+                  ))}
                 </div>
               </section>
 
               <section>
-                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">Player</h3>
-                <PlayerSection events={events} value={draft.player} onChange={(player) => setDraft({ ...draft, player })} teamNames={teamNames} />
+                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
+                  Player
+                </h3>
+                <PlayerSection
+                  events={events}
+                  value={draft.player}
+                  onChange={(player) => setDraft({ ...draft, player })}
+                  teamNames={teamNames}
+                />
               </section>
 
               <section>
-                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">Quality</h3>
+                <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-text-faint">
+                  Quality
+                </h3>
                 <div className="flex flex-wrap gap-1.5">
-                  {QUALITY_OPTIONS.map((option) => <FilterChip key={option.key} label={option.label} active={draft.quality === option.key} onClick={() => setDraft({ ...draft, quality: draft.quality === option.key ? null : option.key })} />)}
+                  {QUALITY_OPTIONS.map((option) => (
+                    <FilterChip
+                      key={option.key}
+                      label={option.label}
+                      active={draft.quality === option.key}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          quality: draft.quality === option.key ? null : option.key,
+                        })
+                      }
+                    />
+                  ))}
                 </div>
               </section>
             </div>
 
-            <button type="button" onClick={() => { onChange(draft); setOpen(false); }} className="tap mt-auto w-full bg-cream px-5 text-sm font-bold text-primary-foreground hover:bg-cream-dim">Apply</button>
+            <button
+              type="button"
+              onClick={() => {
+                onChange(draft);
+                setOpen(false);
+              }}
+              className="tap mt-auto w-full bg-cream px-5 text-sm font-bold text-primary-foreground hover:bg-cream-dim"
+            >
+              Apply
+            </button>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>

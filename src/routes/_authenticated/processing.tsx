@@ -1,8 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, TriangleAlert } from "lucide-react";
+import { Check, Hourglass, Target, TriangleAlert } from "lucide-react";
 import { AppHeader, Screen } from "@/components/ip/chrome";
-import { Card, PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
+import { PrimaryButton, SecondaryButton } from "@/components/ip/primitives";
+import { Crest, Eyebrow } from "@/components/ip/touchline";
+import { MatchBuild } from "@/components/registration/processing-visuals";
+import { shortTeamCode } from "@/components/team/TeamToken";
+import { crestForTeam } from "@/lib/team-crests";
 import { matchesDb } from "@/integrations/matches/client";
 import { cn } from "@/lib/utils";
 
@@ -14,16 +18,44 @@ export const Route = createFileRoute("/_authenticated/processing")({
       { title: "Analysing your match — Ipanema" },
       {
         name: "description",
-        content: "Reading the pitch, finding players, following the ball — then writing your findings.",
+        content:
+          "Reading the pitch, finding players, following the ball — then writing your findings.",
       },
       { property: "og:title", content: "Analysing your match — Ipanema" },
       { property: "og:description", content: "About 30 minutes for a 45-minute half." },
-       { property: "og:type", content: "website" },
-       { name: "twitter:card", content: "summary" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Processing,
 });
+
+/**
+ * The pipeline, in the coach's language.
+ *
+ * Each step says what it produces, not what it runs. The backend reports a
+ * single status rather than per-step telemetry, so a step is marked done only
+ * when the whole analysis is done — the screen never claims to know more about
+ * its own progress than it does.
+ */
+const STEPS = [
+  {
+    name: "Finding the players",
+    detail: "Every body on the pitch, locked to a position on the grass.",
+  },
+  {
+    name: "Working out the teams",
+    detail: "Separating the two kits, so a shirt colour becomes a side.",
+  },
+  {
+    name: "Following the ball",
+    detail: "Building possession sequences and the passes inside them.",
+  },
+  {
+    name: "Finding the moments",
+    detail: "Tagging pressing triggers, shots and transitions worth watching.",
+  },
+] as const;
 
 function Processing() {
   const navigate = useNavigate();
@@ -42,8 +74,16 @@ function Processing() {
       ]);
       if (!alive) return;
       setChecked(true);
-      if (m) setRow({ status: String((m as { status: string }).status), duration_s: (m as { duration_s: number | null }).duration_s });
-      if (l) setNames({ a: String((l as { name_a: string | null }).name_a ?? "Your team"), b: String((l as { name_b: string | null }).name_b ?? "Opponent") });
+      if (m)
+        setRow({
+          status: String((m as { status: string }).status),
+          duration_s: (m as { duration_s: number | null }).duration_s,
+        });
+      if (l)
+        setNames({
+          a: String((l as { name_a: string | null }).name_a ?? "Your team"),
+          b: String((l as { name_b: string | null }).name_b ?? "Opponent"),
+        });
     };
     void poll();
     const timer = setInterval(poll, 15_000);
@@ -57,75 +97,239 @@ function Processing() {
   const ready = status === "ready";
   const failed = status === "failed";
   const minutes = row?.duration_s ? Math.round(row.duration_s / 60) : null;
-  const steps = [
-    { label: "Video uploaded", done: status !== "loading" && status !== "missing" },
-    { label: "Pitch set up for this ground", done: ready, note: "Once per ground. The first match at a new ground can take a few hours." },
-    { label: "Players, ball and events analysed", done: ready },
-    { label: "Findings written", done: ready },
-  ];
-  const active = steps.findIndex((x) => !x.done);
+
+  const phase = ready ? 4 : failed ? -1 : status === "loading" ? -1 : 2;
+  const stage = ready ? 3 : failed ? 1 : 1;
+
+  const teamA = names
+    ? {
+        name: names.a,
+        shortCode: shortTeamCode(names.a),
+        kitColour: "var(--team-a)",
+        ...(crestForTeam(names.a) ? { crestUrl: crestForTeam(names.a)! } : {}),
+      }
+    : null;
+  const teamB = names
+    ? {
+        name: names.b,
+        shortCode: shortTeamCode(names.b),
+        kitColour: "var(--team-b)",
+        ...(crestForTeam(names.b) ? { crestUrl: crestForTeam(names.b)! } : {}),
+      }
+    : null;
 
   return (
     <div className="min-h-screen bg-bg">
       <AppHeader backTo="/library" />
-      <Screen className="tactical-grid min-h-[calc(100vh-64px)] pt-7 pb-16">
-        <div className="mx-auto max-w-[560px]">
-          <p className="section-kicker">Analysis pipeline</p>
-          <h1 className="display mt-2 text-[30px] uppercase text-text">{failed ? "Analysis failed" : ready ? "Ready" : "Analysing"}</h1>
-          {names && (
-            <p className="mt-1 text-[13px] text-text-dim">
-              {names.a} – {names.b}
-              {minutes ? <> · <span className="num">{minutes} min</span> of video</> : null}
-            </p>
-          )}
+      <Screen className="pb-16 pt-6">
+        {/* The fixture, and where it has got to. */}
+        <div className="border border-wire bg-surface p-4 sm:p-5">
+          <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+            <div className="min-w-0">
+              <Eyebrow>
+                Match pipeline
+                {minutes ? ` · ${minutes} min of video` : ""}
+              </Eyebrow>
+              <h1 className="mt-2 flex flex-wrap items-center gap-3">
+                {teamA && <Crest team={teamA} size={30} />}
+                <span className="display-i text-[clamp(26px,4.4vw,40px)] leading-none text-text-bright">
+                  {names ? (
+                    <>
+                      {names.a} <span className="text-text-faint">vs</span> {names.b}
+                    </>
+                  ) : (
+                    "Your match"
+                  )}
+                </span>
+                {teamB && <Crest team={teamB} size={30} />}
+              </h1>
+            </div>
 
-          {status === "missing" ? (
-            <Card className="mt-5 flex flex-col gap-3">
-              <p className="text-[13px] text-text-dim">We can't find this upload. It may still be finishing — check the library in a minute.</p>
-              <SecondaryButton className="h-12" onClick={() => navigate({ to: "/library" })}>Back to library</SecondaryButton>
-            </Card>
-          ) : failed ? (
-            <Card className="mt-5 flex flex-col gap-3">
-              <span className="flex items-center gap-2 text-[13.5px] font-semibold text-quality-bad">
-                <TriangleAlert size={16} aria-hidden="true" />
-                We couldn't analyse this match
-              </span>
-              <p className="text-[13px] leading-relaxed text-text-dim">The video is safely stored. We'll look at what went wrong and run it again.</p>
-              <SecondaryButton className="h-12" onClick={() => navigate({ to: "/library" })}>Back to library</SecondaryButton>
-            </Card>
-          ) : (
-            <>
-              <Card className="mt-5 flex flex-col gap-1">
-                {steps.map((s, i) => {
-                  const isActive = i === active;
-                  return (
-                    <div key={s.label} className="flex items-start gap-3 border-b border-wire-2 py-3 last:border-0">
-                      <span
-                        className={cn(
-                          "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px]",
-                          s.done ? "border-quality-good bg-quality-good/15 text-quality-good" : isActive ? "border-cream text-cream" : "border-wire text-text-faint",
-                        )}
-                      >
-                        {s.done ? <Check size={13} aria-hidden="true" /> : i + 1}
-                      </span>
-                      <span className="flex-1">
-                        <span className={cn("block text-[13.5px]", s.done ? "text-text" : isActive ? "text-cream" : "text-text-faint")}>{s.label}</span>
-                        {isActive && s.note && <span className="mt-0.5 block text-[11.5px] text-text-faint">{s.note}</span>}
-                      </span>
-                    </div>
-                  );
-                })}
-              </Card>
-              <p className="mt-3 text-[11.5px] text-text-faint">You can close this page. The match appears in your library and opens as soon as it's ready.</p>
-              {ready && id && (
-                <PrimaryButton block className="mt-4 h-12" onClick={() => navigate({ to: "/match/$matchId/insights", params: { matchId: id } })}>
-                  Open analysis
-                </PrimaryButton>
-              )}
-            </>
-          )}
+            <div className="rule-x flex shrink-0 border border-wire" aria-label="Pipeline stage">
+              {["Uploading", "Processing", "Ready"].map((label, i) => (
+                <span
+                  key={label}
+                  aria-current={i === stage ? "step" : undefined}
+                  className={cn(
+                    "label-sm flex h-10 items-center px-3.5",
+                    i === stage
+                      ? "bg-surface-2 text-text-bright"
+                      : i < stage
+                        ? "text-text-dim"
+                        : "text-text-faint",
+                  )}
+                >
+                  {i + 1}. {label}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {status === "missing" ? (
+          <Notice
+            title="We can't find this upload"
+            body="It may still be finishing. Check your matches in a minute — it appears there as soon as the pipeline picks it up."
+            onBack={() => navigate({ to: "/library" })}
+          />
+        ) : failed ? (
+          <Notice
+            alarm
+            title="We couldn't analyse this match"
+            body="The video is safely stored. We'll look at what went wrong and run it again — you don't need to upload it a second time."
+            onBack={() => navigate({ to: "/library" })}
+          />
+        ) : (
+          <>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border border-wire bg-surface px-4 py-3 sm:px-5">
+              <p className="flex items-center gap-2.5">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "h-2 w-2 shrink-0 rounded-full",
+                    ready ? "bg-cream" : "stage-pulse bg-cream",
+                  )}
+                />
+                <span className="display-i text-[18px] leading-none text-text-bright">
+                  {ready ? "Analysis complete" : "Tactical extraction in progress"}
+                </span>
+              </p>
+              <p className="text-[12.5px] text-text-dim">
+                {ready
+                  ? "Every finding is written and the moments are tagged."
+                  : "You can close this page — the work carries on, and the match opens from your library when it's done."}
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
+              <section className="border border-wire bg-surface" aria-labelledby="engine-view">
+                <header className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 p-4 sm:p-5">
+                  <p className="label-sm text-text-faint">Spatial engine</p>
+                  <h2 id="engine-view" className="text-[15px] font-semibold text-text-bright">
+                    {ready ? "Match reconstructed" : STEPS[Math.min(phase, 3)]?.name}
+                  </h2>
+                </header>
+                <div className="px-4 pb-5 sm:px-5">
+                  <MatchBuild
+                    phase={phase}
+                    pct={null}
+                    status={ready ? "complete" : failed ? "failed" : "running"}
+                  />
+                </div>
+              </section>
+
+              <section className="border border-wire bg-surface" aria-labelledby="pipeline-steps">
+                <header className="flex items-baseline justify-between gap-3 border-b border-wire p-4 sm:p-5">
+                  <h2 id="pipeline-steps" className="text-[15px] font-semibold text-text-bright">
+                    Processing pipeline
+                  </h2>
+                  <span className="label-xs text-text-faint">{STEPS.length} steps</span>
+                </header>
+                <ol className="rule-y">
+                  {STEPS.map((step, i) => {
+                    const done = ready;
+                    const active = !ready && i === Math.min(phase, STEPS.length - 1);
+                    return (
+                      <li
+                        key={step.name}
+                        className={cn("flex gap-3 p-4 sm:p-5", active && "bg-surface-2")}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "mt-0.5 grid h-5 w-5 shrink-0 place-items-center border",
+                            done
+                              ? "border-positive bg-positive text-ink"
+                              : active
+                                ? "border-accent-sea text-accent-sea"
+                                : "border-wire text-text-faint",
+                          )}
+                        >
+                          {done ? (
+                            <Check size={12} />
+                          ) : active ? (
+                            <Target size={11} />
+                          ) : (
+                            <Hourglass size={11} />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline justify-between gap-3">
+                            <span
+                              className={cn(
+                                "text-[14px] font-semibold",
+                                done || active ? "text-text-bright" : "text-text-faint",
+                              )}
+                            >
+                              {step.name}
+                            </span>
+                            <span className="label-xs shrink-0 text-text-faint">
+                              {done ? "Done" : active ? "Active" : "Queued"}
+                            </span>
+                          </span>
+                          <span className="mt-1 block text-[12.5px] leading-snug text-text-dim">
+                            {step.detail}
+                          </span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+
+                <div className="border-t border-wire p-4 sm:p-5">
+                  <p className="label-xs text-text-faint">Touchline note</p>
+                  <p className="mt-2 text-[12.5px] leading-snug text-text-dim">
+                    The first match at a new ground takes longer, because the pitch has to be mapped
+                    once before anything can be measured on it. After that it is about thirty
+                    minutes for a forty-five minute half.
+                  </p>
+                  {ready && id && (
+                    <PrimaryButton
+                      block
+                      className="mt-4"
+                      onClick={() =>
+                        navigate({ to: "/match/$matchId/insights", params: { matchId: id } })
+                      }
+                    >
+                      Open the analysis
+                    </PrimaryButton>
+                  )}
+                </div>
+              </section>
+            </div>
+          </>
+        )}
       </Screen>
+    </div>
+  );
+}
+
+function Notice({
+  title,
+  body,
+  onBack,
+  alarm,
+}: {
+  title: string;
+  body: string;
+  onBack: () => void;
+  alarm?: boolean;
+}) {
+  return (
+    <div className="mt-4 border border-wire bg-surface p-5">
+      <p
+        className={cn(
+          "flex items-center gap-2 text-[15px] font-semibold",
+          alarm ? "text-reaction-bad" : "text-text-bright",
+        )}
+      >
+        {alarm && <TriangleAlert size={16} aria-hidden="true" />}
+        {title}
+      </p>
+      <p className="mt-2 max-w-[62ch] text-[13px] leading-relaxed text-text-dim">{body}</p>
+      <SecondaryButton className="mt-4" onClick={onBack}>
+        Back to matches
+      </SecondaryButton>
     </div>
   );
 }

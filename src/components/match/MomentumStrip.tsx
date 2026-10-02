@@ -26,7 +26,9 @@ export function MomentumStrip({ windows, events, durationSeconds, currentTime, o
 
   return (
     <div className="mx-4 mt-3 border border-wire bg-surface p-3">
-      <h2 className="display mb-2 text-[11px] uppercase tracking-[0.08em] text-text-dim">Field tilt over time</h2>
+      <h2 className="display mb-2 text-[11px] uppercase tracking-[0.08em] text-text-dim">
+        Field tilt over time
+      </h2>
 
       <div
         ref={trackRef}
@@ -36,9 +38,19 @@ export function MomentumStrip({ windows, events, durationSeconds, currentTime, o
         {windows.map((w, i) => {
           const nextT = windows[i + 1]?.t ?? durationSeconds;
           return (
-            <div key={`${w.t}-${i}`} className="relative h-full" style={{ width: `${at(nextT - w.t)}%` }}>
-              <div className="absolute inset-x-0 top-0 bg-team-a" style={{ height: `${w.tiltA * 50}%` }} />
-              <div className="absolute inset-x-0 bottom-0 bg-team-b" style={{ height: `${(1 - w.tiltA) * 50}%` }} />
+            <div
+              key={`${w.t}-${i}`}
+              className="relative h-full"
+              style={{ width: `${at(nextT - w.t)}%` }}
+            >
+              <div
+                className="absolute inset-x-0 top-0 bg-team-a"
+                style={{ height: `${w.tiltA * 50}%` }}
+              />
+              <div
+                className="absolute inset-x-0 bottom-0 bg-team-b"
+                style={{ height: `${(1 - w.tiltA) * 50}%` }}
+              />
             </div>
           );
         })}

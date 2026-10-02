@@ -81,11 +81,11 @@ function Stats() {
     >
       {loading && (
         <div
-          className="h-1 w-full overflow-hidden rounded-full bg-surface-2"
+          className="h-[3px] w-full overflow-hidden bg-surface-2"
           role="status"
           aria-label="Loading"
         >
-          <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] rounded-full bg-cream" />
+          <div className="h-full w-1/3 animate-[loadbar_1.1s_ease-in-out_infinite] bg-cream" />
         </div>
       )}
 

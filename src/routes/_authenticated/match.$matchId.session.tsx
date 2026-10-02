@@ -65,22 +65,20 @@ function Session() {
     >
       {finding && (
         <div className="session-sheet">
-          <section className="border-b border-wire-2 px-1 pb-4 pt-1">
+          <section className="border-b border-wire pb-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-text-faint">
-                  Session built from
-                </span>
-                <h1 className="display-i mt-1 max-w-[900px] text-[22px] leading-tight text-cream">{finding.headline}</h1>
-                <p className="mt-2 text-[12px] text-text-dim">
+                <span className="label-sm text-text-faint">Session built from</span>
+                <h1 className="display-i mt-2 max-w-[900px] text-[clamp(24px,3.4vw,34px)] leading-tight text-text-bright">{finding.headline}</h1>
+                <p className="num-flat mt-2 text-[12.5px] text-text-dim">
                   Your number {metric} · target {target} · {finding.events} moments
                 </p>
               </div>
               <div className="flex shrink-0 gap-2 print:hidden">
-                <GhostButton className="h-11 px-3 text-[12.5px]" onClick={() => setSeed((value) => value + 1)}>
+                <GhostButton className="" onClick={() => setSeed((value) => value + 1)}>
                   <RotateCcw size={15} aria-hidden="true" /> Regenerate
                 </GhostButton>
-                <PrimaryButton className="h-11 px-4 text-[12.5px]" onClick={() => window.print()}>
+                <PrimaryButton className="" onClick={() => window.print()}>
                   <Printer size={15} aria-hidden="true" /> Print
                 </PrimaryButton>
               </div>
@@ -88,24 +86,24 @@ function Session() {
           </section>
 
           {drills.length > 0 && (
-            <section className="mt-4 border border-wire bg-surface px-4 py-3.5" aria-label="Session plan">
+            <section className="mt-5 border border-wire bg-surface p-4 sm:p-5" aria-label="Session plan">
               <div className="flex items-baseline justify-between gap-3">
-                <h2 className="display text-[11px] uppercase tracking-[0.08em] text-text-faint">The session</h2>
-                <span className="display-i text-[18px] leading-none text-cream">{totalMinutes} min</span>
+                <h2 className="label-sm text-text-faint">The session</h2>
+                <span className="num text-[22px] leading-none text-text-bright">{totalMinutes} min</span>
               </div>
               <ol className="mt-3 grid gap-2 md:grid-cols-3">
                 {drills.map((drill, index) => (
                   <li key={drill.id}>
                     <a
                       href={`#drill-${drill.id}`}
-                      className="tap flex min-h-11 items-center gap-3 border border-wire-2 bg-surface-2 px-3 py-2 text-left hover:border-cream/30"
+                      className="tap flex min-h-11 items-center gap-3 border border-wire px-3 py-2 text-left transition-colors hover:border-cream/50 hover:bg-surface-2"
                     >
-                      <span className="display-i shrink-0 text-[16px] leading-none text-text-faint">{index + 1}</span>
+                      <span className="num shrink-0 text-[17px] leading-none text-text-faint">{index + 1}</span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[12.5px] font-semibold text-text">{drill.title}</span>
+                        <span className="block truncate text-[13px] font-semibold text-text-bright">{drill.title}</span>
                         <span className="block truncate text-[11px] text-text-faint">{drill.type}</span>
                       </span>
-                      <span className="num shrink-0 text-[12px] text-cream">{minutesOf(drill.duration)}′</span>
+                      <span className="num-flat shrink-0 text-[12px] text-text">{minutesOf(drill.duration)}′</span>
                     </a>
                   </li>
                 ))}
