@@ -927,7 +927,7 @@ export function MatchCanvas({
           ctx.arc(point[0], point[1], radius, 0, Math.PI * 2);
           ctx.fillStyle = "#ffffff";
           ctx.fill();
-          ctx.strokeStyle = "#111315";
+          ctx.strokeStyle = "var(--ink)";
           ctx.lineWidth = 1;
           ctx.stroke();
           ctx.globalAlpha = 1;

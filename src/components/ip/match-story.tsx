@@ -524,7 +524,7 @@ function Crest({ name, src, colour }: { name: string; src?: string; colour: stri
     <div className="relative z-10 flex w-[88px] flex-col items-center sm:w-[130px]">
       {/* The disc stays paper in both themes — club crests are drawn for light. */}
       <span
-        className="grid h-[76px] w-[76px] place-items-center rounded-full border-[5px] bg-[#f4f0e6] shadow-story sm:h-[106px] sm:w-[106px]"
+        className="grid h-[76px] w-[76px] place-items-center rounded-full border-[5px] bg-[var(--story-paper)] shadow-story sm:h-[106px] sm:w-[106px]"
         style={{ borderColor: colour }}
       >
         {src && !broken ? (
@@ -535,7 +535,7 @@ function Crest({ name, src, colour }: { name: string; src?: string; colour: stri
             className="h-[86%] w-[86%] object-contain"
           />
         ) : (
-          <span className="display-i text-[24px] text-[#111315]">{name.slice(0, 3)}</span>
+          <span className="display-i text-[24px] text-[var(--ink)]">{name.slice(0, 3)}</span>
         )}
       </span>
       <span

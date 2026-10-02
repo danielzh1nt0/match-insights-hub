@@ -12,7 +12,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           toast:
             "group toast group-[.toaster]:bg-surface-2 group-[.toaster]:text-text group-[.toaster]:border-wire group-[.toaster]: group-[.toaster]:shadow-lg",
           description: "group-[.toast]:text-text-dim",
-          actionButton: "group-[.toast]:bg-cream group-[.toast]:text-[#111315]",
+          actionButton: "group-[.toast]:bg-cream group-[.toast]:text-[var(--ink)]",
           cancelButton: "group-[.toast]:bg-surface-3 group-[.toast]:text-text-dim",
         },
       }}

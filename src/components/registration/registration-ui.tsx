@@ -11,7 +11,7 @@ export function RegistrationShell({
   footer?: ReactNode;
 }) {
   return (
-    <main className="registration-theme min-h-screen bg-bg">
+    <main className="min-h-screen bg-bg">
       <div className="mx-auto flex min-h-[100svh] w-full max-w-[560px] flex-col px-6 pt-6 md:py-10">
         <Wordmark size="sm" className="mx-auto opacity-60" />
         <div className="flex-1 pb-6">{children}</div>

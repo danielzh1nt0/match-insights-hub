@@ -41,7 +41,7 @@ export function EventReviewControls({
         className={cn(
           "tap grid h-9 w-9 place-items-center border text-[13px]",
           confirmed
-            ? "border-transparent text-[#111315]"
+            ? "border-transparent text-[var(--ink)]"
             : "border-wire text-text-faint hover:border-cream/60 hover:text-cream",
         )}
         style={confirmed ? { background: "var(--cream)" } : undefined}

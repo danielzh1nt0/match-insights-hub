@@ -27,8 +27,8 @@ export function MatchSetupSheet({
   const isSfkBp = item.row.id.toUpperCase().includes("SFKBP");
   const [nameA, setNameA] = useState(label?.name_a ?? (isSfkBp ? "SFK" : ""));
   const [nameB, setNameB] = useState(label?.name_b ?? (isSfkBp ? "BP" : ""));
-  const [colourA, setColourA] = useState(label?.colour_a ?? (isSfkBp ? "#111315" : "#ef4444"));
-  const [colourB, setColourB] = useState(label?.colour_b ?? (isSfkBp ? "#e7eaee" : "#22c55e"));
+  const [colourA, setColourA] = useState(label?.colour_a ?? (isSfkBp ? "var(--ink)" : "var(--reaction-bad)"));
+  const [colourB, setColourB] = useState(label?.colour_b ?? (isSfkBp ? "#e7eaee" : "var(--positive)"));
   const [attackRight, setAttackRight] = useState<"left" | "right">(
     label?.attack_right_override?.["A"] === true ? "right" : "left",
   );

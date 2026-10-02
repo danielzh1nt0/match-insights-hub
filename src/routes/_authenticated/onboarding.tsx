@@ -200,8 +200,8 @@ function Onboarding() {
                     id: `team-${Date.now()}`,
                     name: "New team",
                     ageGroup: "P2011",
-                    colorA: "#ef4444",
-                    colorB: "#22c55e",
+                    colorA: "var(--reaction-bad)",
+                    colorB: "var(--positive)",
                   })
                 }
               >

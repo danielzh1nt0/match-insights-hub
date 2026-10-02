@@ -586,23 +586,10 @@ body::before {
   }
 }
 
-/* Isolated registration and upload theme. */
-.registration-theme {
-  --bg: #0e0f0c;
-  --surface: #151714;
-  --surface-2: #1c1e1a;
-  --surface-3: #24261f;
-  --wire: #2a2d28;
-  --wire-2: #1e201c;
-  --text: #ede6d6;
-  --text-dim: #a29b8a;
-  --text-faint: #6b6656;
-  --cream: #ede6d6;
-  --graphite: #3a3d38;
-  --reaction-good: #1d9e75;
-  --reaction-warn: #ba7517;
-  --reaction-bad: #e24b4a;
-}
+/* The registration and upload screens used to carry their own olive palette,
+   which meant two screens in the product ignored whichever ground was chosen.
+   They inherit the system now. */
+
 @keyframes monogram-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes field-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }

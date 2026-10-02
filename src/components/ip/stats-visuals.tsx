@@ -1,4 +1,28 @@
 import { Link } from "@tanstack/react-router";
+import {
+  ArrowLeftRight,
+  CircleDot,
+  Flame,
+  Footprints,
+  Gauge,
+  Goal,
+  Grid3x3,
+  LandPlot,
+  Map as MapIcon,
+  Move,
+  PieChart,
+  Repeat,
+  Route as RouteIcon,
+  Ruler,
+  Scissors,
+  Shield,
+  Target,
+  Timer,
+  TrendingUp,
+  Users,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { createContext, useContext, useState } from "react";
 import type { Period } from "./chrome";
 import type { ReviewedEvent } from "@/lib/event-reviews";
@@ -161,6 +185,7 @@ function Card({
   honesty,
   footer,
   comparison,
+  icon,
 }: {
   question: string;
   caption: string;
@@ -168,17 +193,27 @@ function Card({
   honesty?: string;
   footer?: string;
   comparison?: Comparison;
+  /** The mark that says, at a glance, what kind of question this is. */
+  icon?: LucideIcon;
 }) {
   const context = useContext(StatsCardContext);
+  const Icon = icon;
   return (
     <section className="flex min-w-0 flex-col border border-wire bg-surface">
       <div className="p-4 sm:p-5">
-        {context && (
-          <StatsTeamPill
-            identity={context.identity}
-            {...(context.both ? { both: context.other } : {})}
-          />
-        )}
+        <div className="flex items-start justify-between gap-3">
+          {context && (
+            <StatsTeamPill
+              identity={context.identity}
+              {...(context.both ? { both: context.other } : {})}
+            />
+          )}
+          {Icon && (
+            <span className="grid h-9 w-9 shrink-0 place-items-center border border-wire text-accent-sea">
+              <Icon size={17} strokeWidth={1.75} aria-hidden="true" />
+            </span>
+          )}
+        </div>
         <h2 className="mt-2.5 text-[16px] font-semibold leading-snug text-text-bright sm:text-[17px]">
           {question}
         </h2>
@@ -265,9 +300,11 @@ function StatsPitch({
         )}
         {children}
       </svg>
-      <span className="label-xs mt-2 block text-right text-text-faint">
-        {portrait ? "↑" : "→"} {attackLabel} attack
-      </span>
+      {attackLabel && (
+        <span className="label-xs mt-2 block text-right text-text-faint">
+          {portrait ? "↑" : "→"} {attackLabel} attack
+        </span>
+      )}
     </div>
   );
 }
@@ -304,9 +341,22 @@ function EmptyTab() {
   );
 }
 
-function EvidenceUnavailable({ question, caption }: { question: string; caption: string }) {
+function EvidenceUnavailable({
+  question,
+  caption,
+  icon,
+}: {
+  question: string;
+  caption: string;
+  icon?: LucideIcon;
+}) {
   return (
-    <Card question={question} caption={caption} footer="Evidence threshold not met">
+    <Card
+      question={question}
+      caption={caption}
+      footer="Evidence threshold not met"
+      {...(icon ? { icon } : {})}
+    >
       <div className="flex min-h-28 items-center border-l-2 border-text-faint bg-surface-2 px-4">
         <p className="max-w-[460px] text-[12.5px] leading-relaxed text-text-dim">
           This match does not contain enough reliable evidence to answer this coaching question.
@@ -327,6 +377,7 @@ function Control({ stats, team, colours, teamA, teamB, events }: Props) {
   return (
     <Card
       question="Who controlled the ball?"
+      icon={PieChart}
       caption="Share of reliable ball-control time for each team."
       comparison={{ opponent: opponent === null ? "—" : `${Math.round(opponent)}%`, last5: "—" }}
       honesty={`${events.filter((event) => event.status === "confirmed").length} confirmed · ${events.length} detected`}
@@ -355,6 +406,99 @@ function Control({ stats, team, colours, teamA, teamB, events }: Props) {
   );
 }
 
+/**
+ * Where the team actually spent the match.
+ *
+ * Every tracked frame, every player, dropped into a grid and shaded by how
+ * often they were there. It answers a question no table can — whether the
+ * shape a coach thinks he plays is the shape the match produced — and it is the
+ * one picture every other product in this category leads with.
+ *
+ * Shaded in the kit colour rather than the usual blue-to-red ramp, because the
+ * kit is the thing that says whose heat this is, and a second colour scale
+ * would collide with the ones that mean target met and target missed.
+ */
+function HeatMap({
+  frames,
+  team,
+  colour,
+  file,
+}: {
+  frames: Frame[];
+  team: TeamKey;
+  colour: string;
+  file: MatchDataFile | undefined;
+}) {
+  const COLS = 16;
+  const ROWS = 10;
+  const length = Math.max(file?.pitch?.length ?? 105, 1);
+  const width = Math.max(file?.pitch?.width ?? 68, 1);
+
+  const { grid, max, samples } = (() => {
+    const g = Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));
+    let n = 0;
+    for (const frame of frames) {
+      for (const player of frame.players) {
+        if (player.team !== team || player.state === "stale") continue;
+        const x = Math.min(0.999, Math.max(0, player.m[0] / length));
+        const y = Math.min(0.999, Math.max(0, player.m[1] / width));
+        const r = Math.floor(y * ROWS);
+        const c = Math.floor(x * COLS);
+        g[r]![c] = (g[r]![c] ?? 0) + 1;
+        n += 1;
+      }
+    }
+    return { grid: g, max: Math.max(1, ...g.flat()), samples: n };
+  })();
+
+  // A handful of positions is a scatter, not a heat map, and shading it would
+  // dress up noise as a pattern.
+  if (samples < 200)
+    return (
+      <EvidenceUnavailable
+        question="Where did we spend the time?"
+        caption="Every tracked position, shaded by how often we were there."
+        icon={Flame}
+      />
+    );
+
+  return (
+    <Card
+      question="Where did we spend the time?"
+      caption="Every tracked position, shaded by how often we were there."
+      honesty={`${samples.toLocaleString()} tracked positions`}
+      icon={Flame}
+    >
+      <StatsPitch attackLabel="" ariaLabel="Where the team spent the match">
+        {grid.map((row, r) =>
+          row.map((count, c) =>
+            count === 0 ? null : (
+              <rect
+                key={`h-${r}-${c}`}
+                x={3 + (94 / COLS) * c}
+                y={1.5 + (60.9 / ROWS) * r}
+                width={94 / COLS}
+                height={60.9 / ROWS}
+                fill={colour}
+                fillOpacity={Math.min(0.8, (count / max) ** 0.65 * 0.8)}
+              />
+            ),
+          ),
+        )}
+      </StatsPitch>
+      <div className="mt-3 flex items-center gap-2">
+        <span className="label-xs text-text-faint">Less</span>
+        <span className="flex h-2 flex-1">
+          {[0.08, 0.2, 0.34, 0.5, 0.65, 0.8].map((o) => (
+            <span key={o} className="flex-1" style={{ background: colour, opacity: o }} />
+          ))}
+        </span>
+        <span className="label-xs text-text-faint">More</span>
+      </div>
+    </Card>
+  );
+}
+
 function Thirds({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour: string }) {
   const counts = [0, 0, 0];
   frames.forEach((frame) =>
@@ -370,6 +514,7 @@ function Thirds({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colo
   return (
     <Card
       question="Which third did we occupy?"
+      icon={LandPlot}
       caption="Where our observed players spent their tracked time."
       honesty={`${frames.length} tracked frames`}
     >
@@ -426,6 +571,7 @@ function SequenceLength({ stats, team }: Props) {
   return (
     <Card
       question="How long did we keep it?"
+      icon={Timer}
       caption="Possession spells grouped by the number of passes."
       {...(lengths.length ? { honesty: `${lengths.length} sequences` } : {})}
     >
@@ -493,6 +639,7 @@ function Runs({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour
   return (
     <Card
       question="Where did our runs go?"
+      icon={Move}
       caption="Five fastest tracked runs. Solid had the ball; dashed were off it."
       honesty={`${runs.length} tracked runs`}
     >
@@ -528,6 +675,7 @@ function Distance({ players, colour }: { players: PlayerStat[]; colour: string }
   return (
     <Card
       question="Who covered the ground?"
+      icon={Footprints}
       caption="Sorted by distance per visible minute. Bright segment marks the top-intensity share."
       honesty={`${ranked.length} observed players`}
     >
@@ -574,6 +722,7 @@ function PressMap({ events, team, matchId, colour, file }: Props & { colour: str
   return (
     <Card
       question="Where did we press?"
+      icon={Target}
       caption="Each dot is one pressure or regain at the ball position."
       honesty={`${press.filter((p) => p.event.status === "confirmed").length} confirmed · ${press.length} detected`}
     >
@@ -607,6 +756,7 @@ function CounterPress({ events, team, stats, matchId, teamA, teamB }: Props) {
   return (
     <Card
       question="How fast did we react?"
+      icon={Gauge}
       caption={`${identity.name} · ${losses.length} losses`}
       comparison={{
         target: "2 s",
@@ -691,6 +841,7 @@ function SetPieceMap({ events, team, matchId, colour, file }: Props & { colour: 
     return (
       <EvidenceUnavailable
         question="Where did the set pieces come from?"
+        icon={CircleDot}
         caption="No corner, free kick or throw-in in this match file."
       />
     );
@@ -698,12 +849,14 @@ function SetPieceMap({ events, team, matchId, colour, file }: Props & { colour: 
     return (
       <EvidenceUnavailable
         question="Where did the set pieces come from?"
+        icon={CircleDot}
         caption={`${pieces.length} set pieces detected, none with a pitch position.`}
       />
     );
   return (
     <Card
       question="Where did the set pieces come from?"
+      icon={CircleDot}
       caption="Each mark is one restart, at the position in the match file. Tap to watch it."
       honesty={`${placed.filter((item) => item.event.status === "confirmed").length} confirmed · ${placed.length} placed of ${pieces.length}`}
     >
@@ -751,6 +904,7 @@ function SetPieceCounts({ events, team, teamA, teamB }: Props) {
   return (
     <Card
       question="How many restarts did each side get?"
+      icon={Repeat}
       caption="Counted from the set pieces in this match file."
       honesty={`${events.filter((event) => event.type === "set_piece").length} set pieces detected`}
     >
@@ -841,6 +995,7 @@ function ShapeMultiples({
   return (
     <Card
       question="How did our shape change?"
+      icon={Grid3x3}
       caption={`Average shape · ${identity.name}`}
       comparison={{ target: "—", opponent: "—", last5: "—" }}
       honesty={`${territory.frameCount} tracked frames`}
@@ -882,6 +1037,7 @@ function ShapeOutcome({ lineDefending, colour }: { lineDefending: LineDefending;
   return (
     <Card
       question="In which shape did we suffer?"
+      icon={Shield}
       caption="Defensive states compared by opponent shots and goals."
       honesty={`${lineDefending.timeline.length} shape samples`}
     >
@@ -945,12 +1101,14 @@ function ShotMap({ stats, colours, matchId, events, file }: Props) {
     return (
       <EvidenceUnavailable
         question="Where did shots come from?"
+        icon={Goal}
         caption="The location and outcome of each reliable shot."
       />
     );
   return (
     <Card
       question="Where did shots come from?"
+      icon={Goal}
       caption="Filled means on target. A cream ring marks a goal."
       honesty={`${shots.length} shots`}
     >
@@ -1003,6 +1161,7 @@ function ShotSummary({ stats, team, events }: Props) {
     return (
       <EvidenceUnavailable
         question="What did our shooting produce?"
+        icon={Zap}
         caption="Shot volume, accuracy and penalty-area share."
       />
     );
@@ -1014,6 +1173,7 @@ function ShotSummary({ stats, team, events }: Props) {
   return (
     <Card
       question="What did our shooting produce?"
+      icon={Zap}
       caption="The shot total, accuracy and penalty-area share without a score dial."
       honesty={`${shots.length} shot moments`}
     >
@@ -1041,6 +1201,7 @@ function EntriesConceded({ events, team, matchId, file }: Props) {
     return (
       <EvidenceUnavailable
         question="Where did they get in?"
+        icon={ArrowLeftRight}
         caption="Opponent entries into our defensive third."
       />
     );
@@ -1052,6 +1213,7 @@ function EntriesConceded({ events, team, matchId, file }: Props) {
   return (
     <Card
       question="Where did they get in?"
+      icon={ArrowLeftRight}
       caption="Opponent entries into our defensive third, grouped into five lanes."
       honesty={`${entries.length} entries and shots`}
     >
@@ -1239,6 +1401,7 @@ function LaneEffectiveness({
     return (
       <EvidenceUnavailable
         question="Which lanes worked?"
+        icon={RouteIcon}
         caption="Lane use and completion quality."
       />
     );
@@ -1282,6 +1445,7 @@ function LaneEffectiveness({
   return (
     <Card
       question="Which lanes worked?"
+      icon={RouteIcon}
       caption="Tap a lane to isolate the real pass route."
       comparison={{ target: "—", opponent: "—", last5: "—" }}
       honesty={`${passes.length} passes`}
@@ -1392,6 +1556,7 @@ function BetterOption({
     return (
       <EvidenceUnavailable
         question="Where were we open?"
+        icon={MapIcon}
         caption="The available moment has no reliable pitch coordinates."
       />
     );
@@ -1413,6 +1578,7 @@ function BetterOption({
   return (
     <Card
       question="Where were we open?"
+      icon={MapIcon}
       caption={`${identity.name} · #${shirt(carrier)} with the ball`}
       comparison={{ target: "—", opponent: "—", last5: "—" }}
       honesty={`${moments.filter((e) => e.status === "confirmed").length} confirmed · ${moments.length} detected`}
@@ -1532,6 +1698,7 @@ function PassNetwork({
   return (
     <Card
       question="How did we build?"
+      icon={Users}
       caption={`Pass network · ${identity.name} · ${passes.length} passes`}
       comparison={{ opponent: `${opponentPasses} passes`, last5: "—" }}
       honesty={`${passes.length} pass records`}
@@ -1606,12 +1773,14 @@ function PassMap({ passes, matchId, colour }: { passes: Pass[]; matchId: string;
     return (
       <EvidenceUnavailable
         question="Where did our passes go?"
+        icon={RouteIcon}
         caption="Release and reception locations for reliable passes."
       />
     );
   return (
     <Card
       question="Where did our passes go?"
+      icon={RouteIcon}
       caption="The first five located passes; open the log for the full sequence."
       honesty={`${all.length} located passes`}
     >
@@ -1656,6 +1825,7 @@ function Interceptions({ events, team, matchId, colour, file }: Props & { colour
   return (
     <Card
       question="Where did we cut passes out?"
+      icon={Scissors}
       caption="Each mark is an interception or pass-led regain."
       honesty={`${items.length} moments`}
     >
@@ -1684,6 +1854,7 @@ function PassLog({ passes, matchId }: { passes: Pass[]; matchId: string }) {
   return (
     <Card
       question="Which passes should we review?"
+      icon={Scissors}
       caption="A chronological log of player, direction, quality and outcome."
       honesty={`${passes.length} passes in this period`}
     >
@@ -1861,6 +2032,7 @@ function ShapeByPhase({
     return (
       <Card
         question="How did our shape look?"
+        icon={Grid3x3}
         caption={`${PHASES.find((x) => x.key === active)?.label} · ${identity.name}`}
         footer="Evidence threshold not met"
       >
@@ -1903,6 +2075,7 @@ function ShapeByPhase({
   return (
     <Card
       question="How did our shape look?"
+      icon={Grid3x3}
       caption={`Median over ${samples.length} moments · dots show one representative moment (${fmt(rep.frame.t)})`}
       comparison={{
         target: "—",
@@ -1982,6 +2155,7 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
   return (
     <Card
       question="In which shape did we suffer?"
+      icon={Shield}
       caption="Defensive states, ranked by shots conceded per minute."
       honesty={`${lineDefending.shots.length} shots conceded · ${tl.length} line samples`}
     >
@@ -2155,6 +2329,7 @@ function LanesTable({
   return (
     <Card
       question="Which lanes worked?"
+      icon={RouteIcon}
       caption="Volume, completion and progression between players."
       comparison={{ target: "—", opponent: "—", last5: "—" }}
       honesty={`${passes.length} passes · players labelled by tracker id until a lineup is set`}
@@ -2241,6 +2416,7 @@ export function StatsVisuals(props: Props) {
     cards = [
       <Control key="control" {...p} />,
       <Thirds key="thirds" frames={frames} team={props.team} colour={colour} />,
+      <HeatMap key="heat" frames={frames} team={props.team} colour={colour} file={props.file} />,
       <SequenceLength key="sequence" {...p} />,
       <Runs key="runs" frames={frames} team={props.team} colour={colour} />,
       <Distance
@@ -2266,6 +2442,7 @@ export function StatsVisuals(props: Props) {
         <EvidenceUnavailable
           key="depth-empty"
           question="Did we defend too deep?"
+          icon={Ruler}
           caption="Our defensive line compared with its usual height."
         />
       ),
@@ -2285,6 +2462,7 @@ export function StatsVisuals(props: Props) {
         <EvidenceUnavailable
           key="outcome-empty"
           question="In which shape did we suffer?"
+          icon={Shield}
           caption="Defensive states compared with opponent outcomes."
         />
       ),
@@ -2294,6 +2472,7 @@ export function StatsVisuals(props: Props) {
         <EvidenceUnavailable
           key="timeline-empty"
           question="Where was our line over time?"
+          icon={TrendingUp}
           caption="Defensive line height across the selected period."
         />
       ),
@@ -2329,9 +2508,13 @@ export function StatsVisuals(props: Props) {
   const shown = cards.filter(Boolean);
   return (
     <StatsCardContext.Provider value={{ identity, other, both: props.scopeBoth }}>
-      <div className="grid items-start gap-3 min-[1100px]:grid-cols-2">
-        {shown.length ? shown : <EmptyTab />}
-      </div>
+      {shown.length ? (
+        <div className="gap-4 min-[1100px]:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
+          {shown}
+        </div>
+      ) : (
+        <EmptyTab />
+      )}
     </StatsCardContext.Provider>
   );
 }

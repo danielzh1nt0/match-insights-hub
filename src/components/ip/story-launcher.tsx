@@ -28,15 +28,15 @@ export function StoryLauncher({
       params={{ matchId }}
       aria-label={label}
       className={cn(
-        "flex items-center text-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
+        "flex items-center text-[var(--ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cream focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
         small ? "min-h-11 gap-2 px-3 py-2" : "gap-3 px-3.5 py-3",
         className,
       )}
-      style={{ background: "linear-gradient(135deg, var(--cream) 0%, #d9d0bb 100%)" }}
+      style={{ background: "linear-gradient(135deg, var(--cream) 0%, var(--cream-dim) 100%)" }}
     >
       <span
         className={cn(
-          "grid shrink-0 place-items-center rounded-full bg-[#111111]",
+          "grid shrink-0 place-items-center rounded-full bg-[var(--ink)]",
           small ? "h-6 w-6" : "h-9 w-9",
         )}
         aria-hidden="true"
@@ -53,7 +53,7 @@ export function StoryLauncher({
       <span className="min-w-0 flex-1">
         <span
           className={cn(
-            "display-i block leading-[1.1] text-[#111111]",
+            "display-i block leading-[1.1] text-[var(--ink)]",
             small ? "truncate text-[12.5px]" : "text-[16px]",
           )}
         >
@@ -66,7 +66,7 @@ export function StoryLauncher({
         )}
       </span>
       <span
-        className={cn("display-i shrink-0 text-[#111111]", small ? "text-[15px]" : "text-[20px]")}
+        className={cn("display-i shrink-0 text-[var(--ink)]", small ? "text-[15px]" : "text-[20px]")}
         aria-hidden="true"
       >
         →

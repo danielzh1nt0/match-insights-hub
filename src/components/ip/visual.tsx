@@ -366,7 +366,7 @@ export function PitchShirts({
             y={(p.y / 100) * 64 + 1.1}
             textAnchor="middle"
             fontSize="2.6"
-            fill="#111315"
+            fill="var(--ink)"
             fontWeight="700"
           >
             {p.shirt}
