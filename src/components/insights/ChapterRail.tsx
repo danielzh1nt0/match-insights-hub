@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentType } from "react";
-import { CalendarCheck, Goal, MoveRight, Target, Users } from "lucide-react";
+import { Activity, CalendarCheck, Goal, MoveRight, Target } from "lucide-react";
 import { STORY_CHAPTERS, type ChapterId } from "@/lib/story-chapters";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +16,7 @@ export type ChapterCell = {
 const ICONS: Record<ChapterId, ComponentType<{ size?: number; strokeWidth?: number }>> = {
   score: Goal,
   strength: MoveRight,
-  player: Users,
+  turned: Activity,
   improve: Target,
   verdict: CalendarCheck,
 };

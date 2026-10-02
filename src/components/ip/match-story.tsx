@@ -1,83 +1,85 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Check, Play, RotateCcw, Target, X } from "lucide-react";
-import type { TeamKey } from "@/lib/match-analysis";
-import type { RecapAnalysis } from "@/lib/recap-analysis";
-import { crestForTeam } from "@/lib/team-crests";
-import { formatClock, matchTitle, type LibraryMatch } from "@/lib/sample-data";
+import type { ReactNode } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { CalendarCheck, Check, ChevronLeft, ChevronRight, Pause, Play, X } from "lucide-react";
+import { Crest } from "@/components/ip/touchline";
+import { ClipThumb } from "@/components/ip/clip-thumb";
+import { MatchFlow } from "@/components/insights/MatchFlow";
+import { PressureArt, type Loss } from "@/components/visuals/PitchArt";
+import type { TeamIdentity } from "@/components/team/TeamToken";
+import { useClipPosters } from "@/hooks/use-clip-posters";
+import type { MatchModel } from "@/hooks/use-match-model";
+import type { LibraryMatch } from "@/lib/sample-data";
+import { STORY_CHAPTERS, chapterIndex, type ChapterId } from "@/lib/story-chapters";
 import { cn } from "@/lib/utils";
-import { STORY_CHAPTERS, chapterIndex } from "@/lib/story-chapters";
-import { PositionsArt, PressureArt, type Loss } from "@/components/visuals/PitchArt";
 
-type Chapter = "score" | "strength" | "player" | "improve" | "verdict";
-type Action = {
-  label: string;
-  kind: "primary" | "secondary";
-  run: () => void;
-  icon?: "play" | "session";
-};
-type StorySlide = { id: Chapter; durationMs: number; moment?: number };
-export type StoryShape = {
-  dots: { x: number; y: number; team: TeamKey }[];
-  carrier?: { x: number; y: number };
-  target?: { x: number; y: number };
-};
+function clock(seconds: number) {
+  const m = Math.floor(Math.max(seconds, 0) / 60);
+  const s = Math.floor(Math.max(seconds, 0) % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
-const SLIDES: StorySlide[] = STORY_CHAPTERS.map((chapter) => ({
-  id: chapter.id,
-  durationMs: chapter.durationMs,
-}));
-
+/**
+ * The match as five chapters, for showing a squad.
+ *
+ * It is the same debrief the Insights page gives, told at arm's length: the
+ * result, what held up, when it turned, the one thing to fix, and Tuesday.
+ * Every figure on it comes from the shared match model, so a chapter cannot
+ * celebrate something the page does not — which is what went wrong when the
+ * story worked its own statistics out separately.
+ *
+ * Visually it is the app, not a second design: the same ground, the same
+ * hairlines, the same scoreboard italic for figures and clipboard grotesque
+ * for prose. What makes it a story is the scale and the pacing, not a
+ * different set of colours.
+ */
 export function MatchStory({
   matchId,
   match,
-  recap,
-  shape,
+  model,
+  identities,
   losses = [],
-  pressTarget = null,
+  videoUrl,
   startChapter,
 }: {
   matchId: string;
   match: LibraryMatch;
-  recap: RecapAnalysis;
-  shape?: StoryShape | null | undefined;
+  model: MatchModel;
+  identities: { A: TeamIdentity; B: TeamIdentity };
   /** Possession losses that carry real coordinates. */
   losses?: Loss[] | undefined;
-  pressTarget?: number | null | undefined;
+  videoUrl?: string | undefined;
   /** Open straight at this chapter, from a rail bubble. */
   startChapter?: string | undefined;
 }) {
   const navigate = useNavigate();
-  const slides = useMemo(
-    () =>
-      SLIDES.map((slide) =>
-        slide.id === "improve" ? { ...slide, moment: recap.firstMoment ?? undefined } : slide,
-      ),
-    [recap.firstMoment],
-  );
   const [index, setIndex] = useState(() => chapterIndex(startChapter));
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const pausedRef = useRef(false);
-  const slide = slides[index] ?? slides[0]!;
+  const chapter = STORY_CHAPTERS[index] ?? STORY_CHAPTERS[0]!;
 
   const close = useCallback(() => {
     void navigate({ to: "/match/$matchId/insights", params: { matchId } });
   }, [navigate, matchId]);
+
   const next = useCallback(() => {
     setProgress(0);
-    if (index >= slides.length - 1) {
+    if (index >= STORY_CHAPTERS.length - 1) {
       close();
       return;
     }
     setIndex(index + 1);
-  }, [index, slides.length, close]);
+  }, [index, close]);
+
   const prev = useCallback(() => {
     setProgress(0);
     setIndex((current) => Math.max(0, current - 1));
   }, []);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   useEffect(() => {
     let frame = 0;
@@ -88,7 +90,7 @@ export function MatchStory({
       last = now;
       if (!pausedRef.current) {
         elapsed += delta;
-        const percent = Math.min(1, elapsed / slide.durationMs);
+        const percent = Math.min(1, elapsed / chapter.durationMs);
         setProgress(percent);
         if (percent >= 1) {
           next();
@@ -99,598 +101,424 @@ export function MatchStory({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [index, slide.durationMs, next]);
-
-  useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
+  }, [index, chapter.durationMs, next]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
       if (event.key === "ArrowRight") next();
       if (event.key === "ArrowLeft") prev();
+      if (event.key === " ") {
+        event.preventDefault();
+        setPaused((p) => !p);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [close, next, prev]);
 
-  const watch = useCallback(
-    (t: number) =>
-      void navigate({ to: "/match/$matchId/match", params: { matchId }, search: { t } }),
-    [navigate, matchId],
-  );
-  const actions = useMemo<Action[]>(() => {
-    if (slide.id === "score")
-      return [
-        { label: "Watch match", kind: "secondary", icon: "play", run: () => watch(0) },
-        { label: "See the story", kind: "primary", run: next },
-      ];
-    if (slide.id === "strength" || slide.id === "player")
-      return [{ label: "Next chapter", kind: "primary", run: next }];
-    if (slide.id === "improve")
-      return [
-        {
-          label: `See ${recap.improvement?.events ?? 0} moments`,
-          kind: "secondary",
-          icon: "play",
-          run: () => watch(recap.firstMoment ?? 0),
-        },
-        {
-          label: "Build the fix",
-          kind: "primary",
-          icon: "session",
-          run: () =>
-            void navigate({
-              to: "/match/$matchId/session",
-              params: { matchId },
-              search: recap.improvement ? { finding: recap.improvement.id } : {},
-            }),
-        },
-      ];
-    return [
-      {
-        label: "Open the clip reel",
-        kind: "secondary",
-        icon: "play",
-        run: () => void navigate({ to: "/match/$matchId/reel", params: { matchId } }),
-      },
-      { label: "Open analysis", kind: "primary", run: close },
-    ];
-  }, [slide.id, recap, watch, next, navigate, matchId, close]);
-
-  const gesture = useRef<{
-    started: number;
-    y: number;
-    hold?: ReturnType<typeof setTimeout>;
-  } | null>(null);
-  const onDown = (event: ReactPointerEvent) => {
-    const hold = setTimeout(() => setPaused(true), 220);
-    gesture.current = { started: performance.now(), y: event.clientY, hold };
+  const body: Record<ChapterId, ReactNode> = {
+    score: <ScoreChapter match={match} model={model} identities={identities} />,
+    strength: <StrengthChapter model={model} />,
+    turned: <TurnedChapter model={model} identities={identities} />,
+    improve: <ImproveChapter model={model} losses={losses} videoUrl={videoUrl} matchId={matchId} />,
+    verdict: <VerdictChapter model={model} matchId={matchId} onClose={close} />,
   };
-  const onUp = (side: "left" | "right") => (event: ReactPointerEvent) => {
-    const start = gesture.current;
-    gesture.current = null;
-    if (!start) return;
-    clearTimeout(start.hold);
-    const held = performance.now() - start.started;
-    const vertical = event.clientY - start.y;
-    setPaused(false);
-    if (vertical > 90) close();
-    else if (held < 220) side === "right" ? next() : prev();
-  };
-
-  const storyStyle = {
-    "--story-own": recap.ownColour,
-    "--story-other": recap.otherColour,
-  } as CSSProperties;
 
   return (
-    <main
-      className="fixed inset-0 z-50 overflow-hidden bg-story-ink text-story-paper"
-      style={storyStyle}
-    >
-      <StoryBackdrop chapter={slide.id} shape={shape ?? null} />
-      <div className="absolute inset-0 z-10 flex flex-col px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] sm:px-6">
-        <div className="flex gap-1" aria-label={`Slide ${index + 1} of ${slides.length}`}>
-          {slides.map((item, itemIndex) => (
-            <span key={item.id} className="h-1 flex-1 overflow-hidden bg-story-paper/20">
-              <span
-                className="block h-full bg-story-paper"
-                style={{
-                  width:
-                    itemIndex < index ? "100%" : itemIndex === index ? `${progress * 100}%` : "0%",
-                }}
-              />
-            </span>
-          ))}
-        </div>
-        <header className="mt-3 flex items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-[10px] font-black uppercase text-story-paper/75">
-            {matchTitle(match)} · {match.competition}
-          </span>
-          <span className="num text-[10px] text-story-paper/55">0{index + 1}/05</span>
-          <button
-            type="button"
-            onClick={close}
-            aria-label="Close recap"
-            className="tap grid h-9 w-9 place-items-center rounded-full border border-story-paper/25 bg-story-ink/45 backdrop-blur-md"
-          >
-            <X size={15} aria-hidden="true" />
-          </button>
-        </header>
-        <AnimatePresence mode="wait">
-          <motion.section
-            key={slide.id}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="relative z-20 flex min-h-0 flex-1 flex-col"
-          >
-            <ChapterContent
-              chapter={slide.id}
-              match={match}
-              recap={recap}
-              shape={shape ?? null}
-              losses={losses}
-              pressTarget={pressTarget}
+    <div className="relative flex min-h-dvh flex-col">
+      {/* One ruled bar across the top: where we are, and how long is left. */}
+      <div className="flex gap-[3px] px-3 pt-3 sm:px-5">
+        {STORY_CHAPTERS.map((entry, i) => (
+          <span key={entry.id} className="h-[3px] flex-1 bg-wire">
+            <span
+              className="block h-full bg-cream"
+              style={{ width: i < index ? "100%" : i === index ? `${progress * 100}%` : "0%" }}
             />
-            <div className="relative z-30 mt-auto flex gap-2 pt-4">
-              {actions.map((action) => (
-                <StoryButton key={action.label} action={action} />
-              ))}
-            </div>
-          </motion.section>
-        </AnimatePresence>
-      </div>
-      <button
-        type="button"
-        aria-label="Previous slide"
-        onPointerDown={onDown}
-        onPointerUp={onUp("left")}
-        className="absolute bottom-16 left-0 top-16 z-[15] w-[28%]"
-      />
-      <button
-        type="button"
-        aria-label="Next slide"
-        onPointerDown={onDown}
-        onPointerUp={onUp("right")}
-        className="absolute bottom-16 right-0 top-16 z-[15] w-[72%]"
-      />
-    </main>
-  );
-}
-
-function ChapterContent({
-  chapter,
-  match,
-  recap,
-  shape,
-  losses,
-  pressTarget,
-}: {
-  chapter: Chapter;
-  match: LibraryMatch;
-  recap: RecapAnalysis;
-  shape: StoryShape | null;
-  losses: Loss[];
-  pressTarget: number | null;
-}) {
-  if (chapter === "score") return <ScoreChapter match={match} recap={recap} />;
-  if (chapter === "strength") return <StrengthChapter recap={recap} />;
-  if (chapter === "player") return <PlayerChapter recap={recap} />;
-  if (chapter === "improve") return <ImproveChapter recap={recap} shape={shape} />;
-  return <VerdictChapter recap={recap} losses={losses} pressTarget={pressTarget} />;
-}
-
-function Kicker({ children, tone = "paper" }: { children: ReactNode; tone?: "paper" | "own" }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex self-start px-2.5 py-1 text-[10px] font-black uppercase",
-        tone === "own" ? "bg-story-own text-story-ink" : "bg-story-paper text-story-ink",
-      )}
-    >
-      {children}
-    </span>
-  );
-}
-
-function ScoreChapter({ match, recap }: { match: LibraryMatch; recap: RecapAnalysis }) {
-  const crestA = crestForTeam(match.teamA);
-  const crestB = crestForTeam(match.teamB);
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center pb-2 text-center">
-      <Kicker>{match.date} · final</Kicker>
-      <h1 className="display-i mt-3 text-[44px] leading-[0.84] sm:text-[64px]">
-        The game
-        <br />
-        in one frame
-      </h1>
-      <div className="relative mt-7 flex w-full max-w-[520px] items-center justify-between px-2 sm:px-8">
-        <Crest name={match.teamA} {...(crestA ? { src: crestA } : {})} colour="var(--story-own)" />
-        <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
-          <div className="display-i whitespace-nowrap text-[74px] leading-none drop-shadow-story sm:text-[108px]">
-            {match.scoreA}:{match.scoreB}
-          </div>
-          <span className="mt-1 inline-block bg-story-paper px-3 py-1 text-[9px] font-black uppercase text-story-ink">
-            Full time
           </span>
-        </div>
-        <Crest
-          name={match.teamB}
-          {...(crestB ? { src: crestB } : {})}
-          colour="var(--story-other)"
-        />
-      </div>
-      <div className="mt-8 grid w-full max-w-[520px] grid-cols-3 border-y border-story-paper/25 bg-story-ink/55 py-3 backdrop-blur-md">
-        <MiniStat
-          value={`${match.summary.possession[0]}–${match.summary.possession[1]}`}
-          label="possession"
-        />
-        <MiniStat value={`${recap.turnoversLost}–${recap.turnoversWon}`} label="lost / won" />
-        <MiniStat value={`${match.summary.shots[0]}–${match.summary.shots[1]}`} label="shots" />
-      </div>
-    </div>
-  );
-}
-
-function StrengthChapter({ recap }: { recap: RecapAnalysis }) {
-  const total = Math.max(recap.strength.value + recap.strength.other, 1);
-  const ownWidth = `${Math.max(8, (recap.strength.value / total) * 100)}%`;
-  return (
-    <div className="flex flex-1 flex-col justify-center pb-3">
-      <Kicker tone="own">Where {recap.ownName} excelled</Kicker>
-      <p className="display-i mt-4 text-[64px] leading-[0.82] text-story-own sm:text-[90px]">
-        {recap.strength.value}
-        {recap.strength.unit}
-      </p>
-      <h1 className="display-i mt-3 max-w-[620px] text-[38px] leading-[0.92] sm:text-[58px]">
-        {recap.strength.headline}
-      </h1>
-      <p className="mt-3 max-w-[520px] text-[13px] font-semibold leading-relaxed text-story-paper/75 sm:text-[16px]">
-        {recap.strength.explanation}
-      </p>
-      <div className="mt-7 max-w-[620px] border-y border-story-paper/25 bg-story-ink/60 p-4 backdrop-blur-md">
-        <div className="flex justify-between text-[10px] font-black uppercase">
-          <span>
-            {recap.ownName} · {recap.strength.value}
-            {recap.strength.unit}
-          </span>
-          <span className="text-story-paper/60">
-            {recap.otherName} · {recap.strength.other}
-            {recap.strength.unit}
-          </span>
-        </div>
-        <div className="mt-2 flex h-3 overflow-hidden bg-story-paper/15">
-          <span className="h-full bg-story-own" style={{ width: ownWidth }} />
-          <span className="h-full flex-1 bg-story-other" />
-        </div>
-        <p className="mt-2 text-[10px] uppercase text-story-paper/50">
-          {recap.strength.label} · direct match comparison
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function PlayerChapter({ recap }: { recap: RecapAnalysis }) {
-  const player = recap.standout;
-  return (
-    <div className="flex flex-1 flex-col justify-center pb-3">
-      <Kicker>Who excelled — and why</Kicker>
-      {player ? (
-        <>
-          <div className="mt-5 flex items-end gap-4">
-            <span className="display-i grid h-28 w-28 shrink-0 place-items-center rounded-full border-[7px] border-story-own bg-story-ink text-[62px] text-story-own shadow-story">
-              {player.id}
-            </span>
-            <div className="pb-2">
-              <p className="text-[10px] font-black uppercase text-story-own">
-                Highest all-round involvement
-              </p>
-              <h1 className="display-i mt-1 text-[42px] leading-[0.88] sm:text-[62px]">
-                {player.title}
-              </h1>
-            </div>
-          </div>
-          <p className="mt-4 max-w-[560px] text-[13px] leading-relaxed text-story-paper/75 sm:text-[16px]">
-            Names are not in the tracking file, so the recap uses the player’s tracked shirt number
-            rather than inventing one.
-          </p>
-          <div className="mt-6 grid grid-cols-3 gap-2">
-            {player.reasons.map((reason) => (
-              <MiniStat key={reason.label} value={reason.value} label={reason.label} strong />
-            ))}
-          </div>
-          <div className="mt-4 border-l-4 border-story-own bg-story-ink/65 p-4 text-[12px] font-semibold leading-relaxed backdrop-blur-md">
-            Led the team’s combined involvement ranking through touches, completed passes and
-            distance covered.
-          </div>
-        </>
-      ) : (
-        <h1 className="display-i mt-5 text-[42px]">No player rows were supplied</h1>
-      )}
-    </div>
-  );
-}
-
-function ImproveChapter({ recap, shape }: { recap: RecapAnalysis; shape: StoryShape | null }) {
-  const finding = recap.improvement;
-  return (
-    <div className="flex flex-1 flex-col justify-center pb-3">
-      <Kicker>Biggest improvement area</Kicker>
-      <div className="mt-4 grid min-h-0 grid-cols-1 gap-4 sm:grid-cols-[1.05fr_.95fr] sm:items-center">
-        <div>
-          <p className="display-i text-[56px] leading-none text-story-own">
-            {finding ? `${finding.value}${finding.unit === "%" ? "%" : ""}` : "—"}
-          </p>
-          <h1 className="display-i mt-2 text-[34px] leading-[0.92] sm:text-[48px]">
-            {finding?.headline ?? "No improvement rule fired"}
-          </h1>
-          <p className="mt-3 text-[12px] leading-relaxed text-story-paper/75 sm:text-[15px]">
-            {finding?.interpretation ??
-              `${recap.ownName} met every configured target in this match.`}
-          </p>
-          {finding && (
-            <div className="mt-3 flex items-center gap-3 text-[10px] font-black uppercase">
-              <span className="bg-story-paper px-2 py-1 text-story-ink">
-                Target {finding.target}
-                {finding.unit === "%" ? "%" : ` ${finding.unit}`}
-              </span>
-              <span>{finding.events} real moments</span>
-            </div>
-          )}
-        </div>
-        <PositionsArt
-          dots={shape?.dots ?? []}
-          carrier={shape?.carrier ?? null}
-          target={shape?.target ?? null}
-          caption={
-            recap.firstMoment == null
-              ? "Actual frame"
-              : `${formatClock(recap.firstMoment)} · actual frame`
-          }
-          note="Real tracked positions at the first moment behind this finding."
-        />
-      </div>
-    </div>
-  );
-}
-
-function VerdictChapter({
-  recap,
-  losses,
-  pressTarget,
-}: {
-  recap: RecapAnalysis;
-  losses: Loss[];
-  pressTarget: number | null;
-}) {
-  const quick = losses.filter((loss) => loss.timeToPress !== null && loss.timeToPress <= 2).length;
-  return (
-    <div className="flex flex-1 flex-col justify-center pb-3">
-      <Kicker tone="own">The coach’s page</Kicker>
-      <h1 className="display-i mt-3 text-[40px] leading-[0.86] sm:text-[62px]">
-        Keep it.
-        <br />
-        Fix it.
-        <br />
-        <span className="text-story-own">Train it.</span>
-      </h1>
-      <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_.8fr] sm:items-center">
-        <div className="grid gap-2">
-          <VerdictItem icon={<Check size={16} />} label="Keep" value={recap.strength.headline} />
-          <VerdictItem
-            icon={<RotateCcw size={16} />}
-            label="Improve"
-            value={recap.improvement?.headline ?? "Maintain every target"}
-          />
-          <VerdictItem
-            icon={<Target size={16} />}
-            label="Next session"
-            value={
-              recap.improvement
-                ? `Train the ${recap.improvement.events} moments behind the finding`
-                : "Reinforce the strongest match habit"
-            }
-          />
-        </div>
-        <PressureArt
-          losses={losses}
-          caption="Where we lost it"
-          note={
-            losses.length
-              ? `${quick} of ${losses.length} losses got pressure inside two seconds${pressTarget === null ? "" : ` · target ${pressTarget}%`}`
-              : "No losses in this match carry coordinates."
-          }
-          className="hidden sm:block"
-        />
-      </div>
-      <p className="mt-5 max-w-[560px] border-t border-story-paper/20 pt-4 text-[11px] leading-relaxed text-story-paper/60">
-        Built only from this match: {recap.eventCount} team events, the tracking frames, player rows
-        and your saved targets.
-      </p>
-    </div>
-  );
-}
-
-function Crest({ name, src, colour }: { name: string; src?: string; colour: string }) {
-  // A crest that fails to load must not leave a broken-image glyph on a slide
-  // the coach is about to show the squad — fall back to the monogram.
-  const [broken, setBroken] = useState(false);
-  return (
-    <div className="relative z-10 flex w-[88px] flex-col items-center sm:w-[130px]">
-      {/* The disc stays paper in both themes — club crests are drawn for light. */}
-      <span
-        className="grid h-[76px] w-[76px] place-items-center rounded-full border-[5px] bg-[var(--story-paper)] shadow-story sm:h-[106px] sm:w-[106px]"
-        style={{ borderColor: colour }}
-      >
-        {src && !broken ? (
-          <img
-            src={src}
-            alt={`${name} crest`}
-            onError={() => setBroken(true)}
-            className="h-[86%] w-[86%] object-contain"
-          />
-        ) : (
-          <span className="display-i text-[24px] text-[var(--ink)]">{name.slice(0, 3)}</span>
-        )}
-      </span>
-      <span
-        className="mt-2 max-w-full truncate bg-story-ink px-2 py-1 text-[9px] font-black uppercase"
-        style={{ color: colour }}
-      >
-        {name}
-      </span>
-    </div>
-  );
-}
-
-function MiniStat({
-  value,
-  label,
-  strong = false,
-}: {
-  value: string;
-  label: string;
-  strong?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "px-2 text-center",
-        strong && "border border-story-paper/15 bg-story-ink/60 py-4 backdrop-blur-md",
-      )}
-    >
-      <div className="display-i text-[22px] leading-none sm:text-[28px]">{value}</div>
-      <div className="mt-1 text-[8px] font-black uppercase text-story-paper/55 sm:text-[10px]">
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function VerdictItem({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="border-l-4 border-story-own bg-story-ink/65 p-3 backdrop-blur-md">
-      <div className="flex items-center gap-2 text-story-own">
-        {icon}
-        <span className="text-[9px] font-black uppercase">{label}</span>
-      </div>
-      <p className="display mt-2 text-[15px] leading-tight">{value}</p>
-    </div>
-  );
-}
-
-function TacticalMoment({
-  shape,
-  colour,
-  moment,
-}: {
-  shape: StoryShape | null;
-  colour: string;
-  moment: number | null;
-}) {
-  return (
-    <div className="relative aspect-[16/10] overflow-hidden border border-story-paper/25 bg-pitch-top shadow-story">
-      <svg
-        viewBox="0 0 100 62.5"
-        className="absolute inset-0 h-full w-full"
-        aria-label="Actual player positions at the first finding moment"
-        role="img"
-      >
-        <g fill="none" stroke="var(--pitch-line)" strokeWidth="0.45">
-          <rect x="3" y="3" width="94" height="56.5" />
-          <line x1="50" y1="3" x2="50" y2="59.5" />
-          <circle cx="50" cy="31.25" r="8" />
-          <rect x="3" y="19" width="14" height="24" />
-          <rect x="83" y="19" width="14" height="24" />
-        </g>
-        {shape?.carrier && shape.target && (
-          <line
-            x1={shape.carrier.x}
-            y1={shape.carrier.y * 0.625}
-            x2={shape.target.x}
-            y2={shape.target.y * 0.625}
-            stroke="var(--cream)"
-            strokeWidth="1"
-            strokeDasharray="3 2"
-          />
-        )}
-        {(shape?.dots ?? []).map((dot, index) => (
-          <circle
-            key={`${dot.x}-${dot.y}-${index}`}
-            cx={dot.x}
-            cy={dot.y * 0.625}
-            r="1.7"
-            fill={dot.team === "A" ? colour : "var(--story-other)"}
-            stroke="var(--story-paper)"
-            strokeWidth=".35"
-          />
         ))}
-      </svg>
-      <span className="num absolute bottom-2 left-2 bg-story-ink/75 px-2 py-1 text-[10px]">
-        {moment == null ? "No timestamp" : `${formatClock(moment)} · actual frame`}
-      </span>
-    </div>
-  );
-}
-
-function StoryBackdrop({ chapter, shape }: { chapter: Chapter; shape: StoryShape | null }) {
-  return (
-    <div aria-hidden="true" className="absolute inset-0 overflow-hidden bg-story-ink">
-      <div
-        className={cn(
-          "absolute -left-[24%] -top-[10%] h-[120%] w-[70%] -skew-x-12 bg-story-own transition-transform",
-          chapter === "strength" && "w-[82%]",
-          chapter === "improve" && "w-[42%]",
-        )}
-      />
-      <div
-        className={cn(
-          "absolute -right-[24%] -top-[10%] h-[120%] w-[70%] -skew-x-12 bg-story-other",
-          chapter === "player" && "opacity-25",
-          chapter === "strength" && "w-[36%] opacity-70",
-          chapter === "improve" && "w-[35%] opacity-25",
-          chapter === "verdict" && "w-[30%]",
-        )}
-      />
-      <div className="absolute inset-0 bg-story-scrim" />
-      <div className="display-i absolute -bottom-8 -right-5 rotate-[-8deg] text-[110px] leading-none text-story-paper/[0.035] sm:text-[180px]">
-        {chapter === "score"
-          ? "MATCH"
-          : chapter === "player"
-            ? "PLAYER"
-            : chapter === "improve"
-              ? "FIX"
-              : "IPANEMA"}
       </div>
-      {chapter === "improve" && shape && (
-        <div className="absolute inset-0 opacity-[0.08]">
-          <TacticalMoment shape={shape} colour="var(--story-own)" moment={null} />
+
+      <header className="flex items-center justify-between gap-3 px-3 py-3 sm:px-5">
+        <div className="flex min-w-0 items-baseline gap-2.5">
+          <span className="num text-[13px] leading-none text-text-faint">
+            {String(index + 1).padStart(2, "0")}/{String(STORY_CHAPTERS.length).padStart(2, "0")}
+          </span>
+          <span className="label-xs truncate text-accent-sea">{chapter.kind}</span>
         </div>
-      )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <StoryButton onClick={() => setPaused((p) => !p)} label={paused ? "Play" : "Pause"}>
+            {paused ? (
+              <Play size={14} aria-hidden="true" />
+            ) : (
+              <Pause size={14} aria-hidden="true" />
+            )}
+          </StoryButton>
+          <StoryButton onClick={close} label="Close the story">
+            <X size={15} aria-hidden="true" />
+          </StoryButton>
+        </div>
+      </header>
+
+      {/* The chapter. Tapping the left or right third steps through it, which
+          is how everyone already expects a story to behave, but the controls
+          below are there for anyone who does not know that. */}
+      <main className="relative flex flex-1 flex-col justify-center overflow-y-auto px-4 pb-4 sm:px-7">
+        <button
+          type="button"
+          onClick={prev}
+          aria-label="Previous chapter"
+          className="absolute inset-y-0 left-0 z-10 w-1/4"
+        />
+        <button
+          type="button"
+          onClick={next}
+          aria-label="Next chapter"
+          className="absolute inset-y-0 right-0 z-10 w-1/4"
+        />
+        <div className="pointer-events-none relative z-20 mx-auto my-auto w-full max-w-[1000px] py-6 [&_a]:pointer-events-auto [&_button]:pointer-events-auto">
+          {body[chapter.id]}
+        </div>
+      </main>
+
+      <footer className="flex items-center justify-between gap-3 border-t border-wire px-3 py-3 sm:px-5">
+        <StoryButton onClick={prev} label="Previous chapter" disabled={index === 0}>
+          <ChevronLeft size={16} aria-hidden="true" />
+        </StoryButton>
+        <p className="min-w-0 truncate text-[12px] text-text-faint">{chapter.nav}</p>
+        <StoryButton onClick={next} label="Next chapter">
+          <ChevronRight size={16} aria-hidden="true" />
+        </StoryButton>
+      </footer>
     </div>
   );
 }
 
-function StoryButton({ action }: { action: Action }) {
+function StoryButton({
+  onClick,
+  label,
+  disabled,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
   return (
     <button
       type="button"
-      onClick={action.run}
-      className={cn(
-        "tap relative z-30 flex min-h-12 flex-1 items-center justify-center gap-2 border px-3 text-[11px] font-black uppercase backdrop-blur-md",
-        action.kind === "primary"
-          ? "border-story-paper bg-story-paper text-story-ink"
-          : "border-story-paper/40 bg-story-ink/55 text-story-paper",
-      )}
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className="grid h-9 w-9 shrink-0 place-items-center border border-wire text-text-dim transition-colors hover:border-accent-sea hover:text-accent-sea disabled:opacity-35 disabled:hover:border-wire disabled:hover:text-text-dim"
     >
-      {action.icon === "play" && <Play size={14} aria-hidden="true" />}
-      {action.icon === "session" && <ArrowRight size={14} aria-hidden="true" />}
-      {action.label}
+      {children}
     </button>
+  );
+}
+
+/** The line that names what a chapter is about, above the figure. */
+function Kicker({ children }: { children: ReactNode }) {
+  return <p className="label-sm text-accent-sea">{children}</p>;
+}
+
+/** The sentence under a figure. Never more than two lines on a phone. */
+function Caption({ children }: { children: ReactNode }) {
+  return (
+    <p className="mt-4 max-w-[52ch] text-[14px] leading-relaxed text-text-dim sm:text-[15.5px]">
+      {children}
+    </p>
+  );
+}
+
+/* ---------- 01 · the result ---------- */
+
+function ScoreChapter({
+  match,
+  model,
+  identities,
+}: {
+  match: LibraryMatch;
+  model: MatchModel;
+  identities: { A: TeamIdentity; B: TeamIdentity };
+}) {
+  const headline = model.cells.slice(0, 3);
+  return (
+    <div>
+      <Kicker>{match.competition || match.date}</Kicker>
+
+      <div className="mt-5 flex items-center gap-4 sm:gap-7">
+        <Crest team={identities.A} size={44} />
+        <p className="display-i shrink-0 text-[clamp(64px,17vw,150px)] leading-[0.8] text-text-bright">
+          {match.scoreA}–{match.scoreB}
+        </p>
+        <Crest team={identities.B} size={44} />
+      </div>
+
+      <p className="display-i mt-4 text-[clamp(22px,4vw,38px)] leading-[0.95] text-text">
+        {model.flowTitle}
+      </p>
+      <Caption>
+        {identities.A.name} against {identities.B.name}. {model.moments.length} tracked moments,{" "}
+        {model.confirmed} of them confirmed by you.
+      </Caption>
+
+      {/* The same three figures the page opens with, in the same words. */}
+      <dl className="rule-x mt-7 grid grid-cols-3 border-y border-wire">
+        {headline.map((cell) => (
+          <div key={cell.label} className="px-3 py-4 first:pl-0 sm:px-5">
+            <dd className="num text-[clamp(26px,5vw,44px)] leading-[0.9] text-text-bright">
+              {cell.value ?? "—"}
+            </dd>
+            <dt className="label-xs mt-2 text-text-faint">{cell.label}</dt>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+/* ---------- 02 · what held up ---------- */
+
+function StrengthChapter({ model }: { model: MatchModel }) {
+  const { strengths } = model;
+  if (strengths.length === 0) {
+    return (
+      <div>
+        <Kicker>What held up</Kicker>
+        <p className="display-i mt-4 text-[clamp(30px,6vw,56px)] leading-[0.9] text-text-bright">
+          Nothing cleared a target
+        </p>
+        <Caption>
+          That is unusual rather than damning — check the targets on your club profile still match
+          the level you are playing at.
+        </Caption>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Kicker>What held up</Kicker>
+      <p className="display-i mt-3 text-[clamp(30px,6vw,56px)] leading-[0.88] text-text-bright">
+        {strengths.length === 1 ? "One thing held up" : `${strengths.length} things held up`}
+      </p>
+
+      <ul className="rule-y mt-6 border-y border-wire">
+        {strengths.slice(0, 5).map((strength) => (
+          <li
+            key={strength.id}
+            className="flex items-baseline justify-between gap-4 py-3.5 sm:py-4"
+          >
+            <span className="flex min-w-0 items-baseline gap-3">
+              <Check
+                size={15}
+                aria-hidden="true"
+                className="relative top-[2px] shrink-0 text-positive"
+              />
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold leading-snug text-text-bright sm:text-[17px]">
+                  {strength.label}
+                </span>
+                <span className="mt-0.5 block text-[12px] text-text-faint">{strength.basis}</span>
+              </span>
+            </span>
+            <span className="num shrink-0 text-[clamp(24px,4.5vw,40px)] leading-none text-positive">
+              {strength.value}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ---------- 03 · when it turned ---------- */
+
+function TurnedChapter({
+  model,
+  identities,
+}: {
+  model: MatchModel;
+  identities: { A: TeamIdentity; B: TeamIdentity };
+}) {
+  const { pressureWindow, lossEvents } = model;
+  return (
+    <div>
+      <Kicker>When it turned</Kicker>
+      <p className="display-i mt-3 text-[clamp(26px,5vw,48px)] leading-[0.9] text-text-bright">
+        {pressureWindow
+          ? `The worst of it ran ${clock(pressureWindow.fromS)} to ${clock(pressureWindow.toS)}`
+          : "The losses never clustered"}
+      </p>
+      <Caption>
+        {pressureWindow
+          ? `${pressureWindow.label}. The band on the chart is that stretch — nobody chose it, a fourteen-minute frame slid across the match and this is where it was busiest.`
+          : `We gave the ball away ${lossEvents.length} times, but never often enough in one stretch for the analysis to call it a spell.`}
+      </Caption>
+
+      <div className="mt-6">
+        <MatchFlow
+          momentum={model.momentum}
+          durationS={model.duration}
+          goals={model.goals}
+          turnovers={lossEvents.map((event) => event.t)}
+          window={pressureWindow}
+          teamA={identities.A}
+          teamB={identities.B}
+          confirmed={model.confirmed}
+          detected={Math.max(model.moments.length - model.confirmed, 0)}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 04 · the one thing ---------- */
+
+function ImproveChapter({
+  model,
+  losses,
+  videoUrl,
+  matchId,
+}: {
+  model: MatchModel;
+  losses: Loss[];
+  videoUrl?: string | undefined;
+  matchId: string;
+}) {
+  const finding = model.model.top;
+  const moments = useMemo(() => finding?.timestamps.slice(0, 3) ?? [], [finding]);
+  const { posters, blocked } = useClipPosters(videoUrl, moments, Boolean(videoUrl));
+
+  if (!finding) {
+    return (
+      <div>
+        <Kicker>The one thing</Kicker>
+        <p className="display-i mt-4 text-[clamp(30px,6vw,56px)] leading-[0.9] text-text-bright">
+          Every target was met
+        </p>
+        <Caption>
+          Nothing in this match crossed one of your thresholds, so there is nothing to build a
+          corrective session from.
+        </Caption>
+      </div>
+    );
+  }
+
+  const unit = finding.unit === "%" ? "%" : ` ${finding.unit}`;
+  return (
+    <div>
+      <Kicker>The one thing</Kicker>
+      <p className="display-i mt-3 text-[clamp(26px,5vw,48px)] leading-[0.9] text-text-bright">
+        {finding.headline}
+      </p>
+
+      {/* The gap, as two figures rather than a sentence about a gap. */}
+      <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4 border-y border-wire py-5">
+        <span>
+          <span className="num block text-[clamp(44px,9vw,86px)] leading-[0.82] text-reaction-bad">
+            {finding.value}
+            {unit}
+          </span>
+          <span className="label-xs mt-2 block text-text-faint">What we did</span>
+        </span>
+        <span>
+          <span className="num block text-[clamp(30px,6vw,56px)] leading-[0.82] text-text-dim">
+            {finding.target}
+            {unit}
+          </span>
+          <span className="label-xs mt-2 block text-text-faint">Your target</span>
+        </span>
+        <span className="ml-auto">
+          <span className="num block text-[clamp(30px,6vw,56px)] leading-[0.82] text-text-bright">
+            {finding.events}
+          </span>
+          <span className="label-xs mt-2 block text-text-faint">
+            {finding.events === 1 ? "moment" : "moments"}
+          </span>
+        </span>
+      </div>
+
+      <Caption>{finding.interpretation}</Caption>
+
+      {/* The evidence, two ways: the moments as the frames they actually are,
+          and every loss on one pitch so the shape of the problem is visible
+          rather than only its size. Side by side where there is room for both. */}
+      <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+        {moments.length > 0 && (
+          <ul className="flex gap-0 overflow-x-auto border border-wire [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {moments.map((t, i) => (
+              <li key={t} className={cn("shrink-0", i > 0 && "border-l border-wire")}>
+                <Link
+                  to="/match/$matchId/match"
+                  params={{ matchId }}
+                  search={{ t: Math.round(t * 10) / 10 }}
+                  className="group flex w-[128px] flex-col gap-2 p-3 transition-colors hover:bg-surface-2 sm:w-[150px]"
+                >
+                  <ClipThumb
+                    videoUrl={videoUrl}
+                    t={t}
+                    poster={posters[t]}
+                    paintFrame={blocked}
+                    className="h-[64px] border border-wire text-text-dim group-hover:border-accent-sea group-hover:text-accent-sea sm:h-[76px]"
+                  />
+                  <span className="num-flat text-[12.5px] text-text-bright">{clock(t)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {losses.length > 0 && (
+          <div className="hidden lg:block">
+            <PressureArt
+              losses={losses}
+              caption="Where we lost it"
+              note="Coloured by how long the first pressure took."
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- 05 · Tuesday ---------- */
+
+function VerdictChapter({
+  model,
+  matchId,
+  onClose,
+}: {
+  model: MatchModel;
+  matchId: string;
+  onClose: () => void;
+}) {
+  const finding = model.model.top;
+  return (
+    <div>
+      <Kicker>Tuesday</Kicker>
+      <p className="display-i mt-3 text-[clamp(30px,6vw,56px)] leading-[0.88] text-text-bright">
+        {finding ? "Built from the finding above" : "Keep what worked"}
+      </p>
+      <Caption>
+        {finding
+          ? `The session comes from "${finding.headline.toLowerCase()}" — the drills, their durations and the pitch diagrams all come from that finding and the ${finding.events} moments behind it.`
+          : "No threshold was crossed in this match, so there is nothing to correct. The plan keeps what already works."}
+      </Caption>
+
+      <div className="mt-7 flex flex-wrap gap-3">
+        <Link to="/match/$matchId/session" params={{ matchId }} className="btn btn-primary">
+          <CalendarCheck size={16} aria-hidden="true" />
+          Build Tuesday session
+        </Link>
+        <button type="button" onClick={onClose} className="btn btn-secondary">
+          Back to the debrief
+        </button>
+      </div>
+    </div>
   );
 }

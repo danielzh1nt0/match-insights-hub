@@ -58,10 +58,6 @@
   --color-pitch-control: var(--pitch-control);
   --color-ball-detail: var(--ball-detail);
   --color-team-gk: var(--team-gk);
-  --color-story-ink: var(--story-ink);
-  --color-story-paper: var(--story-paper);
-  --color-story-own: var(--story-own);
-  --color-story-other: var(--story-other);
   --color-ink: var(--ink);
   --color-workspace: var(--workspace);
 
@@ -162,8 +158,6 @@
 
   --club-bvb: #fde100;
   --club-bayern: #dc052d;
-  --story-ink: #15121f;
-  --story-paper: #efe8da;
   --workspace: #15121f;
   --graphite: #3a3d38;
   --radius: 0px;
@@ -220,8 +214,6 @@ body::before {
   --pitch-top: #1a2a1d;
   --pitch-bottom: #141f17;
   --pitch-line: rgba(237, 230, 214, 0.5);
-  --story-ink: #0d0e11;
-  --story-paper: #ede6d6;
   --workspace: #0d0e11;
   color-scheme: dark;
 }
@@ -261,8 +253,6 @@ body::before {
     --reaction-good: #15171b;
     --reaction-warn: #8a5c12;
     --reaction-bad: #a62525;
-    --story-ink: #ece7da;
-    --story-paper: #0d0e11;
     --workspace: #ece7da;
     color-scheme: light;
   }
@@ -290,12 +280,9 @@ body::before {
   --reaction-good: #15171b;
   --reaction-warn: #8a5c12;
   --reaction-bad: #a62525;
-  --story-ink: #ece7da;
-  --story-paper: #0d0e11;
   --workspace: #ece7da;
   color-scheme: light;
 }
-
 
 .bg-priority {
   background: color-mix(in srgb, var(--reaction-bad) 8%, transparent);
@@ -446,27 +433,31 @@ body::before {
   background: linear-gradient(180deg, var(--pitch-top) 0%, var(--pitch-bottom) 100%);
 }
 
-@utility bg-story-scrim {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--story-ink) 38%, transparent), color-mix(in srgb, var(--story-ink) 8%, transparent) 42%, color-mix(in srgb, var(--story-ink) 84%, transparent));
-}
-
-@utility shadow-story {
-  box-shadow: 8px 8px 0 color-mix(in srgb, var(--story-ink) 72%, transparent);
-}
-
-@utility drop-shadow-story {
-  filter: drop-shadow(7px 7px 0 color-mix(in srgb, var(--story-ink) 82%, transparent));
-}
-
 @keyframes loadbar {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(300%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
 }
 
 @keyframes feedIn {
-  0% { opacity: 0; transform: translateY(-6px); background: color-mix(in srgb, var(--cream) 14%, transparent); }
-  40% { opacity: 1; transform: translateY(0); background: color-mix(in srgb, var(--cream) 14%, transparent); }
-  100% { opacity: 1; transform: translateY(0); background: transparent; }
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+    background: color-mix(in srgb, var(--cream) 14%, transparent);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(0);
+    background: color-mix(in srgb, var(--cream) 14%, transparent);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    background: transparent;
+  }
 }
 
 .feed-in {
@@ -493,7 +484,10 @@ body::before {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1;
-  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
 }
 
 .fchip:hover {
@@ -536,7 +530,10 @@ body::before {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   line-height: 1;
-  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .btn-primary {
@@ -567,7 +564,6 @@ body::before {
   color: var(--reaction-bad);
 }
 
-
 /* ===== Level 3: overlays =====
    A menu or dialog floating over the page is pinned by a high-contrast chalk
    outline rather than a shadow, which this system does not use. Unlayered, so
@@ -590,35 +586,182 @@ body::before {
    which meant two screens in the product ignored whichever ground was chosen.
    They inherit the system now. */
 
-@keyframes monogram-fade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes field-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes sheet-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
-@keyframes breathe-ring { 0%,100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-@keyframes stage-pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
-@keyframes tracker-scan { from { transform: translateX(-32px); } to { transform: translateX(192px); } }
-@keyframes tracker-dot-in { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes tracker-ball { 0% { transform: translate(0,0); } 25% { transform: translate(30px,-10px); } 50% { transform: translate(60px,5px); } 75% { transform: translate(90px,-5px); } 100% { transform: translate(120px,0); } }
-@keyframes tracker-heat { 0%,100% { transform: scale(.6); opacity: .4; } 50% { transform: scale(1.2); opacity: .8; } }
-@keyframes tracker-outline { 0%,100% { stroke-opacity: 0; } 50% { stroke-opacity: .6; } }
-.animate-monogram { animation: monogram-fade 120ms ease-out; }
-.animate-field-in { animation: field-in 200ms ease-out; }
-.animate-sheet { animation: sheet-in 250ms ease-out; }
-.processing-ring { animation: breathe-ring 2s ease-in-out infinite; }
-.progress-stroke { transition: stroke-dashoffset 400ms ease-out; }
-.stage-pulse { animation: stage-pulse 1.5s ease-in-out infinite; }
-.tracker-scan,.tracker-players,.tracker-ball,.tracker-heat,.tracker-outline { opacity: 0; transform-origin: center; }
-.tracker-stage-0 .tracker-scan { opacity: 1; animation: tracker-scan 2s linear infinite; }
-.tracker-stage-1 .tracker-scan { transform: translateX(192px); opacity: .1; }
-.tracker-stage-1 .tracker-players circle { opacity: 1; transform-origin: center; animation: tracker-dot-in 300ms ease-out both; }
-.tracker-stage-2 .tracker-players,.tracker-stage-3 .tracker-players,.tracker-stage-4 .tracker-players { opacity: 1; }
-.tracker-stage-2 .tracker-ball { opacity: 1; animation: tracker-ball 2s ease-in-out infinite; }
-.tracker-stage-3 .tracker-ball,.tracker-stage-4 .tracker-ball { opacity: 1; transform: translate(120px,0); }
-.tracker-stage-3 .tracker-heat { opacity: 1; animation: tracker-heat 2s ease-in-out infinite; }
-.tracker-stage-4 .tracker-heat { opacity: .55; }
-.tracker-stage-4 .tracker-outline { opacity: 1; animation: tracker-outline 1.2s ease-out 1; }
+@keyframes monogram-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes field-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes breathe-ring {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+@keyframes stage-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+@keyframes tracker-scan {
+  from {
+    transform: translateX(-32px);
+  }
+  to {
+    transform: translateX(192px);
+  }
+}
+@keyframes tracker-dot-in {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes tracker-ball {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(30px, -10px);
+  }
+  50% {
+    transform: translate(60px, 5px);
+  }
+  75% {
+    transform: translate(90px, -5px);
+  }
+  100% {
+    transform: translate(120px, 0);
+  }
+}
+@keyframes tracker-heat {
+  0%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+@keyframes tracker-outline {
+  0%,
+  100% {
+    stroke-opacity: 0;
+  }
+  50% {
+    stroke-opacity: 0.6;
+  }
+}
+.animate-monogram {
+  animation: monogram-fade 120ms ease-out;
+}
+.animate-field-in {
+  animation: field-in 200ms ease-out;
+}
+.animate-sheet {
+  animation: sheet-in 250ms ease-out;
+}
+.processing-ring {
+  animation: breathe-ring 2s ease-in-out infinite;
+}
+.progress-stroke {
+  transition: stroke-dashoffset 400ms ease-out;
+}
+.stage-pulse {
+  animation: stage-pulse 1.5s ease-in-out infinite;
+}
+.tracker-scan,
+.tracker-players,
+.tracker-ball,
+.tracker-heat,
+.tracker-outline {
+  opacity: 0;
+  transform-origin: center;
+}
+.tracker-stage-0 .tracker-scan {
+  opacity: 1;
+  animation: tracker-scan 2s linear infinite;
+}
+.tracker-stage-1 .tracker-scan {
+  transform: translateX(192px);
+  opacity: 0.1;
+}
+.tracker-stage-1 .tracker-players circle {
+  opacity: 1;
+  transform-origin: center;
+  animation: tracker-dot-in 300ms ease-out both;
+}
+.tracker-stage-2 .tracker-players,
+.tracker-stage-3 .tracker-players,
+.tracker-stage-4 .tracker-players {
+  opacity: 1;
+}
+.tracker-stage-2 .tracker-ball {
+  opacity: 1;
+  animation: tracker-ball 2s ease-in-out infinite;
+}
+.tracker-stage-3 .tracker-ball,
+.tracker-stage-4 .tracker-ball {
+  opacity: 1;
+  transform: translate(120px, 0);
+}
+.tracker-stage-3 .tracker-heat {
+  opacity: 1;
+  animation: tracker-heat 2s ease-in-out infinite;
+}
+.tracker-stage-4 .tracker-heat {
+  opacity: 0.55;
+}
+.tracker-stage-4 .tracker-outline {
+  opacity: 1;
+  animation: tracker-outline 1.2s ease-out 1;
+}
 @media (prefers-reduced-motion: reduce) {
-  .processing-ring,.stage-pulse,.tracker-stage-0 .tracker-scan,.tracker-stage-1 .tracker-players circle,.tracker-stage-2 .tracker-ball,.tracker-stage-3 .tracker-heat,.tracker-stage-4 .tracker-outline { animation: none !important; }
-  .tracker-stage-0 .tracker-scan { transform: translateX(192px); }
+  .processing-ring,
+  .stage-pulse,
+  .tracker-stage-0 .tracker-scan,
+  .tracker-stage-1 .tracker-players circle,
+  .tracker-stage-2 .tracker-ball,
+  .tracker-stage-3 .tracker-heat,
+  .tracker-stage-4 .tracker-outline {
+    animation: none !important;
+  }
+  .tracker-stage-0 .tracker-scan {
+    transform: translateX(192px);
+  }
 }
 
 /* ---------------------------------------------------------------
@@ -628,9 +771,12 @@ body::before {
    ink on paper and every drill is kept whole on its page.
    --------------------------------------------------------------- */
 @media print {
-  @page { margin: 14mm; }
+  @page {
+    margin: 14mm;
+  }
 
-  html, body {
+  html,
+  body {
     background: #fff !important;
     color: #111 !important;
   }
@@ -659,6 +805,10 @@ body::before {
   }
 
   /* The pitch diagrams are the point of the sheet — keep them legible. */
-  .session-sheet svg { max-height: 78mm; }
-  .session-sheet a[href^="#"] { text-decoration: none; }
+  .session-sheet svg {
+    max-height: 78mm;
+  }
+  .session-sheet a[href^="#"] {
+    text-decoration: none;
+  }
 }
