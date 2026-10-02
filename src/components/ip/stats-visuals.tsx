@@ -49,6 +49,8 @@ import {
   eventPoint,
   finite,
   metresToPct,
+  metresToPctAt,
+  mirroredAt,
   setPitchContext,
   type Point,
 } from "@/lib/pitch-coords";
@@ -441,10 +443,16 @@ function HeatMap({
     const g = Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));
     let n = 0;
     for (const frame of frames) {
+      // Sides change ends at half-time, so the second half has to be turned
+      // round before it is counted. Without this the map is one team's shape
+      // laid over its own mirror image, which averages towards the middle.
+      const flip = mirroredAt(file, frame.t);
       for (const player of frame.players) {
         if (player.team !== team || player.state === "stale") continue;
-        const x = Math.min(0.999, Math.max(0, player.m[0] / length));
-        const y = Math.min(0.999, Math.max(0, player.m[1] / width));
+        const rawX = Math.min(0.999, Math.max(0, player.m[0] / length));
+        const rawY = Math.min(0.999, Math.max(0, player.m[1] / width));
+        const x = flip ? 0.999 - rawX : rawX;
+        const y = flip ? 0.999 - rawY : rawY;
         const r = Math.floor(y * ROWS);
         const c = Math.floor(x * COLS);
         g[r]![c] = (g[r]![c] ?? 0) + 1;
@@ -712,6 +720,134 @@ function Distance({ players, colour }: { players: PlayerStat[]; colour: string }
   );
 }
 
+/** Within this many metres of the carrier counts as pressure on him. */
+const PRESS_WITHIN_M = 5;
+
+/**
+ * Where the pressure was, both ways round.
+ *
+ * The Pressing tab already said "where did we press" over a scatter of balls
+ * won, which is where pressure *succeeded* — a different and much smaller
+ * thing. Pressure itself is in the frames: who had the ball, where it was, and
+ * how close the nearest opponent got. A frame where they had it and one of ours
+ * was inside five metres is us pressing; the same frame with the sides reversed
+ * is them pressing us.
+ *
+ * Both pitches are drawn the same way round, with our goal on the left, so the
+ * pair can be read against each other: mass on the right of the first map is a
+ * team that presses high, mass on the left of the second is a team being
+ * squeezed in its own build-up.
+ *
+ * It counts tracked moments, not press actions — a press held for three seconds
+ * weighs more than one held for one. That is the right weighting for a heat map
+ * and the wrong one for a count, so the figure underneath says moments.
+ */
+function PressureMap({
+  frames,
+  team,
+  colours,
+  file,
+  teamA,
+  teamB,
+}: {
+  frames: Frame[];
+  team: TeamKey;
+  colours: { A: string; B: string };
+  file: MatchDataFile | undefined;
+  teamA: StatsTeamIdentity;
+  teamB: StatsTeamIdentity;
+}) {
+  const other: TeamKey = team === "A" ? "B" : "A";
+  const COLS = 14;
+  const ROWS = 9;
+
+  const build = (underPressure: TeamKey) => {
+    const grid = Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));
+    let samples = 0;
+    let measured = 0;
+    for (const frame of frames) {
+      if (frame.possession !== underPressure) continue;
+      const near = frame.pressure_m;
+      if (typeof near !== "number" || !Number.isFinite(near)) continue;
+      measured += 1;
+      if (near > PRESS_WITHIN_M) continue;
+      // Always from our point of view, so both maps share one orientation.
+      const point = metresToPctAt(frame.ball?.m, team, frame.t, file);
+      if (!point) continue;
+      const c = Math.min(COLS - 1, Math.floor((point.x / 100) * COLS));
+      const r = Math.min(ROWS - 1, Math.floor((point.y / 100) * ROWS));
+      grid[r]![c] = (grid[r]![c] ?? 0) + 1;
+      samples += 1;
+    }
+    return { grid, samples, measured, max: Math.max(1, ...grid.flat()) };
+  };
+
+  const ours = build(other); // they had it, we pressed
+  const theirs = build(team); // we had it, they pressed
+
+  // Without a distance to the nearest opponent there is no pressure to map.
+  if (ours.measured + theirs.measured === 0)
+    return (
+      <EvidenceUnavailable
+        question="Where was the pressure?"
+        icon={Target}
+        caption="Where we closed them down, and where they closed us down."
+      />
+    );
+
+  const panel = (built: ReturnType<typeof build>, title: string, sub: string, colour: string) => (
+    <div className="min-w-0">
+      <p className="text-[13.5px] font-semibold text-text-bright">{title}</p>
+      <p className="mt-0.5 mb-2 text-[11.5px] text-text-faint">{sub}</p>
+      <StatsPitch attackLabel="" ariaLabel={title}>
+        {built.grid.map((row, r) =>
+          row.map((count, c) =>
+            count === 0 ? null : (
+              <rect
+                key={`p-${r}-${c}`}
+                x={3 + (94 / COLS) * c}
+                y={1.5 + (60.9 / ROWS) * r}
+                width={94 / COLS}
+                height={60.9 / ROWS}
+                fill={colour}
+                fillOpacity={Math.min(0.82, (count / built.max) ** 0.65 * 0.82)}
+              />
+            ),
+          ),
+        )}
+      </StatsPitch>
+      <p className="mt-2 text-[11.5px] text-text-faint">
+        {built.samples.toLocaleString()} moments under pressure of {built.measured.toLocaleString()}{" "}
+        tracked
+      </p>
+    </div>
+  );
+
+  return (
+    <Card
+      question="Where was the pressure?"
+      icon={Target}
+      caption={`Inside ${PRESS_WITHIN_M} m of the player on the ball. Both pitches attack right, so they can be read against each other.`}
+      honesty={`${(ours.samples + theirs.samples).toLocaleString()} pressured moments`}
+    >
+      <div className="grid gap-5 lg:grid-cols-2">
+        {panel(
+          ours,
+          `${(team === "A" ? teamA : teamB).name} pressing`,
+          "Where we closed them down",
+          colours[team],
+        )}
+        {panel(
+          theirs,
+          `${(team === "A" ? teamB : teamA).name} pressing`,
+          "Where they closed us down",
+          colours[other],
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function PressMap({ events, team, matchId, colour, file }: Props & { colour: string }) {
   const press = events
     .filter(
@@ -724,9 +860,9 @@ function PressMap({ events, team, matchId, colour, file }: Props & { colour: str
   if (!press.length) return null;
   return (
     <Card
-      question="Where did we press?"
+      question="Where did we win it back?"
       icon={Target}
-      caption="Each dot is one pressure or regain at the ball position."
+      caption="Each dot is one ball won, at the position it was won."
       honesty={`${press.filter((p) => p.event.status === "confirmed").length} confirmed · ${press.length} detected`}
     >
       <Pitch>
@@ -2440,6 +2576,15 @@ export function StatsVisuals(props: Props) {
     ];
   if (props.tab === "pressing")
     cards = [
+      <PressureMap
+        key="pressure"
+        frames={frames}
+        team={props.team}
+        colours={props.colours}
+        file={props.file}
+        teamA={props.teamA}
+        teamB={props.teamB}
+      />,
       <PressMap key="press" {...p} colour={colour} />,
       <CounterPress key="counter" {...p} />,
       props.lineDefending && props.lineDefending.lineBreakCount !== 0 ? (
