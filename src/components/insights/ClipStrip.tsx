@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useId, useRef, useState } from "react";
-import { Play, Scissors } from "lucide-react";
+import { Scissors } from "lucide-react";
 import { ClipPlayer } from "@/components/insights/ClipPlayer";
+import { ClipThumb } from "@/components/ip/clip-thumb";
 import { actionLinkClass } from "@/components/ip/touchline";
 import { useClipPosters } from "@/hooks/use-clip-posters";
 import { useOnScreen } from "@/hooks/use-on-screen";
@@ -68,7 +69,11 @@ export function ClipStrip({
 
   const shown = timestamps.slice(0, shownCount);
   const more = Math.max(total - shown.length, 0);
-  const posters = useClipPosters(videoUrl, shown.slice(0, POSTER_LIMIT), seen && Boolean(videoUrl));
+  const { posters, blocked } = useClipPosters(
+    videoUrl,
+    shown.slice(0, POSTER_LIMIT),
+    seen && Boolean(videoUrl),
+  );
   if (shown.length === 0) return null;
 
   const open = (index: number) => {
@@ -111,35 +116,28 @@ export function ClipStrip({
       >
         {shown.map((t, i) => {
           const poster = posters[t];
+          // When the pixels cannot be read back, let the browser paint the
+          // frame itself: a media fragment asks it to show the file at that
+          // second, which needs no permission we have to be granted. It costs
+          // an element per tile, so only the first screenful gets one.
+          const paintFrame = blocked && Boolean(videoUrl) && i < POSTER_LIMIT;
           const current = active === i;
           // The frame, the clock and the number are the same whichever way the
           // tile behaves; only what a click does changes.
           const face = (
             <>
-              <span
+              <ClipThumb
+                videoUrl={videoUrl}
+                t={t}
+                poster={poster}
+                paintFrame={paintFrame}
                 className={cn(
-                  "relative grid h-[58px] place-items-center overflow-hidden border bg-surface-2 transition-colors sm:h-[66px]",
+                  "h-[58px] border sm:h-[66px]",
                   current
                     ? "border-accent-sea text-accent-sea"
                     : "border-wire text-text-dim group-hover:border-accent-sea group-hover:text-accent-sea",
                 )}
-              >
-                {poster && (
-                  <img
-                    src={poster}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                )}
-                <span
-                  className={cn(
-                    "relative grid h-7 w-7 place-items-center",
-                    poster && "bg-black/55 text-white",
-                  )}
-                >
-                  <Play size={15} aria-hidden="true" />
-                </span>
-              </span>
+              />
               <span
                 className={cn(
                   "num-flat text-[12.5px]",

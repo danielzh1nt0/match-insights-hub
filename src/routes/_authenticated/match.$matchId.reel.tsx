@@ -4,6 +4,8 @@ import type { Period, TeamScope } from "@/components/ip/chrome";
 import { ClipList } from "@/components/ip/clip-list";
 import { MatchShell } from "@/components/ip/match-shell";
 import { useAnalysis } from "@/hooks/use-match";
+import { useClipPosters } from "@/hooks/use-clip-posters";
+import { useMatchVideo } from "@/hooks/use-match-video";
 import { buildClips } from "@/lib/clips";
 
 export const Route = createFileRoute("/_authenticated/match/$matchId/reel")({
@@ -12,7 +14,10 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/reel")({
       { title: "Clip reel — Ipanema" },
       { name: "description", content: "The handful of moments worth showing the team." },
       { property: "og:title", content: "Clip reel — Ipanema" },
-      { property: "og:description", content: "Every clip comes from a tracked moment, with the reason for each." },
+      {
+        property: "og:description",
+        content: "Every clip comes from a tracked moment, with the reason for each.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -22,12 +27,16 @@ export const Route = createFileRoute("/_authenticated/match/$matchId/reel")({
 
 function Reel() {
   const { matchId } = Route.useParams();
-  const { match, events, team } = useAnalysis(matchId, "a");
+  const { match, row, events, team } = useAnalysis(matchId, "a");
+  const videoUrl = useMatchVideo(row);
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
 
   const clips = useMemo(() => buildClips(events, team ?? "A"), [events, team]);
   const confirmed = clips.filter((clip) => clip.confirmed).length;
+  // The reel is short by design, so every row can carry its own frame.
+  const frameTimes = useMemo(() => clips.slice(0, 24).map((clip) => clip.t), [clips]);
+  const { posters, blocked } = useClipPosters(videoUrl, frameTimes, Boolean(videoUrl));
 
   return (
     <MatchShell
@@ -49,7 +58,13 @@ function Reel() {
                 : `${clips.length} tracked ${clips.length === 1 ? "moment" : "moments"}, in match order${confirmed > 0 ? ` · ${confirmed} confirmed by you` : ""}.`}
             </p>
           </div>
-          <ClipList clips={clips} matchId={matchId} />
+          <ClipList
+            clips={clips}
+            matchId={matchId}
+            videoUrl={videoUrl}
+            posters={posters}
+            paintFrames={blocked}
+          />
         </>
       )}
     </MatchShell>
