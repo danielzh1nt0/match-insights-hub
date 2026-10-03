@@ -26,6 +26,7 @@ import { MatchSide, FeedHeading, type SideTab } from "@/components/match/MatchSi
 import { MomentumStrip } from "@/components/match/MomentumStrip";
 import type { StatIconName } from "@/components/match/StatIcon";
 import { useAnalysis } from "@/hooks/use-match";
+import { listableEvents } from "@/lib/match-source";
 import { useMatchVideo } from "@/hooks/use-match-video";
 import { buildClips } from "@/lib/clips";
 import { formatClock } from "@/lib/sample-data";
@@ -122,8 +123,12 @@ function MatchScreen() {
   const { t: startT } = Route.useSearch();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, row, label, file, stats, team, colours, loading, events, hiddenEvents, review } =
+  const { match, row, label, file, stats, team, colours, loading, events: allEvents, hiddenEvents, review } =
     useAnalysis(matchId, scope);
+  const [showBeta, setShowBeta] = useState(false);
+  const hasBeta = useMemo(() => allEvents.some((e) => (e as { tier?: string }).tier === "beta"), [allEvents]);
+  /** Only verified moments are listed; beta behind a toggle, hidden never. */
+  const events = useMemo(() => listableEvents(allEvents, showBeta), [allEvents, showBeta]);
   const [typesOverride, setTypesOverride] = useState<string[] | null>(null);
   const [focusIndex, setFocusIndex] = useState(0);
   const [showHidden, setShowHidden] = useState(false);
@@ -708,6 +713,17 @@ function MatchScreen() {
                   events={events}
                   teamNames={{ A: match.teamA, B: match.teamB }}
                 />
+                {hasBeta && (
+                  <label className="mt-2 flex min-h-11 cursor-pointer items-center gap-2 text-[12px] text-text-dim">
+                    <input
+                      type="checkbox"
+                      checked={showBeta}
+                      onChange={(e) => setShowBeta(e.target.checked)}
+                      className="h-4 w-4 accent-[var(--cream)]"
+                    />
+                    Show beta events
+                  </label>
+                )}
 
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[11.5px] font-medium text-text-faint">

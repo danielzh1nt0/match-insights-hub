@@ -101,6 +101,35 @@ export type MatchDataFile = {
   periods?: { t_start: number; t_end: number; mirrored?: boolean }[];
 };
 
+/**
+ * Demo allow-list for the library. Empty = list every match.
+ * Hidden matches still open by direct URL; they are just not listed.
+ */
+export const DEMO_MATCH_IDS: string[] = ["SFKBP1109", "p15u-vs-aik-2026-09-21-bd09"];
+export const DEMO_MATCH_TITLES: Record<string, string> = {
+  SFKBP1109: "SFK – BP · first half",
+  "p15u-vs-aik-2026-09-21-bd09": "SFK – AIK · first half",
+};
+
+/** Types the event list may show when a file carries no tier. */
+const LISTED_TYPES = new Set(["goal", "shot"]);
+
+export function listableEvents<E extends { type: string }>(events: E[], showBeta = false): E[] {
+  return events.filter((e) => {
+    const tier = (e as { tier?: string }).tier;
+    if (tier) return tier === "verified" || (showBeta && tier === "beta");
+    return LISTED_TYPES.has(e.type);
+  });
+}
+
+/** True when t sits inside the video and inside some period window (±5 s). */
+export function inVideo(t: number, durationS: number | null | undefined, periods?: MatchDataFile["periods"]) {
+  if (typeof t !== "number") return true;
+  if (durationS && t > durationS) return false;
+  if (periods?.length) return periods.some((p) => t >= p.t_start - 5 && t <= p.t_end + 5);
+  return true;
+}
+
 export async function fetchMatches(): Promise<MatchListItem[]> {
   const [{ data: rows, error }, { data: labels, error: labelError }] = await Promise.all([
     matchesDb.from("matches").select("*").order("created_at", { ascending: false }),
@@ -111,7 +140,13 @@ export async function fetchMatches(): Promise<MatchListItem[]> {
   const byId = new Map<string, MatchLabelRow>(
     ((labels ?? []) as MatchLabelRow[]).map((l) => [l.match_id, l]),
   );
-  return ((rows ?? []) as MatchRow[]).map((row) => ({ row, label: byId.get(row.id) ?? null }));
+  let list = (rows ?? []) as MatchRow[];
+  if (DEMO_MATCH_IDS.length) {
+    list = DEMO_MATCH_IDS.map((id) => list.find((r) => r.id === id)).filter(
+      (r): r is MatchRow => Boolean(r),
+    );
+  }
+  return list.map((row) => ({ row, label: byId.get(row.id) ?? null }));
 }
 
 export async function fetchMatch(id: string): Promise<MatchListItem | null> {
@@ -191,11 +226,26 @@ export function normaliseEvents(events: FeedEvent[] | undefined): FeedEvent[] {
 
 export async function fetchMatchData(row: MatchRow): Promise<MatchDataFile> {
   const file = await loadJson<MatchDataFile>(row.files.match_data);
-  return { ...file, events: normaliseEvents(file.events), frames: file.frames ?? [] };
+  const events = normaliseEvents(file.events).filter((e) =>
+    inVideo(e.t, row.duration_s, file.periods),
+  );
+  return { ...file, events, frames: file.frames ?? [] };
 }
 
-export function fetchMatchStats(row: MatchRow): Promise<Record<string, any>> {
-  return loadJson<Record<string, any>>(row.files.stats);
+export async function fetchMatchStats(row: MatchRow): Promise<Record<string, any>> {
+  const [stats, file] = await Promise.all([
+    loadJson<Record<string, any>>(row.files.stats),
+    loadJson<MatchDataFile>(row.files.match_data).catch(() => null),
+  ]);
+  const shots = stats?.["metrics"]?.["shots"];
+  if (!Array.isArray(shots)) return stats;
+  return {
+    ...stats,
+    metrics: {
+      ...stats["metrics"],
+      shots: shots.filter((s: { t?: number }) => inVideo(s?.t as number, row.duration_s, file?.periods)),
+    },
+  };
 }
 
 export function videoSrc(row: MatchRow): Promise<string> {
