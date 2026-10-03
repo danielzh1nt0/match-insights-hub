@@ -777,7 +777,7 @@ function PressureMap({
       measured += 1;
       if (typeof pressed === "boolean" ? !pressed : (near as number) > PRESS_WITHIN_M) continue;
       // Second-half positions are already mirrored; plot at the carrier.
-      const point = metresToPctAt(carrier.m, team, frame.t, file);
+      const point = metresToPct(carrier.m, team);
       if (!point) continue;
       const c = Math.min(COLS - 1, Math.floor((point.x / 100) * COLS));
       const r = Math.min(ROWS - 1, Math.floor((point.y / 100) * ROWS));

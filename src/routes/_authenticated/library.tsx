@@ -13,7 +13,7 @@ import { StoryLauncher } from "@/components/ip/story-launcher";
 import { crestForTeam } from "@/lib/team-crests";
 import { shortTeamCode } from "@/components/team/TeamToken";
 import { matchesDb } from "@/integrations/matches/client";
-import { fetchMatches, toLibraryMatch } from "@/lib/match-source";
+import { DEMO_MATCH_TITLES, fetchMatches, toLibraryMatch } from "@/lib/match-source";
 
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
@@ -411,6 +411,13 @@ function MatchCard({ match }: { match: LibraryMatch }) {
             </span>
           )}
         </div>
+
+        {DEMO_MATCH_TITLES[match.id] && (
+          <p className="mt-3 flex items-center justify-between gap-2 text-[13px] font-semibold text-text-bright">
+            <span className="truncate">{DEMO_MATCH_TITLES[match.id]}</span>
+            <span className="label-xs shrink-0 border border-wire px-1.5 py-0.5 text-text-faint">Beta</span>
+          </p>
+        )}
 
         <p className="mt-3 flex-1 border-t border-wire pt-3 text-[13px] leading-snug text-text-dim">
           {line}
