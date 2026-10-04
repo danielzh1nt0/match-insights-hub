@@ -1305,10 +1305,11 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
               <circle
                 cx={3 + (clamp(x) / 100) * 94}
                 cy={1.5 + (clamp(y) / 100) * 60.9}
-                r={goal ? 2.8 : 2.2}
-                fill={on ? colours[shotTeam] : "var(--surface-2)"}
+                r={goal ? 1.9 : 1.4}
+                fill={on ? colours[shotTeam] : "transparent"}
+                fillOpacity={on ? 0.9 : 1}
                 stroke={goal ? "var(--cream)" : colours[shotTeam]}
-                strokeWidth={goal ? 1.2 : 0.8}
+                strokeWidth={goal ? 0.9 : 0.6}
               />
             </Link>
           );
@@ -2329,15 +2330,14 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
   const minutes = (key: string) => (tl.filter((p) => stateOf(p.height) === key).length * dt) / 60;
   const rows = lineDefending.states
     .map((s) => ({ ...s, min: minutes(s.key) }))
-    .filter((r) => r.min > 0);
+    .filter((r) => r.min > 0)
+    .sort((a, b) => b.height - a.height);
 
   /**
    * How much of a spell it takes before a rate means anything.
    *
    * One shot in seven minutes reads as the worst rate in the match and is
-   * nothing of the sort — it is one shot. Without a floor the badge lands on
-   * whichever state the team barely used, and the sentence underneath then
-   * contradicts the goals column sitting next to it.
+   * nothing of the sort — it is one shot.
    */
   const ENOUGH_MIN = 8;
   const ENOUGH_SHOTS = 3;
@@ -2346,88 +2346,85 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
   const worst = [...judged].sort((a, b) => rate(b) - rate(a))[0];
   const mostShots = [...rows].sort((a, b) => b.shots - a.shots || b.goals - a.goals)[0];
   const name = (k: string) => (k === "high" ? "High line" : k === "mid" ? "Mid line" : "Low line");
-
+  const where = (k: string) => (k === "high" ? "pushed up" : k === "mid" ? "halfway back" : "deep");
   const maxMin = Math.max(...rows.map((r) => r.min), 1);
-  // Positioned against the real pitch, because the drawing carries real
-  // markings: a line placed on a made-up scale would sit in the wrong place
-  // relative to the box and the halfway line underneath it.
-  const pitchLength = PITCH.length;
 
   return (
     <Card
-      question="How high was our last line, and what did it cost?"
+      question="How high did we defend, and what did it cost?"
       icon={Shield}
-      caption="Each band is the height we defended at. Thickness is time spent there."
+      caption="How long we spent at each height, and what we gave up there."
       honesty={`${lineDefending.shots.length} shots conceded · ${tl.length} line samples`}
     >
-      {/* Our goal is on the left, so a band further right is a higher line.
-          The picture is the point — the figures sit beside it, not instead. */}
-      <StatsPitch attackLabel="" ariaLabel="Defensive line height, our goal on the left">
+      {/* Three rows, longest bar = most time. A coach reads down it once and
+          knows where the team sat and what happened there. The pitch diagram
+          this replaced was clever and unreadable. */}
+      <ul className="flex flex-col gap-3">
         {rows.map((r) => {
-          const x = 3 + (r.height / pitchLength) * 94;
-          const thickness = 1 + (r.min / maxMin) * 5;
           const alarm = worst?.key === r.key;
           return (
-            <g key={r.key}>
-              <rect
-                x={x - thickness / 2}
-                y={1.5}
-                width={thickness}
-                height={60.9}
-                fill={alarm ? "var(--reaction-bad)" : "var(--cream)"}
-                fillOpacity={alarm ? 0.5 : 0.22}
-              />
-              <rect
-                x={x - 0.25}
-                y={1.5}
-                width={0.5}
-                height={60.9}
-                fill={alarm ? "var(--reaction-bad)" : "var(--cream)"}
-              />
-              {/* One mark per shot conceded while we sat at this height. */}
-              {Array.from({ length: Math.min(r.shots, 12) }, (_, i) => (
-                <circle
-                  key={i}
-                  cx={x}
-                  cy={6 + i * 4.4}
-                  r={i < r.goals ? 1.7 : 1.2}
-                  fill={i < r.goals ? "var(--reaction-bad)" : "var(--surface)"}
-                  stroke={i < r.goals ? "var(--cream)" : "var(--text-dim)"}
-                  strokeWidth={0.4}
-                />
-              ))}
-            </g>
+            <li key={r.key}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span className="flex items-baseline gap-2">
+                  <span className="text-[14px] font-semibold text-text-bright">{name(r.key)}</span>
+                  <span className="num text-[12px] text-text-faint">
+                    {Math.round(r.height)} m · {where(r.key)}
+                  </span>
+                </span>
+                <span className="num-flat text-[12px] text-text-dim">
+                  {r.min < 1 ? `${Math.round(r.min * 60)} s` : `${Math.round(r.min)} min`}
+                </span>
+              </div>
+
+              <div className="mt-1.5 flex h-7 items-center gap-2">
+                <span className="relative h-full flex-1 bg-surface-2">
+                  <span
+                    className={cn(
+                      "absolute inset-y-0 left-0",
+                      alarm ? "bg-reaction-bad/35" : "bg-cream/20",
+                    )}
+                    style={{ width: `${(r.min / maxMin) * 100}%` }}
+                  />
+                  {/* One mark per shot conceded while we defended at this
+                      height, filled where it went in. */}
+                  <span className="absolute inset-y-0 left-2 flex items-center gap-1.5">
+                    {Array.from({ length: Math.min(r.shots, 14) }, (_, i) => (
+                      <span
+                        key={i}
+                        className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          i < r.goals ? "bg-reaction-bad" : "border border-text-dim bg-transparent",
+                        )}
+                      />
+                    ))}
+                  </span>
+                </span>
+                <span className="num-flat w-[118px] shrink-0 text-right text-[12px] text-text-dim">
+                  {r.shots} {r.shots === 1 ? "shot" : "shots"}
+                  {r.goals > 0 ? `, ${r.goals} in` : ""}
+                </span>
+              </div>
+            </li>
           );
         })}
-      </StatsPitch>
-
-      <ul className="rule-y mt-3 border-t border-wire">
-        {rows.map((r) => (
-          <li
-            key={r.key}
-            className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2"
-          >
-            <span className="flex items-center gap-2 text-[13px] text-text">
-              {worst?.key === r.key && (
-                <span className="h-1.5 w-1.5 shrink-0 bg-reaction-bad" aria-hidden="true" />
-              )}
-              {name(r.key)}
-              <span className="num text-text-faint">{Math.round(r.height)} m</span>
-            </span>
-            <span className="num-flat text-[12px] text-text-dim">
-              {r.min < 1 ? `${Math.round(r.min * 60)} s` : `${Math.round(r.min)} min`} · {r.shots}{" "}
-              {r.shots === 1 ? "shot" : "shots"}
-              {r.goals > 0 ? ` · ${r.goals} ${r.goals === 1 ? "goal" : "goals"}` : ""}
-            </span>
-          </li>
-        ))}
       </ul>
+
+      <div className="mt-4 flex items-center gap-4 border-t border-wire pt-3">
+        <span className="flex items-center gap-1.5 text-[11.5px] text-text-faint">
+          <span className="h-2 w-2 rounded-full border border-text-dim" aria-hidden="true" />
+          shot conceded
+        </span>
+        <span className="flex items-center gap-1.5 text-[11.5px] text-text-faint">
+          <span className="h-2 w-2 rounded-full bg-reaction-bad" aria-hidden="true" />
+          goal
+        </span>
+      </div>
 
       <p className="mt-3 text-[12px] leading-relaxed text-text-dim">
         {worst
-          ? `Per minute spent there, we gave up most while defending in a ${name(worst.key).toLowerCase()} (${Math.round(worst.height)} m).`
+          ? `Per minute spent there, we gave up most while defending ${where(worst.key)} (${Math.round(worst.height)} m).`
           : mostShots && mostShots.shots > 0
-            ? `Most of what we conceded came while defending in a ${name(mostShots.key).toLowerCase()} (${Math.round(mostShots.height)} m) — ${mostShots.shots} of ${lineDefending.shots.length} shots. No line state was used long enough to compare rates fairly.`
+            ? `Most of what we conceded came while defending ${where(mostShots.key)} — ${mostShots.shots} of ${lineDefending.shots.length} shots. No height was used long enough to compare rates fairly.`
             : "No shots conceded in any line state in this period."}
       </p>
     </Card>
