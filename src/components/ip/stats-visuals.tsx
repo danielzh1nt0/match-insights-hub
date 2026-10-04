@@ -716,7 +716,8 @@ function Distance({ players, colour }: { players: PlayerStat[]; colour: string }
 }
 
 /** Within this many metres of the carrier counts as pressure on him. */
-const PRESS_WITHIN_M = 5;
+/** The pipeline's rule: pressure on the carrier means an opponent within 2 m. */
+const PRESS_WITHIN_M = 2;
 
 /**
  * Where the pressure was, both ways round.
@@ -761,13 +762,19 @@ function PressureMap({
     let samples = 0;
     let measured = 0;
     for (const frame of frames) {
-      if (frame.possession !== underPressure) continue;
+      // The carrier's team comes from players[], never from possession.
+      if (frame.carrier == null) continue;
+      const carrier = frame.players?.find((p) => p.id === frame.carrier);
+      if (!carrier || carrier.team !== underPressure) continue;
+      const pressed = (frame as { pressed?: boolean }).pressed;
       const near = frame.pressure_m;
-      if (typeof near !== "number" || !Number.isFinite(near)) continue;
+      if (typeof pressed !== "boolean" && (typeof near !== "number" || !Number.isFinite(near))) continue;
       measured += 1;
-      if (near > PRESS_WITHIN_M) continue;
-      // Always from our point of view, so both maps share one orientation.
-      const point = metresToPct(frame.ball?.m, team);
+      // The export's own pressed flag where it has one, the five-metre rule
+      // where it does not. Plotted at the carrier rather than the ball, and
+      // never flipped: the file already writes both halves the same way round.
+      if (typeof pressed === "boolean" ? !pressed : (near as number) > PRESS_WITHIN_M) continue;
+      const point = metresToPct(carrier.m, team);
       if (!point) continue;
       const c = Math.min(COLS - 1, Math.floor((point.x / 100) * COLS));
       const r = Math.min(ROWS - 1, Math.floor((point.y / 100) * ROWS));
