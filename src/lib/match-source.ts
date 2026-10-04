@@ -105,10 +105,15 @@ export type MatchDataFile = {
  * Demo allow-list for the library. Empty = list every match.
  * Hidden matches still open by direct URL; they are just not listed.
  */
-export const DEMO_MATCH_IDS: string[] = ["SFKBP1109", "p15u-vs-aik-2026-09-21-bd09"];
+export const DEMO_MATCH_IDS: string[] = [
+  "SFKBP1109",
+  "p15u-vs-aik-2026-09-21-bd09",
+  "p15u-vs-vallentuna-2026-10-03-6cce",
+];
 export const DEMO_MATCH_TITLES: Record<string, string> = {
   SFKBP1109: "SFK – BP · first half",
   "p15u-vs-aik-2026-09-21-bd09": "SFK – AIK · first half",
+  "p15u-vs-vallentuna-2026-10-03-6cce": "SFK – Vallentuna · full match",
 };
 
 /** Types the event list may show when a file carries no tier. */
