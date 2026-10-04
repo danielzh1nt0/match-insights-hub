@@ -46,35 +46,18 @@ export const metresToPct = (m: unknown, team: TeamKey | null): Point | null => {
 };
 
 /**
- * Whether the sides had swapped ends at this moment.
+ * Whether the export marks this moment as being in the mirrored period.
  *
- * `attack_right` is one flag for the whole match, but teams change ends at
- * half-time, so any picture covering both halves draws the second one
- * backwards — a team that attacked the same end all match. The export marks
- * the second period `mirrored`, and that is what this reads.
+ * Kept for anything that needs to know which half a moment is in. It is **not**
+ * a reason to flip coordinates: as of the 4 Oct export the pipeline writes
+ * every position already turned the right way round, with team A always
+ * attacking towards x = length. Flipping again on top of that drew the second
+ * half backwards, which is the bug this used to be the fix for.
  */
 export const mirroredAt = (file: MatchDataFile | undefined, t: number): boolean =>
   (file?.periods ?? []).some(
     (period) => period.mirrored === true && t >= period.t_start && t <= period.t_end,
   );
-
-/**
- * A point in the match, drawn the way the selected team played it.
- *
- * Same as `metresToPct` but aware of which half it happened in, so a map
- * covering ninety minutes puts both halves at the same end.
- */
-export const metresToPctAt = (
-  m: unknown,
-  team: TeamKey | null,
-  t: number,
-  file: MatchDataFile | undefined,
-): Point | null => {
-  const point = metresToPct(m, team);
-  if (!point) return null;
-  if (!mirroredAt(file, t)) return point;
-  return { x: clamp(100 - point.x), y: clamp(100 - point.y) };
-};
 
 /** Where a moment happened, from its own coordinates or the ball at that time. */
 export const eventPoint = (event: ReviewedEvent, file?: MatchDataFile): Point | null => {

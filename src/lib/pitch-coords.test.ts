@@ -1,24 +1,23 @@
 import { expect, test } from "bun:test";
-import { PITCH, metresToPct, metresToPctAt, mirroredAt, setPitchContext } from "./pitch-coords";
+import { PITCH, metresToPct, mirroredAt, setPitchContext } from "./pitch-coords";
 
 /**
- * Teams change ends at half-time.
+ * Coordinates arrive already turned the right way round.
  *
- * `attack_right` is one flag for the whole match, so any picture covering both
- * halves drew the second one backwards — a team's own shape laid over its
- * mirror image, which averages towards the middle and looks like a side that
- * played everywhere. The export marks the second period mirrored; these pin
- * down that we read it.
+ * As of the 4 Oct export the pipeline mirrors the second half itself, so team A
+ * always attacks towards x = length in the file. The app flipping again on top
+ * of that drew the second half backwards. These pin down that we read the
+ * period flag for *time* and never for geometry.
  */
 
 const file = {
-  pitch: { length: 105, width: 68 },
+  pitch: { length: 106, width: 64 },
   attack_right: { A: true, B: false },
   frames: [],
   events: [],
   periods: [
-    { t_start: 0, t_end: 2820 },
-    { t_start: 3600, t_end: 6480, mirrored: true },
+    { t_start: 435, t_end: 2890 },
+    { t_start: 3220, t_end: 5645, mirrored: true },
   ],
 } as never;
 
@@ -28,36 +27,24 @@ test("knows which half a moment is in", () => {
   expect(mirroredAt(undefined, 4000)).toBe(false);
 });
 
-test("turns the second half round so both halves share an end", () => {
+test("the same metres draw the same way in both halves", () => {
   setPitchContext(file);
-  // A ball 84 m up the pitch is 80% of the way towards the goal we attack.
-  const first = metresToPctAt([84, 17], "A", 1200, file);
+  const first = metresToPct([84.8, 16], "A");
+  const second = metresToPct([84.8, 16], "A");
   expect(first!.x).toBeCloseTo(80, 5);
-
-  // The same metres in the second half are at the other end, because the
-  // teams have swapped. Drawn our way round, that is 20%.
-  const second = metresToPctAt([84, 17], "A", 4000, file);
-  expect(second!.x).toBeCloseTo(20, 5);
-  expect(second!.y).toBeCloseTo(75, 5);
-});
-
-test("the half-blind conversion is what smeared the maps", () => {
-  setPitchContext(file);
-  const blind = metresToPct([84, 17], "A");
-  const aware = metresToPctAt([84, 17], "A", 4000, file);
-  expect(blind!.x).toBeCloseTo(80, 5);
-  expect(aware!.x).not.toBeCloseTo(blind!.x, 1);
+  expect(second!.x).toBeCloseTo(80, 5);
 });
 
 test("a side attacking left still reads left to right", () => {
   setPitchContext(file);
   expect(PITCH.attackRight["B"]).toBe(false);
-  // B attacks the other way, so 84 m in raw metres is only 20% of B's journey.
-  expect(metresToPct([84, 17], "B")!.x).toBeCloseTo(20, 5);
+  expect(metresToPct([84.8, 16], "B")!.x).toBeCloseTo(20, 5);
 });
 
-test("without periods nothing is flipped", () => {
-  const noPeriods = { pitch: { length: 105, width: 68 }, frames: [], events: [] } as never;
-  setPitchContext(noPeriods);
-  expect(metresToPctAt([84, 17], "A", 4000, noPeriods)!.x).toBeCloseTo(80, 5);
+test("drawn raw, both teams keep their own end", () => {
+  setPitchContext(file);
+  // The shot map passes no team, so nothing is mirrored and SFK's shots sit
+  // near x = 106 while the opponent's sit near x = 0, as the file stores them.
+  expect(metresToPct([100, 32], null)!.x).toBeCloseTo(94.3, 1);
+  expect(metresToPct([6, 32], null)!.x).toBeCloseTo(5.7, 1);
 });

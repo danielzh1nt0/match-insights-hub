@@ -28,6 +28,7 @@ export function ScopeChips({
   teamA,
   teamB,
   allowBoth = true,
+  halves,
   className,
 }: {
   scope: TeamScope;
@@ -37,6 +38,8 @@ export function ScopeChips({
   teamA: ScopeTeam;
   teamB: ScopeTeam;
   allowBoth?: boolean;
+  /** How many periods the file holds. One means there is no half to choose. */
+  halves?: number | undefined;
   className?: string;
 }) {
   const teams: { key: TeamScope; team: ScopeTeam | null; label: string }[] = [
@@ -52,11 +55,7 @@ export function ScopeChips({
         className,
       )}
     >
-      <div
-        className="flex shrink-0 gap-[2px] border border-wire bg-surface p-[3px]"
-        role="group"
-        aria-label="Team"
-      >
+      <div className="flex shrink-0 border border-wire bg-surface" role="group" aria-label="Team">
         {teams.map(({ key, team, label }) => (
           <button
             key={key}
@@ -65,8 +64,11 @@ export function ScopeChips({
             onClick={() => onScope(key)}
             title={team?.name ?? "Both teams"}
             className={cn(
-              "flex min-h-9 items-center gap-1.5 px-2.5 text-[12px] font-bold transition-colors",
-              scope === key ? "bg-surface-3 text-text" : "text-text-faint hover:text-text",
+              "flex min-h-11 items-center gap-1.5 px-3 text-[12px] font-bold transition-colors",
+              "border-l border-wire first:border-l-0",
+              scope === key
+                ? "bg-accent-sea text-ink"
+                : "text-text-dim hover:bg-surface-2 hover:text-text",
             )}
           >
             {team &&
@@ -84,9 +86,18 @@ export function ScopeChips({
         ))}
       </div>
 
-      {period && onPeriod && (
+      {/* A match the pipeline only has one period for has no half to pick, so
+          the control says what you are looking at rather than offering two
+          options that would both show the same thing. */}
+      {period && onPeriod && halves !== undefined && halves < 2 && (
+        <span className="flex min-h-11 shrink-0 items-center border border-wire bg-surface px-3 text-[12px] font-bold text-text-dim">
+          First half only
+        </span>
+      )}
+
+      {period && onPeriod && (halves === undefined || halves >= 2) && (
         <div
-          className="flex shrink-0 gap-[2px] border border-wire bg-surface p-[3px]"
+          className="flex shrink-0 border border-wire bg-surface"
           role="group"
           aria-label="Period"
         >
@@ -97,8 +108,10 @@ export function ScopeChips({
               aria-pressed={period === p.key}
               onClick={() => onPeriod(p.key)}
               className={cn(
-                "min-h-9 px-3 text-[12px] font-bold transition-colors",
-                period === p.key ? "bg-surface-3 text-text" : "text-text-faint hover:text-text",
+                "min-h-11 border-l border-wire px-3.5 text-[12px] font-bold transition-colors first:border-l-0",
+                period === p.key
+                  ? "bg-accent-sea text-ink"
+                  : "text-text-dim hover:bg-surface-2 hover:text-text",
               )}
             >
               {p.label}

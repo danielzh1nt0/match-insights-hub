@@ -14,6 +14,7 @@ import { crestForTeam } from "@/lib/team-crests";
 import { shortTeamCode } from "@/components/team/TeamToken";
 import { matchesDb } from "@/integrations/matches/client";
 import { fetchMatches, toLibraryMatch } from "@/lib/match-source";
+import { useMatchScores } from "@/hooks/use-match-scores";
 
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
@@ -66,7 +67,16 @@ function LibraryPage() {
     };
   }, [queryClient]);
 
-  const matches = useMemo(() => (items ?? []).map(toLibraryMatch), [items]);
+  const scores = useMatchScores(items);
+  const matches = useMemo(
+    () =>
+      (items ?? []).map((item) => {
+        const base = toLibraryMatch(item);
+        const score = scores.get(item.row.id);
+        return score ? { ...base, scoreA: score.a, scoreB: score.b } : base;
+      }),
+    [items, scores],
+  );
 
   const competitions = useMemo(() => {
     const set = new Set<string>();

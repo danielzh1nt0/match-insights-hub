@@ -37,6 +37,7 @@ import type {
 } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import {
+  insidePeriods,
   passCompleted,
   periodWindow,
   shotsOf as contractShots,
@@ -49,8 +50,6 @@ import {
   eventPoint,
   finite,
   metresToPct,
-  metresToPctAt,
-  mirroredAt,
   setPitchContext,
   type Point,
 } from "@/lib/pitch-coords";
@@ -443,16 +442,12 @@ function HeatMap({
     const g = Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));
     let n = 0;
     for (const frame of frames) {
-      // Sides change ends at half-time, so the second half has to be turned
-      // round before it is counted. Without this the map is one team's shape
-      // laid over its own mirror image, which averages towards the middle.
-      const flip = mirroredAt(file, frame.t);
       for (const player of frame.players) {
         if (player.team !== team || player.state === "stale") continue;
-        const rawX = Math.min(0.999, Math.max(0, player.m[0] / length));
-        const rawY = Math.min(0.999, Math.max(0, player.m[1] / width));
-        const x = flip ? 0.999 - rawX : rawX;
-        const y = flip ? 0.999 - rawY : rawY;
+        // The export already writes both halves the same way round, so
+        // nothing is flipped here.
+        const x = Math.min(0.999, Math.max(0, player.m[0] / length));
+        const y = Math.min(0.999, Math.max(0, player.m[1] / width));
         const r = Math.floor(y * ROWS);
         const c = Math.floor(x * COLS);
         g[r]![c] = (g[r]![c] ?? 0) + 1;
@@ -772,7 +767,7 @@ function PressureMap({
       measured += 1;
       if (near > PRESS_WITHIN_M) continue;
       // Always from our point of view, so both maps share one orientation.
-      const point = metresToPctAt(frame.ball?.m, team, frame.t, file);
+      const point = metresToPct(frame.ball?.m, team);
       if (!point) continue;
       const c = Math.min(COLS - 1, Math.floor((point.x / 100) * COLS));
       const r = Math.min(ROWS - 1, Math.floor((point.y / 100) * ROWS));
@@ -1217,7 +1212,7 @@ function ShapeOutcome({ lineDefending, colour }: { lineDefending: LineDefending;
   );
 }
 
-function ShotMap({ stats, colours, matchId, events, file }: Props) {
+function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA, teamB }: Props) {
   const metricShots = contractShots(stats);
   const eventShots: Shot[] = events
     .filter((event) => event.type === "shot" || event.type === "goal")
@@ -1236,9 +1231,14 @@ function ShotMap({ stats, colours, matchId, events, file }: Props) {
   // A shot with no position cannot be drawn on a pitch. It used to be planted
   // at a default spot, which made a metres-based export look like a team that
   // shot from one place all match.
-  const shots = (metricShots.length ? metricShots : eventShots).filter(
-    (shot) => shot.x !== null && shot.y !== null,
+  // Positions are stored with A attacking towards the far goal and B towards
+  // the near one, already the right way round for both halves. Drawn as they
+  // are stored, each side's shots cluster at the goal it was attacking — so
+  // nothing here mirrors anything.
+  const all = (metricShots.length ? metricShots : eventShots).filter(
+    (shot) => shot.x !== null && shot.y !== null && insidePeriods(shot.t, file?.periods),
   );
+  const shots = scopeBoth ? all : all.filter((shot) => shot.team === team);
   if (!shots.length)
     return (
       <EvidenceUnavailable
@@ -1251,9 +1251,30 @@ function ShotMap({ stats, colours, matchId, events, file }: Props) {
     <Card
       question="Where did shots come from?"
       icon={Goal}
-      caption="Filled means on target. A cream ring marks a goal."
-      honesty={`${shots.length} shots`}
+      caption="Filled means on target. A cream ring marks a goal. Each side shoots towards the goal it was attacking."
+      honesty={`${shots.length} ${shots.length === 1 ? "shot" : "shots"}${
+        scopeBoth ? "" : ` · ${(team === "A" ? teamA : teamB).shortCode}`
+      }`}
     >
+      {scopeBoth && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+          {[
+            { id: "A" as TeamKey, who: teamA },
+            { id: "B" as TeamKey, who: teamB },
+          ].map(({ id, who }) => (
+            <span key={id} className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 shrink-0"
+                style={{ background: colours[id] }}
+                aria-hidden="true"
+              />
+              <span className="text-[12px] text-text-dim">
+                {who.name} · {all.filter((shot) => shot.team === id).length}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
       <Pitch>
         {shots.map((shot, index) => {
           const shotTeam = shot.team;
@@ -2549,6 +2570,20 @@ function LanesTable({
   );
 }
 
+/**
+ * Said in place of a figure we are not standing behind yet.
+ *
+ * Better than a confident number nobody has checked, and better than an empty
+ * tab that looks broken.
+ */
+export function NotVerifiedYet({ what }: { what: string }) {
+  return (
+    <div className="border border-wire bg-surface p-5">
+      <p className="text-[13.5px] leading-relaxed text-text-dim">{what}</p>
+    </div>
+  );
+}
+
 export function StatsVisuals(props: Props) {
   setPitchContext(props.file);
   const range = periodRange(props.file, props.period);
@@ -2568,11 +2603,8 @@ export function StatsVisuals(props: Props) {
       <HeatMap key="heat" frames={frames} team={props.team} colour={colour} file={props.file} />,
       <SequenceLength key="sequence" {...p} />,
       <Runs key="runs" frames={frames} team={props.team} colour={colour} />,
-      <Distance
-        key="distance"
-        players={props.players.filter((x) => x.team === props.team)}
-        colour={colour}
-      />,
+      // Distance covered only counts a player while the camera can see him,
+      // so the figure is far below the truth. Out until it is whole.
     ];
   if (props.tab === "pressing")
     cards = [
@@ -2659,9 +2691,9 @@ export function StatsVisuals(props: Props) {
         identity={identity}
         opponentPasses={opponentPasses}
       />,
-      <PassMap key="map" passes={passes} colour={colour} matchId={props.matchId} />,
+      // The pass map and the located-pass count are roughly 30% short of the
+      // real passes, so neither is shown.
       <Interceptions key="interceptions" {...p} colour={colour} />,
-      <PassLog key="log" passes={passes} matchId={props.matchId} />,
     ];
   const shown = cards.filter(Boolean);
   return (

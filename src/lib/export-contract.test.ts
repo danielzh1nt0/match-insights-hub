@@ -2,8 +2,10 @@ import { expect, test } from "bun:test";
 import {
   completionOf,
   finalThirdEntries,
+  goalsFrom,
   passCompleted,
   periodWindow,
+  shotCount,
   shotsOf,
 } from "./export-contract";
 
@@ -135,4 +137,53 @@ test("the second half is the mirrored period, whatever its order", () => {
 test("falls back to halving the clock when the file has no periods", () => {
   expect(periodWindow(undefined, "1st", 5400)).toEqual([0, 2700]);
   expect(periodWindow({ periods: [] } as never, "2nd", 5400)).toEqual([2700, 5400]);
+});
+
+/* ---------------- score ---------------- */
+
+const periods = [
+  { t_start: 435, t_end: 2890 },
+  { t_start: 3220, t_end: 5645, mirrored: true },
+];
+
+const statsWith = (shots: Record<string, unknown>[]) =>
+  ({ pitch: { length: 106, width: 64 }, metrics: { shots } }) as never;
+
+test("the score is the goals inside the periods", () => {
+  const stats = statsWith([
+    { team: "A", t: 600, x_m: 100, y_m: 32, goal: true, outcome: "goal" },
+    { team: "A", t: 3400, x_m: 99, y_m: 30, goal: true, outcome: "goal" },
+    { team: "A", t: 5000, x_m: 98, y_m: 34, goal: true, outcome: "goal" },
+    { team: "B", t: 900, x_m: 6, y_m: 30, goal: true, outcome: "goal" },
+    { team: "B", t: 4200, x_m: 5, y_m: 33, goal: true, outcome: "goal" },
+    // On target but not in: not a goal.
+    { team: "A", t: 1200, x_m: 97, y_m: 31, goal: false, outcome: "on target" },
+    // Inside the half-time break: warm-up, not a goal.
+    { team: "B", t: 3000, x_m: 4, y_m: 32, goal: true, outcome: "goal" },
+  ]);
+  expect(goalsFrom(stats, periods)).toEqual({ a: 3, b: 2 });
+});
+
+test("a goal on the whistle still counts", () => {
+  const stats = statsWith([{ team: "A", t: 2893, x_m: 100, y_m: 32, goal: true }]);
+  expect(goalsFrom(stats, periods)).toEqual({ a: 1, b: 0 });
+});
+
+test("with no periods every goal counts", () => {
+  const stats = statsWith([
+    { team: "A", t: 3000, x_m: 100, y_m: 32, goal: true },
+    { team: "B", t: 10, x_m: 6, y_m: 32, goal: true },
+  ]);
+  expect(goalsFrom(stats, undefined)).toEqual({ a: 1, b: 1 });
+});
+
+test("shots are counted per side, inside the periods", () => {
+  const stats = statsWith([
+    { team: "A", t: 600, x_m: 100, y_m: 32, outcome: "on target" },
+    { team: "A", t: 700, x_m: 99, y_m: 32, outcome: "goal", goal: true },
+    { team: "A", t: 3000, x_m: 99, y_m: 32, outcome: "on target" },
+    { team: "B", t: 800, x_m: 6, y_m: 32, outcome: "on target" },
+  ]);
+  expect(shotCount(stats, "A", periods)).toBe(2);
+  expect(shotCount(stats, "B", periods)).toBe(1);
 });

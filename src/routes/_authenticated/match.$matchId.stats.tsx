@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Chip } from "@/components/ip/primitives";
-import { StatsVisuals } from "@/components/ip/stats-visuals";
+import { NotVerifiedYet, StatsVisuals } from "@/components/ip/stats-visuals";
 import { ScopeChips } from "@/components/ip/scope-chips";
 import { HeadToHeadBand } from "@/components/ip/head-to-head-band";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
@@ -72,6 +72,28 @@ function Stats() {
       }
     : null;
 
+  const grade = row?.summary?.["ball_grade"] as
+    { possession_ok?: boolean; events_ok?: boolean } | undefined;
+  // Absent means an older file we never graded, which stays allowed. Only an
+  // explicit false withholds anything.
+  const possessionOk = grade?.possession_ok !== false;
+
+  /** Tabs that rest on the ball being tracked well enough to believe. */
+  const NEEDS_BALL = new Set(["ball", "pressing", "passes", "setpieces"]);
+  /** Rows inside the surviving tabs that rest on the same thing. */
+  const NEEDS_BALL_ROW = /possession|loss|lost|turnover|pass|tilt|third|press|set piece|sequence/i;
+
+  const shownSections = possessionOk
+    ? sections
+    : sections
+        .filter((section) => !NEEDS_BALL.has(section.key))
+        .map((section) => ({
+          ...section,
+          rows: section.rows.filter((r) => !NEEDS_BALL_ROW.test(r.label)),
+        }));
+  const shownTab = shownSections.some((s) => s.key === tab) ? tab : shownSections[0]?.key;
+  const shownActive = shownSections.find((s) => s.key === shownTab) ?? shownSections[0];
+
   return (
     <MatchShell
       matchId={matchId}
@@ -95,16 +117,20 @@ function Stats() {
       {match && active && (
         <>
           <div
-            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0"
+            className="tab-rail -mx-4 px-4 pb-1 md:mx-0 md:px-0"
             role="tablist"
             aria-label="Stat groups"
           >
-            {sections.map((t) => (
-              <Chip key={t.key} active={tab === t.key} onClick={() => setTab(t.key)}>
+            {shownSections.map((t) => (
+              <Chip key={t.key} active={shownTab === t.key} onClick={() => setTab(t.key)}>
                 {t.label}
               </Chip>
             ))}
           </div>
+
+          {!possessionOk && (
+            <NotVerifiedYet what="Possession, passing and pressing are still being verified for this match. The score, shots, shape and the tracked players on the video are shown as normal." />
+          )}
 
           {teamA && teamB && (
             <ScopeChips
@@ -114,18 +140,24 @@ function Stats() {
               onPeriod={setPeriod}
               teamA={teamA}
               teamB={teamB}
+              halves={file?.periods?.length}
             />
           )}
 
-          <p className="text-[12px] text-text-faint">{active.caption}</p>
+          <p className="text-[12px] text-text-faint">{shownActive?.caption}</p>
 
-          {teamA && teamB && active.rows.length > 0 && (
-            <HeadToHeadBand rows={active.rows} teamA={teamA} teamB={teamB} title={active.label} />
+          {teamA && teamB && shownActive && shownActive.rows.length > 0 && (
+            <HeadToHeadBand
+              rows={shownActive.rows}
+              teamA={teamA}
+              teamB={teamB}
+              title={shownActive.label}
+            />
           )}
 
           {teamA && teamB && (
             <StatsVisuals
-              tab={active.key}
+              tab={shownActive?.key ?? "shooting"}
               players={players}
               stats={stats}
               file={file}
@@ -140,10 +172,7 @@ function Stats() {
               lineDefending={lineDefending}
               teamA={teamA}
               teamB={teamB}
-              ballGrade={
-                (row?.summary?.["ball_grade"] as
-                  { possession_ok?: boolean; events_ok?: boolean } | undefined) ?? null
-              }
+              ballGrade={grade ?? null}
             />
           )}
         </>

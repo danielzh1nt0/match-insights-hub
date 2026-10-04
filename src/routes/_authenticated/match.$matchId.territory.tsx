@@ -126,6 +126,7 @@ function PhasesScreen() {
                 teamA={identities.A}
                 teamB={identities.B}
                 allowBoth={false}
+                halves={file?.periods?.length}
               />
             )}
 

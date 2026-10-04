@@ -13,6 +13,7 @@ import {
   thresholdsFrom,
   type StatsFile,
 } from "@/lib/match-analysis";
+import { goalsFrom } from "@/lib/export-contract";
 import {
   fetchMatch,
   fetchMatchData,
@@ -78,7 +79,16 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
   const stats = statsQuery.data;
   const team = teamKey(scope);
   const thresholds = useMemo(() => thresholdsFrom(label), [label]);
-  const match = useMemo(() => (item ? toLibraryMatch(item) : undefined), [item]);
+  // The label's score field is empty on every match, which is why the app was
+  // showing 0-0 everywhere. The goals are in the stats file, so the scoreline
+  // and the shot map are now counted from the same records.
+  const match = useMemo(() => {
+    if (!item) return undefined;
+    const base = toLibraryMatch(item);
+    if (!stats) return base;
+    const goals = goalsFrom(stats, raw?.periods);
+    return { ...base, scoreA: goals.a, scoreB: goals.b };
+  }, [item, stats, raw?.periods]);
   const colours = useMemo(() => {
     const saved = teamColours(label);
     return {
@@ -103,10 +113,12 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
   );
 
   const territory = useMemo(() => buildTerritory(file, stats, team), [file, stats, team]);
-  const lineDefending = useMemo(() => buildLineDefending(file, stats, team ?? "A"), [file, stats, team]);
+  const lineDefending = useMemo(
+    () => buildLineDefending(file, stats, team ?? "A"),
+    [file, stats, team],
+  );
   const findings = useMemo(
-    () =>
-      buildFindings(findingFile, stats, team ?? "A", thresholds).map((f) => ({ ...f, basis })),
+    () => buildFindings(findingFile, stats, team ?? "A", thresholds).map((f) => ({ ...f, basis })),
     [findingFile, stats, team, thresholds, basis],
   );
   const summary = useMemo(
@@ -117,7 +129,10 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
       }),
     [file, stats, team, findings, match?.teamA, match?.teamB],
   );
-  const sections = useMemo(() => buildStatSections(file, stats, thresholds), [file, stats, thresholds]);
+  const sections = useMemo(
+    () => buildStatSections(file, stats, thresholds),
+    [file, stats, thresholds],
+  );
   const players = useMemo(() => buildPlayerStats(stats, team), [stats, team]);
 
   return {

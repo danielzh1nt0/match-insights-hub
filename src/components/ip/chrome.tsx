@@ -372,8 +372,8 @@ export function SectionNav({ matchId, className }: { matchId: string; className?
             className={cn(
               "label-sm relative flex h-11 shrink-0 items-center whitespace-nowrap transition-colors",
               active
-                ? "text-text-bright after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-cream"
-                : "text-text-faint hover:text-text",
+                ? "text-accent-sea after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:bg-accent-sea"
+                : "text-text-dim hover:text-text",
             )}
           >
             {item.label}

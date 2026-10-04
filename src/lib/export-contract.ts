@@ -87,6 +87,45 @@ export function shotsOf(stats: StatsFile | undefined, team?: TeamKey): Shot[] {
   return team ? all.filter((shot) => shot.team === team) : all;
 }
 
+/** A moment counts towards the match if it falls inside a period, with slack. */
+const PERIOD_SLACK_S = 5;
+
+export type Periods = { t_start: number; t_end: number; mirrored?: boolean }[] | undefined;
+
+export function insidePeriods(t: number, periods: Periods): boolean {
+  if (!periods || periods.length === 0) return true;
+  return periods.some(
+    (period) => t >= period.t_start - PERIOD_SLACK_S && t <= period.t_end + PERIOD_SLACK_S,
+  );
+}
+
+/**
+ * The score, counted from the shots that went in.
+ *
+ * There is a score on the match label, but nobody fills it in and every screen
+ * was showing 0–0 because of it. The goals are in the file: a shot with
+ * `goal: true` at a time inside one of the match periods. Counting them is the
+ * only way the scoreline and the shot map can agree, because they are then the
+ * same records.
+ *
+ * Moments outside the periods are warm-up and stoppages, and are not goals.
+ */
+export function goalsFrom(stats: StatsFile | undefined, periods: Periods) {
+  let a = 0;
+  let b = 0;
+  for (const shot of shotsOf(stats)) {
+    if (!shot.goal || !insidePeriods(shot.t, periods)) continue;
+    if (shot.team === "A") a += 1;
+    else b += 1;
+  }
+  return { a, b };
+}
+
+/** Shots on the record for one side, inside the periods. */
+export function shotCount(stats: StatsFile | undefined, team: TeamKey, periods: Periods) {
+  return shotsOf(stats, team).filter((shot) => insidePeriods(shot.t, periods)).length;
+}
+
 /* ---------------- passes ---------------- */
 
 /**
