@@ -5,6 +5,7 @@ import {
   goalsFrom,
   passCompleted,
   periodWindow,
+  shotCoordinateCheck,
   shotCount,
   shotsOf,
 } from "./export-contract";
@@ -233,4 +234,42 @@ test("x_m wins over x whatever x holds", () => {
     metrics: { shots: [{ team: "A", t: 600, x: 95, x_m: 53, y_m: 32 }] },
   } as never;
   expect(shotsOf(stats)[0]!.x).toBeCloseTo(50, 1);
+});
+
+/* ---------------- coordinates that do not fit ---------------- */
+
+test("spots coordinates that cannot be on a pitch, and reports their range", () => {
+  // Pixels. Read as metres they all clamp to the touchline, which is what the
+  // shot map was drawing.
+  const stats = {
+    pitch: { length: 106, width: 64 },
+    metrics: {
+      shots: Array.from({ length: 8 }, (_, i) => ({
+        team: "A",
+        t: 600 + i * 100,
+        x: 1500 + i * 40,
+        y: 400 + i * 50,
+      })),
+    },
+  } as never;
+
+  const check = shotCoordinateCheck(stats)!;
+  expect(check.fits).toBe(false);
+  expect(check.offPitch).toBe(8);
+  expect(check.key).toBe("x");
+  expect(check.xRange[0]).toBe(1500);
+  expect(check.xRange[1]).toBe(1780);
+});
+
+test("real metres pass the check", () => {
+  const stats = {
+    pitch: { length: 106, width: 64 },
+    metrics: {
+      shots: [
+        { team: "A", t: 600, x_m: 88, y_m: 30 },
+        { team: "B", t: 700, x_m: 18, y_m: 40 },
+      ],
+    },
+  } as never;
+  expect(shotCoordinateCheck(stats)!.fits).toBe(true);
 });

@@ -116,6 +116,60 @@ export function shotsOf(stats: StatsFile | undefined, team?: TeamKey): Shot[] {
   return team ? all.filter((shot) => shot.team === team) : all;
 }
 
+/**
+ * Whether this file's shot coordinates actually land on a pitch.
+ *
+ * The reader has to decide what unit the numbers are in, and it can be wrong:
+ * metres, percentages and raw pixels all look like plausible numbers. Read the
+ * wrong way they do not fail — they clamp, and every shot piles onto one
+ * touchline, which looks like a drawing bug rather than a data one.
+ *
+ * So the map asks first. If a third of the shots would have to be clamped to
+ * fit, the coordinates are not what we think they are, and the card says so and
+ * reports the range it actually saw instead of drawing something false.
+ */
+export function shotCoordinateCheck(stats: StatsFile | undefined) {
+  const raw = stats?.metrics?.["shots"];
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const raws = raw as Record<string, unknown>[];
+  const pitch = pitchOf(stats);
+  const unit = unitOf(raws, pitch);
+
+  const xs: number[] = [];
+  const ys: number[] = [];
+  for (const shot of raws) {
+    const x = finite(shot["x_m"] ?? shot["x"] ?? shot["px"]);
+    const y = finite(shot["y_m"] ?? shot["y"] ?? shot["py"]);
+    if (x !== null) xs.push(x);
+    if (y !== null) ys.push(y);
+  }
+  if (xs.length === 0) return null;
+
+  const converted = raws.map((shot, i) => normaliseShot(shot, i, pitch, unit));
+  const offPitch = converted.filter(
+    (shot) =>
+      shot.x !== null &&
+      shot.y !== null &&
+      (shot.x < 1 || shot.x > 99 || shot.y < 1 || shot.y > 99),
+  ).length;
+
+  return {
+    unit,
+    fits: offPitch / converted.length < 0.34,
+    offPitch,
+    total: converted.length,
+    xRange: [Math.min(...xs), Math.max(...xs)] as [number, number],
+    yRange: [Math.min(...ys), Math.max(...ys)] as [number, number],
+    pitch,
+    /** The key the file actually carries, for the message. */
+    key: raws.some((r) => finite(r["x_m"]) !== null)
+      ? "x_m"
+      : raws.some((r) => finite(r["x"]) !== null)
+        ? "x"
+        : "px",
+  };
+}
+
 /** A moment counts towards the match if it falls inside a period, with slack. */
 const PERIOD_SLACK_S = 5;
 

@@ -37,6 +37,7 @@ import type {
 } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import {
+  shotCoordinateCheck,
   insidePeriods,
   passCompleted,
   periodWindow,
@@ -1247,6 +1248,7 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
     (shot) => shot.x !== null && shot.y !== null && insidePeriods(shot.t, file?.periods),
   );
   const shots = scopeBoth ? all : all.filter((shot) => shot.team === team);
+  const check = shotCoordinateCheck(stats);
   if (!shots.length)
     return (
       <EvidenceUnavailable
@@ -1255,6 +1257,46 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
         caption="The location and outcome of each reliable shot."
       />
     );
+  // Drawing shots we cannot place is worse than not drawing them: they stack on
+  // the touchline and read as a broken pitch. The counts underneath are still
+  // true, so those are what the card shows, with the range it actually saw.
+  if (check && !check.fits)
+    return (
+      <Card
+        question="Where did shots come from?"
+        icon={Goal}
+        caption="The positions in this match file do not land on a pitch, so only the counts are shown."
+        honesty={`${check.offPitch} of ${check.total} off the pitch`}
+      >
+        <div className="rule-y border border-wire">
+          {[
+            { id: "A" as TeamKey, who: teamA },
+            { id: "B" as TeamKey, who: teamB },
+          ].map(({ id, who }) => (
+            <div key={id} className="flex items-baseline justify-between gap-4 px-4 py-3">
+              <span className="text-[14px] text-text-bright">{who.name}</span>
+              <span className="num text-[24px] leading-none text-text-bright">
+                {all.filter((shot) => shot.team === id).length}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[12px] leading-relaxed text-text-dim">
+          Read as {check.unit}, {check.offPitch} of {check.total} shots fall outside a{" "}
+          {Math.round(check.pitch.length)} × {Math.round(check.pitch.width)} m pitch. The
+          file&apos;s <span className="num-flat">{check.key}</span> runs{" "}
+          <span className="num-flat">
+            {Math.round(check.xRange[0])}–{Math.round(check.xRange[1])}
+          </span>{" "}
+          across and{" "}
+          <span className="num-flat">
+            {Math.round(check.yRange[0])}–{Math.round(check.yRange[1])}
+          </span>{" "}
+          down.
+        </p>
+      </Card>
+    );
+
   return (
     <Card
       question="Where did shots come from?"
