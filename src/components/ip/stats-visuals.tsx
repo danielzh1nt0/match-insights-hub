@@ -54,6 +54,8 @@ import {
   setPitchContext,
   type Point,
 } from "@/lib/pitch-coords";
+import { BlockSpacing } from "./block-spacing";
+import { buildBlocks } from "@/lib/blocks";
 import { DeepAnswer, LineBreakHero, LineTimeline } from "./line-break-cards";
 import { Button } from "./primitives";
 import { StatsTeamPill, type StatsTeamIdentity } from "./stats-team-selector";
@@ -2740,6 +2742,18 @@ export function StatsVisuals(props: Props) {
         identity={identity}
         ballGrade={props.ballGrade ?? null}
         range={range}
+      />,
+      <BlockSpacing
+        key="blocks"
+        blocks={buildBlocks({
+          file: props.file,
+          team: props.team,
+          ceilingM: props.thresholds.blockCeilingM,
+          events: props.events,
+        })}
+        ceilingM={props.thresholds.blockCeilingM}
+        matchId={props.matchId}
+        teamName={(props.team === "A" ? props.teamA : props.teamB).name}
       />,
       line ? (
         <ShapeOutcomeTable key="outcome" lineDefending={line} />
