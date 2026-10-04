@@ -9,6 +9,9 @@ import djursholmsCrest from "@/assets/djursholms-fotboll-crest.png.asset.json";
 import vasalundCrest from "@/assets/vasalund-crest.png.asset.json";
 import hammarbyCrest from "@/assets/hammarby-crest.png.asset.json";
 import tabyCrest from "@/assets/taby-fotboll-crest.png.asset.json";
+// Added from the club's own crest rather than through Lovable's asset store,
+// so this one is a plain import and has no .url.
+import vallentunaCrest from "@/assets/vallentuna-crest.png";
 
 function normaliseTeamName(name: string) {
   return name
@@ -19,16 +22,26 @@ function normaliseTeamName(name: string) {
 
 export function crestForTeam(name: string) {
   const normalised = normaliseTeamName(name);
-  const words = normalised.replace(/[^a-z0-9]+/g, " ").trim().split(/\s+/).filter(Boolean);
+  const words = normalised
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   const hasCode = (code: string) => words.includes(code);
 
   if (normalised.includes("sollentuna") || hasCode("sfk")) return sollentunaCrest.url;
-  if (normalised.includes("brommapojkarna") || normalised.includes("bpsod") || normalised.includes("bromma") || hasCode("bp"))
+  if (
+    normalised.includes("brommapojkarna") ||
+    normalised.includes("bpsod") ||
+    normalised.includes("bromma") ||
+    hasCode("bp")
+  )
     return brommapojkarnaCrest.url;
   if (normalised.includes("djursholm") || hasCode("fcd")) return djursholmsCrest.url;
   if (normalised.includes("vasalund")) return vasalundCrest.url;
   if (normalised.includes("hammarby") || hasCode("hif")) return hammarbyCrest.url;
   if (normalised.includes("taby")) return tabyCrest.url;
+  if (normalised.includes("vallentuna") || hasCode("vbk") || hasCode("val")) return vallentunaCrest;
   if (hasCode("aik") || normalised.includes("allmanna idrottsklubben")) return aikCrest.url;
   if (normalised.includes("koln") || normalised.includes("cologne")) return kolnCrest.url;
   if (normalised.includes("wolfsburg")) return wolfsburgCrest.url;
@@ -47,7 +60,13 @@ export function crestForTeam(name: string) {
 /** Majority crest colour for known clubs; saved match colours remain the fallback. */
 export function colourForTeam(name: string, fallback: string) {
   const normalised = normaliseTeamName(name);
-  if (normalised.includes("bvb") || normalised.includes("dortmund") || normalised.includes("borussia d")) return "var(--club-bvb)";
-  if (normalised.includes("bayern") || normalised.includes("fcb") || normalised.includes("munchen")) return "var(--club-bayern)";
+  if (
+    normalised.includes("bvb") ||
+    normalised.includes("dortmund") ||
+    normalised.includes("borussia d")
+  )
+    return "var(--club-bvb)";
+  if (normalised.includes("bayern") || normalised.includes("fcb") || normalised.includes("munchen"))
+    return "var(--club-bayern)";
   return fallback;
 }
