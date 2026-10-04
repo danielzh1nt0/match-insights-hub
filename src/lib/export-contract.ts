@@ -59,11 +59,11 @@ export function normaliseShot(
   raw: Record<string, unknown>,
   index: number,
   pitch: { length: number; width: number },
+  /** Whether this file's coordinates are metres on the pitch or a percentage. */
+  unit: "metres" | "percent",
 ): Shot {
-  const percentX = finite(raw["x"] ?? raw["px"]);
-  const metreX = finite(raw["x_m"]);
-  const percentY = finite(raw["y"] ?? raw["py"]);
-  const metreY = finite(raw["y_m"]);
+  const rawX = finite(raw["x_m"] ?? raw["x"] ?? raw["px"]);
+  const rawY = finite(raw["y_m"] ?? raw["y"] ?? raw["py"]);
 
   const outcome = String(raw["outcome"] ?? "").toLowerCase();
   const goal = raw["goal"] === true || outcome === "goal" || outcome === "scored";
@@ -71,19 +71,48 @@ export function normaliseShot(
   return {
     id: String(raw["id"] ?? `shot-${index}`),
     team: raw["team"] === "B" ? "B" : "A",
-    x: percentX ?? (metreX === null ? null : (metreX / pitch.length) * 100),
-    y: percentY ?? (metreY === null ? null : (metreY / pitch.width) * 100),
+    x: rawX === null ? null : unit === "metres" ? (rawX / pitch.length) * 100 : rawX,
+    y: rawY === null ? null : unit === "metres" ? (rawY / pitch.width) * 100 : rawY,
     t: finite(raw["t"]) ?? 0,
     goal,
     onTarget: goal || raw["on_target"] === true || ON_TARGET.has(outcome),
   };
 }
 
+/**
+ * Metres or a percentage, decided once for the whole file.
+ *
+ * Exports have written both, and the two overlap: 80 could be 80 m up the
+ * pitch or 80% of the way. Guessing per shot would be worse than guessing
+ * once — a map with some shots in metres and some in percent is wrong in a way
+ * nobody can see. So the file decides: a documented `x_m` anywhere, or any
+ * coordinate past the end of a percentage scale, means metres throughout.
+ *
+ * Read the wrong way round, metres pile every shot onto the touchline, which
+ * is what the shot map was doing.
+ */
+function unitOf(raws: Record<string, unknown>[], pitch: { length: number; width: number }) {
+  for (const raw of raws) {
+    if (finite(raw["x_m"]) !== null || finite(raw["y_m"]) !== null) return "metres" as const;
+  }
+  for (const raw of raws) {
+    const x = finite(raw["x"] ?? raw["px"]);
+    const y = finite(raw["y"] ?? raw["py"]);
+    if ((x !== null && x > 100) || (y !== null && y > 100)) return "metres" as const;
+  }
+  // Nothing past 100 either way. A pitch is longer than 100 units, so a set
+  // that never exceeds it is far more likely to be a percentage.
+  void pitch;
+  return "percent" as const;
+}
+
 export function shotsOf(stats: StatsFile | undefined, team?: TeamKey): Shot[] {
   const raw = stats?.metrics?.["shots"];
   if (!Array.isArray(raw)) return [];
   const pitch = pitchOf(stats);
-  const all = raw.map((shot, i) => normaliseShot(shot as Record<string, unknown>, i, pitch));
+  const raws = raw as Record<string, unknown>[];
+  const unit = unitOf(raws, pitch);
+  const all = raws.map((shot, i) => normaliseShot(shot, i, pitch, unit));
   return team ? all.filter((shot) => shot.team === team) : all;
 }
 

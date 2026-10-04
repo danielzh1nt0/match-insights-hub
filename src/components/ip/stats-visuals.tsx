@@ -1299,9 +1299,12 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
               search={{ t }}
               aria-label={`Watch ${shotTeam} shot`}
             >
+              {/* Drawn inside the pitch rectangle, not the viewBox. The pitch
+                  is inset, so plotting straight into viewBox space put a shot
+                  on the goal line three units outside the drawn goal. */}
               <circle
-                cx={clamp(x)}
-                cy={(clamp(y) / 100) * 64}
+                cx={3 + (clamp(x) / 100) * 94}
+                cy={1.5 + (clamp(y) / 100) * 60.9}
                 r={goal ? 2.8 : 2.2}
                 fill={on ? colours[shotTeam] : "var(--surface-2)"}
                 stroke={goal ? "var(--cream)" : colours[shotTeam]}

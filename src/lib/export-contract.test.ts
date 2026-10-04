@@ -20,22 +20,25 @@ import {
 
 /* ---------------- shots ---------------- */
 
-test("reads shot positions in metres as well as percent", () => {
+test("one x_m makes the whole file metres", () => {
+  // Reading some shots as metres and others as a percentage would be wrong in
+  // a way nobody could see on the pitch, so the file decides once.
   const stats = {
     pitch: { length: 105, width: 68 },
     metrics: {
       shots: [
         { team: "A", x_m: 94.5, y_m: 34, outcome: "goal" },
-        { team: "A", x: 50, y: 50, on_target: true },
+        { team: "A", x: 52.5, y: 34, on_target: true },
       ],
     },
   } as never;
 
-  const [metres, percent] = shotsOf(stats);
+  const [first, second] = shotsOf(stats);
   // 94.5 m along a 105 m pitch is 90% of the way, not "94.5%".
-  expect(metres!.x).toBeCloseTo(90, 5);
-  expect(metres!.y).toBeCloseTo(50, 5);
-  expect(percent!.x).toBe(50);
+  expect(first!.x).toBeCloseTo(90, 5);
+  expect(first!.y).toBeCloseTo(50, 5);
+  // And the bare x is metres too, because the file is metres.
+  expect(second!.x).toBeCloseTo(50, 5);
 });
 
 test("reads the outcome word as well as the booleans", () => {
@@ -186,4 +189,48 @@ test("shots are counted per side, inside the periods", () => {
   ]);
   expect(shotCount(stats, "A", periods)).toBe(2);
   expect(shotCount(stats, "B", periods)).toBe(1);
+});
+
+test("a coordinate past the percentage scale makes the file metres", () => {
+  // Nothing can be at 104% of the pitch, so this set is metres and every shot
+  // in it converts — including the ones that would have passed as percentages.
+  const stats = {
+    pitch: { length: 106, width: 64 },
+    metrics: {
+      shots: [
+        { team: "A", t: 600, x: 104, y: 32, outcome: "on target" },
+        { team: "A", t: 700, x: 53, y: 32 },
+      ],
+    },
+  } as never;
+  const [edge, middle] = shotsOf(stats);
+  expect(edge!.x).toBeCloseTo(98.1, 1);
+  expect(middle!.x).toBeCloseTo(50, 1);
+  expect(middle!.y).toBeCloseTo(50, 1);
+});
+
+test("with no metre signal at all the file is read as percentages", () => {
+  // Genuinely ambiguous: 80 could be 80 m or 80%. An export that means metres
+  // is expected to say so with x_m, which is what the contract asks for.
+  const stats = {
+    pitch: { length: 106, width: 64 },
+    metrics: { shots: [{ team: "A", t: 600, x: 80, y: 50 }] },
+  } as never;
+  expect(shotsOf(stats)[0]!.x).toBe(80);
+});
+
+test("a real percentage is still a percentage", () => {
+  const stats = {
+    pitch: { length: 106, width: 64 },
+    metrics: { shots: [{ team: "A", t: 600, x: 88, y: 50 }] },
+  } as never;
+  expect(shotsOf(stats)[0]!.x).toBe(88);
+});
+
+test("x_m wins over x whatever x holds", () => {
+  const stats = {
+    pitch: { length: 106, width: 64 },
+    metrics: { shots: [{ team: "A", t: 600, x: 95, x_m: 53, y_m: 32 }] },
+  } as never;
+  expect(shotsOf(stats)[0]!.x).toBeCloseTo(50, 1);
 });
