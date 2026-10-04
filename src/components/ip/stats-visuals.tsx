@@ -768,7 +768,8 @@ function PressureMap({
       if (!carrier || carrier.team !== underPressure) continue;
       const pressed = (frame as { pressed?: boolean }).pressed;
       const near = frame.pressure_m;
-      if (typeof pressed !== "boolean" && (typeof near !== "number" || !Number.isFinite(near))) continue;
+      if (typeof pressed !== "boolean" && (typeof near !== "number" || !Number.isFinite(near)))
+        continue;
       measured += 1;
       // The export's own pressed flag where it has one, the five-metre rule
       // where it does not. Plotted at the carrier rather than the ball, and
@@ -2326,60 +2327,105 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
   const rows = lineDefending.states
     .map((s) => ({ ...s, min: minutes(s.key) }))
     .filter((r) => r.min > 0);
+
+  /**
+   * How much of a spell it takes before a rate means anything.
+   *
+   * One shot in seven minutes reads as the worst rate in the match and is
+   * nothing of the sort — it is one shot. Without a floor the badge lands on
+   * whichever state the team barely used, and the sentence underneath then
+   * contradicts the goals column sitting next to it.
+   */
+  const ENOUGH_MIN = 8;
+  const ENOUGH_SHOTS = 3;
   const rate = (r: { shots: number; min: number }) => r.shots / Math.max(r.min, 0.1);
-  const worst = rows.filter((r) => r.shots > 0).sort((a, b) => rate(b) - rate(a))[0];
+  const judged = rows.filter((r) => r.min >= ENOUGH_MIN && r.shots >= ENOUGH_SHOTS);
+  const worst = [...judged].sort((a, b) => rate(b) - rate(a))[0];
+  const mostShots = [...rows].sort((a, b) => b.shots - a.shots || b.goals - a.goals)[0];
   const name = (k: string) => (k === "high" ? "High line" : k === "mid" ? "Mid line" : "Low line");
+
+  const maxMin = Math.max(...rows.map((r) => r.min), 1);
+  // Positioned against the real pitch, because the drawing carries real
+  // markings: a line placed on a made-up scale would sit in the wrong place
+  // relative to the box and the halfway line underneath it.
+  const pitchLength = PITCH.length;
+
   return (
     <Card
-      question="In which shape did we suffer?"
+      question="How high was our last line, and what did it cost?"
       icon={Shield}
-      caption="Defensive states, ranked by shots conceded per minute."
+      caption="Each band is the height we defended at. Thickness is time spent there."
       honesty={`${lineDefending.shots.length} shots conceded · ${tl.length} line samples`}
     >
-      <div role="table" className="text-[12.5px]">
-        <div
-          role="row"
-          className="grid grid-cols-[1.6fr_1fr_1fr_1fr] gap-2 border-b border-wire px-2 py-2 text-[10px] uppercase text-text-faint"
-        >
-          <span>State</span>
-          <span>Time</span>
-          <span>Shots</span>
-          <span>Goals</span>
-        </div>
+      {/* Our goal is on the left, so a band further right is a higher line.
+          The picture is the point — the figures sit beside it, not instead. */}
+      <StatsPitch attackLabel="" ariaLabel="Defensive line height, our goal on the left">
+        {rows.map((r) => {
+          const x = 3 + (r.height / pitchLength) * 94;
+          const thickness = 1 + (r.min / maxMin) * 5;
+          const alarm = worst?.key === r.key;
+          return (
+            <g key={r.key}>
+              <rect
+                x={x - thickness / 2}
+                y={1.5}
+                width={thickness}
+                height={60.9}
+                fill={alarm ? "var(--reaction-bad)" : "var(--cream)"}
+                fillOpacity={alarm ? 0.5 : 0.22}
+              />
+              <rect
+                x={x - 0.25}
+                y={1.5}
+                width={0.5}
+                height={60.9}
+                fill={alarm ? "var(--reaction-bad)" : "var(--cream)"}
+              />
+              {/* One mark per shot conceded while we sat at this height. */}
+              {Array.from({ length: Math.min(r.shots, 12) }, (_, i) => (
+                <circle
+                  key={i}
+                  cx={x}
+                  cy={6 + i * 4.4}
+                  r={i < r.goals ? 1.7 : 1.2}
+                  fill={i < r.goals ? "var(--reaction-bad)" : "var(--surface)"}
+                  stroke={i < r.goals ? "var(--cream)" : "var(--text-dim)"}
+                  strokeWidth={0.4}
+                />
+              ))}
+            </g>
+          );
+        })}
+      </StatsPitch>
+
+      <ul className="rule-y mt-3 border-t border-wire">
         {rows.map((r) => (
-          <div
-            role="row"
+          <li
             key={r.key}
-            className={cn(
-              "grid min-h-11 grid-cols-[1.6fr_1fr_1fr_1fr] items-center gap-2 px-2",
-              worst?.key === r.key
-                ? "border-l-2 border-reaction-bad bg-surface-2"
-                : "border-l-2 border-transparent",
-            )}
+            className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2"
           >
-            <span className="flex items-center gap-2 text-text">
+            <span className="flex items-center gap-2 text-[13px] text-text">
               {worst?.key === r.key && (
-                <span className="h-1.5 w-1.5 rounded-full bg-reaction-bad" aria-hidden="true" />
+                <span className="h-1.5 w-1.5 shrink-0 bg-reaction-bad" aria-hidden="true" />
               )}
-              {name(r.key)} <span className="num text-text-faint">({Math.round(r.height)} m)</span>
-              {worst?.key === r.key && (
-                <span className="ml-auto rounded-full border border-reaction-bad px-1.5 text-[9px] uppercase text-reaction-bad">
-                  worst
-                </span>
-              )}
+              {name(r.key)}
+              <span className="num text-text-faint">{Math.round(r.height)} m</span>
             </span>
-            <span className="num">
-              {r.min < 1 ? `${Math.round(r.min * 60)} s` : `${Math.round(r.min)} min`}
+            <span className="num-flat text-[12px] text-text-dim">
+              {r.min < 1 ? `${Math.round(r.min * 60)} s` : `${Math.round(r.min)} min`} · {r.shots}{" "}
+              {r.shots === 1 ? "shot" : "shots"}
+              {r.goals > 0 ? ` · ${r.goals} ${r.goals === 1 ? "goal" : "goals"}` : ""}
             </span>
-            <span className="num">{r.shots}</span>
-            <span className="num">{r.goals}</span>
-          </div>
+          </li>
         ))}
-      </div>
-      <p className="mt-3 text-[12px] text-text-dim">
+      </ul>
+
+      <p className="mt-3 text-[12px] leading-relaxed text-text-dim">
         {worst
-          ? `We conceded most while defending in a ${name(worst.key).toLowerCase()} (${Math.round(worst.height)} m).`
-          : "No shots conceded in any line state in this period."}
+          ? `Per minute spent there, we gave up most while defending in a ${name(worst.key).toLowerCase()} (${Math.round(worst.height)} m).`
+          : mostShots && mostShots.shots > 0
+            ? `Most of what we conceded came while defending in a ${name(mostShots.key).toLowerCase()} (${Math.round(mostShots.height)} m) — ${mostShots.shots} of ${lineDefending.shots.length} shots. No line state was used long enough to compare rates fairly.`
+            : "No shots conceded in any line state in this period."}
       </p>
     </Card>
   );

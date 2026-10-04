@@ -127,14 +127,40 @@ export function LineBreakHero({ data, matchId }: { data: LineDefending; matchId:
 export function LineTimeline({ data, matchId }: { data: LineDefending; matchId: string }) {
   const maxT = Math.max(data.timeline.at(-1)?.t ?? 1, 1);
   const maxH = Math.max(...data.timeline.map((point) => point.height), 50);
-  const points = data.timeline
+
+  /**
+   * Drawn as a shape the eye can follow, not four thousand samples.
+   *
+   * The raw timeline is one reading every second or so, and a defensive line
+   * genuinely moves metres between readings. Plotted straight it fills the
+   * panel with a solid sawtooth: every pixel is covered, so nothing stands out
+   * and the shots sit on top of noise. Binning to a rolling median keeps where
+   * the line actually sat and drops the jitter it sat within.
+   */
+  const BINS = 90;
+  const smoothed = (() => {
+    const buckets: number[][] = Array.from({ length: BINS }, () => []);
+    for (const point of data.timeline) {
+      const i = Math.min(BINS - 1, Math.floor((point.t / maxT) * BINS));
+      buckets[i]!.push(point.height);
+    }
+    return buckets
+      .map((values, i) => {
+        if (values.length === 0) return null;
+        const sorted = [...values].sort((a, b) => a - b);
+        return { t: ((i + 0.5) / BINS) * maxT, height: sorted[Math.floor(sorted.length / 2)]! };
+      })
+      .filter((p): p is { t: number; height: number } => p !== null);
+  })();
+
+  const points = smoothed
     .map((point) => `${(point.t / maxT) * 100},${40 - (point.height / maxH) * 36}`)
     .join(" ");
   return (
     <Visual
       framing="custom"
       question="Where was our line when they scored?"
-      caption="Line height in metres while defending. Only the shots are marked."
+      caption="Line height in metres while defending, smoothed. Only the shots are marked."
       info={{
         title: "Line at conceded shots",
         rows: [
@@ -160,8 +186,9 @@ export function LineTimeline({ data, matchId }: { data: LineDefending; matchId: 
               points={points}
               fill="none"
               stroke="var(--cream)"
-              strokeOpacity=".4"
-              strokeWidth="1"
+              strokeOpacity=".75"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
             />
           </svg>

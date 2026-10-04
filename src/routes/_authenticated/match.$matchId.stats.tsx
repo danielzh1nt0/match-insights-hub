@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
@@ -83,16 +84,16 @@ function Stats() {
   /** Rows inside the surviving tabs that rest on the same thing. */
   const NEEDS_BALL_ROW = /possession|loss|lost|turnover|pass|tilt|third|press|set piece|sequence/i;
 
-  const shownSections = possessionOk
-    ? sections
-    : sections
-        .filter((section) => !NEEDS_BALL.has(section.key))
-        .map((section) => ({
-          ...section,
-          rows: section.rows.filter((r) => !NEEDS_BALL_ROW.test(r.label)),
-        }));
-  const shownTab = shownSections.some((s) => s.key === tab) ? tab : shownSections[0]?.key;
-  const shownActive = shownSections.find((s) => s.key === shownTab) ?? shownSections[0];
+  // The tabs stay on screen either way. Removing four of them made the app
+  // look broken rather than careful — you could not tell whether pressing had
+  // been dropped from the product or was simply not ready for this match.
+  const shownSections = sections.map((section) => ({
+    ...section,
+    locked: !possessionOk && NEEDS_BALL.has(section.key),
+    rows: possessionOk ? section.rows : section.rows.filter((r) => !NEEDS_BALL_ROW.test(r.label)),
+  }));
+  const shownActive = shownSections.find((s) => s.key === tab) ?? shownSections[0];
+  const locked = Boolean(shownActive?.locked);
 
   return (
     <MatchShell
@@ -122,15 +123,22 @@ function Stats() {
             aria-label="Stat groups"
           >
             {shownSections.map((t) => (
-              <Chip key={t.key} active={shownTab === t.key} onClick={() => setTab(t.key)}>
+              <Chip
+                key={t.key}
+                active={tab === t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(t.locked && tab !== t.key && "opacity-45")}
+                title={t.locked ? "Still being verified for this match" : undefined}
+              >
                 {t.label}
+                {t.locked && (
+                  <span className="label-xs text-text-faint" aria-label="not verified yet">
+                    ·
+                  </span>
+                )}
               </Chip>
             ))}
           </div>
-
-          {!possessionOk && (
-            <NotVerifiedYet what="Possession, passing and pressing are still being verified for this match. The score, shots, shape and the tracked players on the video are shown as normal." />
-          )}
 
           {teamA && teamB && (
             <ScopeChips
@@ -144,9 +152,15 @@ function Stats() {
             />
           )}
 
-          <p className="text-[12px] text-text-faint">{shownActive?.caption}</p>
+          {locked ? (
+            <NotVerifiedYet
+              what={`${shownActive?.label} is still being verified for this match — the ball was not tracked well enough here to stand behind these numbers, so they are not shown. Score, shots, shape and the tracked players on the video are unaffected.`}
+            />
+          ) : (
+            <p className="text-[12px] text-text-faint">{shownActive?.caption}</p>
+          )}
 
-          {teamA && teamB && shownActive && shownActive.rows.length > 0 && (
+          {!locked && teamA && teamB && shownActive && shownActive.rows.length > 0 && (
             <HeadToHeadBand
               rows={shownActive.rows}
               teamA={teamA}
@@ -155,7 +169,7 @@ function Stats() {
             />
           )}
 
-          {teamA && teamB && (
+          {!locked && teamA && teamB && (
             <StatsVisuals
               tab={shownActive?.key ?? "shooting"}
               players={players}
