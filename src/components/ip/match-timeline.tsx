@@ -1,25 +1,87 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Activity } from "lucide-react";
-import type { ReactNode } from "react";
+import { Activity, ArrowRight } from "lucide-react";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
-import { playedScale, type Bar, type MatchTimeline, type Point } from "@/lib/timeline";
+import {
+  barHalves,
+  buildStory,
+  storyLine,
+  halves,
+  playedScale,
+  type MatchTimeline,
+  type Point,
+  type SpellTone,
+} from "@/lib/timeline";
 import { cn } from "@/lib/utils";
+
+/** Green on top, amber even, red losing it. One meaning each. */
+const TONE: Record<SpellTone, string> = {
+  strong: "bg-positive",
+  even: "bg-text-dim",
+  lost: "bg-reaction-bad",
+};
 
 function minute(seconds: number) {
   return `${Math.round(seconds / 60)}'`;
 }
 
+type Row = {
+  key: string;
+  /** What it is, in a coach's words. */
+  label: string;
+  first: number | null;
+  second: number | null;
+  /** How to write the numbers. */
+  unit: "pct" | "count" | "metres";
+  /** Which direction is good for us. */
+  goodWhen: "up" | "down" | "neither";
+  series: Point[];
+};
+
+function show(value: number | null, unit: Row["unit"]) {
+  if (value === null) return "—";
+  if (unit === "pct") return `${Math.round(value * 100)}%`;
+  if (unit === "metres") return `${Math.round(value)} m`;
+  return `${Math.round(value)}`;
+}
+
+/** A thumbnail of the shape, no axes — it is there to be glanced at. */
+function Spark({ points, colour }: { points: Point[]; colour: string }) {
+  const known = points.filter((p) => p.value !== null) as { t: number; value: number }[];
+  if (known.length < 3) return <span className="h-6 w-full" />;
+  const lo = Math.min(...known.map((p) => p.value));
+  const hi = Math.max(...known.map((p) => p.value));
+  const span = hi - lo || 1;
+  const t0 = known[0]!.t;
+  const t1 = known.at(-1)!.t || 1;
+  const d = known
+    .map(
+      (p, i) =>
+        `${i === 0 ? "M" : "L"}${(((p.t - t0) / (t1 - t0 || 1)) * 100).toFixed(1)} ${(
+          100 -
+          ((p.value - lo) / span) * 100
+        ).toFixed(1)}`,
+    )
+    .join(" ");
+  return (
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-6 w-full" aria-hidden="true">
+      <path d={d} fill="none" stroke={colour} strokeWidth={1.6} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 /**
- * The match as it ran, not as it finished.
+ * The match over time, answer first.
  *
- * Every strip below shares one clock, with half-time closed up so the drawn
- * width is time actually played. That is the whole point of stacking them: the
- * minute the team stopped having the ball is the same place on the chart as the
- * minute they stopped pressing, and a coach can see the two line up without
- * being told to.
+ * The honest version of this was six charts sharing a clock, and it was
+ * useless: a coach gets about five seconds, and six unlabelled lines in five
+ * seconds is nothing. What he actually reads a match in is halves — what we
+ * did, and what changed after the break — so that is what leads. One row per
+ * thing, the two numbers that make the point, the direction marked, and a
+ * thumbnail of the shape beside it.
  *
- * Goals are marked on every strip, so any shape can be read against the score.
- * Tapping anywhere opens the video there.
+ * The full possession chart stays underneath for anyone who wants to find the
+ * minute it turned, with the goals and the playhead on it. Everything is still
+ * one clock with half-time closed up.
  */
 export function MatchTimelineCard({
   timeline,
@@ -32,7 +94,6 @@ export function MatchTimelineCard({
   teamA: StatsTeamIdentity;
   teamB: StatsTeamIdentity;
   matchId: string;
-  /** Where the video is, if it is open. */
   clockS?: number | undefined;
 }) {
   const navigate = useNavigate();
@@ -41,7 +102,7 @@ export function MatchTimelineCard({
   if (timeline.empty)
     return (
       <section className="border border-wire bg-surface p-4 sm:p-5">
-        <h3 className="text-[15px] font-semibold text-text-bright">The match over time</h3>
+        <h3 className="text-[15px] font-semibold text-text-bright">How the match changed</h3>
         <p className="mt-2 text-[13px] leading-relaxed text-text-dim">
           This match file carries no per-window figures yet, so there is nothing to lay out over the
           clock. The totals on the tabs below are unaffected.
@@ -49,7 +110,53 @@ export function MatchTimelineCard({
       </section>
     );
 
-  /** Seconds at a fraction across the drawn width, for taps. */
+  const story = buildStory(timeline);
+  const possession = halves(timeline.possession, timeline.spans);
+  const tilt = halves(timeline.tilt, timeline.spans);
+  const pressing = barHalves(timeline.pressure, timeline.spans, "a");
+  const length = halves(timeline.length.a, timeline.spans);
+
+  const rows: Row[] = [
+    {
+      key: "ball",
+      label: "Ball",
+      first: possession.first,
+      second: possession.second,
+      unit: "pct",
+      goodWhen: "up",
+      series: timeline.possession,
+    },
+    {
+      key: "tilt",
+      label: "Play in their half",
+      first: tilt.first,
+      second: tilt.second,
+      unit: "pct",
+      goodWhen: "up",
+      series: timeline.tilt,
+    },
+    {
+      key: "press",
+      label: "Pressures applied",
+      first: pressing.first,
+      second: pressing.second,
+      unit: "count",
+      goodWhen: "up",
+      series: timeline.possession.map((p) => ({ t: p.t, value: null })),
+    },
+    {
+      key: "length",
+      label: "Length, back to front",
+      first: length.first,
+      second: length.second,
+      unit: "metres",
+      goodWhen: "down",
+      series: timeline.length.a,
+    },
+  ].filter((row) => row.first !== null || row.second !== null) as Row[];
+
+  const headline = storyLine(story);
+
   const secondsAt = (fraction: number) => {
     const spans = timeline.spans.length
       ? timeline.spans
@@ -74,329 +181,246 @@ export function MatchTimelineCard({
     });
   };
 
-  /** One strip: the chart, the goals on top of it, and the playhead. */
-  const Strip = ({
-    label,
-    hint,
-    children,
-  }: {
-    label: string;
-    hint?: string;
-    children: ReactNode;
-  }) => (
-    <div className="border-t border-wire px-4 py-3 sm:px-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h4 className="text-[13px] font-semibold text-text-bright">{label}</h4>
-        {hint && <p className="text-[11.5px] text-text-faint">{hint}</p>}
-      </div>
-      <div
-        className="relative mt-2 cursor-pointer"
-        onClick={jump}
-        role="presentation"
-        title="Open the video here"
-      >
-        {children}
-        {/* Half-time, as a real gap rather than an implied one. */}
-        {timeline.spans.length >= 2 && (
-          <span
-            className="pointer-events-none absolute inset-y-0 w-px bg-wire"
-            style={{ left: `${at(timeline.spans[0]!.toS)}%` }}
-            aria-hidden="true"
-          />
-        )}
-        {timeline.goals.map((goal, i) => (
-          <span
-            key={i}
-            className="pointer-events-none absolute -top-1 h-[calc(100%+8px)] w-px"
-            style={{
-              left: `${at(goal.t)}%`,
-              background: goal.team === "A" ? teamA.kitColour : teamB.kitColour,
-              opacity: 0.75,
-            }}
-            aria-hidden="true"
-          />
-        ))}
-        {clockS !== undefined && (
-          <span
-            className="pointer-events-none absolute inset-y-0 w-[1.5px] bg-cream"
-            style={{ left: `${at(clockS)}%` }}
-            aria-hidden="true"
-          />
-        )}
-      </div>
-    </div>
-  );
-
-  const area = (points: Point[], lo = 0, hi = 1) => {
-    if (points.length === 0) return null;
-    const span = hi - lo || 1;
-    const y = (v: number) => 100 - ((Math.max(lo, Math.min(hi, v)) - lo) / span) * 100;
-    const d = points
-      .map((p, i) => `${i === 0 ? "M" : "L"}${at(p.t).toFixed(2)} ${y(p.value ?? lo).toFixed(2)}`)
+  const d = (() => {
+    const known = timeline.possession.filter((p) => p.value !== null);
+    if (known.length < 2) return null;
+    const line = known
+      .map(
+        (p, i) =>
+          `${i === 0 ? "M" : "L"}${at(p.t).toFixed(2)} ${(100 - p.value! * 100).toFixed(2)}`,
+      )
       .join(" ");
     return {
-      line: d,
-      fill: `${d} L${at(points.at(-1)!.t).toFixed(2)} 50 L${at(points[0]!.t).toFixed(2)} 50 Z`,
+      line,
+      fill: `${line} L${at(known.at(-1)!.t).toFixed(2)} 50 L${at(known[0]!.t).toFixed(2)} 50 Z`,
     };
-  };
-
-  const possession = area(timeline.possession);
-  const tilt = area(timeline.tilt, 0.25, 0.75);
-
-  const barMax = (bars: Bar[]) => Math.max(1, ...bars.map((b) => Math.max(b.a, b.b)));
+  })();
 
   return (
     <section className="border border-wire bg-surface" aria-labelledby="match-timeline">
-      <header className="flex items-start gap-3 p-4 sm:p-5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center border border-wire text-accent-sea">
-          <Activity size={17} strokeWidth={1.75} aria-hidden="true" />
-        </span>
-        <div className="min-w-0">
-          <h3 id="match-timeline" className="text-[15px] font-semibold text-text-bright">
-            The match over time
-          </h3>
-          <p className="mt-1 text-[12.5px] leading-snug text-text-dim">
-            One clock, half-time closed up. Goal lines run through every strip. Tap anywhere to open
-            the video there.
-          </p>
+      <header className="p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center border border-wire text-accent-sea">
+            <Activity size={17} strokeWidth={1.75} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h3 id="match-timeline" className="text-[15px] font-semibold text-text-bright">
+              The match story
+            </h3>
+            <p className="mt-1 text-[13.5px] leading-snug text-text">{headline}</p>
+          </div>
         </div>
       </header>
 
-      {possession && (
-        <Strip
-          label="Who had the ball"
-          hint={`${teamA.shortCode} above the line, ${teamB.shortCode} below`}
-        >
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            className="block h-[84px] w-full"
-            role="img"
-            aria-label="Possession through the match"
-          >
-            {/* The same area drawn twice and clipped to each half, so the side
-                that is on top of the game is the side that is coloured. One
-                colour across the midline reads as one team all match. */}
-            <defs>
-              <clipPath id="tl-top">
-                <rect x="0" y="0" width="100" height="50" />
-              </clipPath>
-              <clipPath id="tl-bottom">
-                <rect x="0" y="50" width="100" height="50" />
-              </clipPath>
-            </defs>
-            <rect x="0" y="0" width="100" height="100" fill="var(--surface-2)" />
-            <path
-              d={possession.fill}
-              fill={teamA.kitColour}
-              fillOpacity={0.55}
-              clipPath="url(#tl-top)"
-            />
-            <path
-              d={possession.fill}
-              fill={teamB.kitColour}
-              fillOpacity={0.5}
-              clipPath="url(#tl-bottom)"
-            />
-            <path
-              d={possession.line}
-              fill="none"
-              stroke="var(--text-bright)"
-              strokeWidth={1.2}
-              vectorEffect="non-scaling-stroke"
-            />
-            <line
-              x1="0"
-              y1="50"
-              x2="100"
-              y2="50"
-              stroke="var(--text-faint)"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-        </Strip>
-      )}
-
-      {timeline.possessionBars.length > 0 && (
-        <Strip label="Five minutes at a time" hint={`${teamA.shortCode} share of the ball`}>
-          {/* Height is the share, so a glance gives the shape and the number
-              is there for anyone who wants it. */}
-          <div className="flex h-[64px] items-end gap-[3px]">
-            {timeline.possessionBars.map((bar, i) => (
-              <span key={i} className="relative flex-1 bg-surface-2" style={{ height: "100%" }}>
+      {/* The spells, in the words a coach would use telling someone about the
+          match. Each one opens the video where it started. */}
+      {story.length > 0 && (
+        <ul className="rule-y border-t border-wire">
+          {story.map((spell, i) => (
+            <li key={i}>
+              <button
+                type="button"
+                onClick={() =>
+                  void navigate({
+                    to: "/match/$matchId/match",
+                    params: { matchId },
+                    search: { t: Math.round(spell.fromS * 10) / 10 },
+                  })
+                }
+                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 sm:px-5"
+              >
                 <span
-                  className="absolute inset-x-0 bottom-0"
-                  style={{ height: `${bar.a}%`, background: teamA.kitColour, opacity: 0.85 }}
+                  className={cn("mt-[5px] h-2.5 w-2.5 shrink-0 rounded-full", TONE[spell.tone])}
+                  aria-hidden="true"
                 />
-                <span
-                  className="absolute inset-x-0 text-center text-[9.5px] font-bold text-text-bright"
-                  style={{ bottom: `calc(${bar.a}% + 2px)` }}
-                >
-                  {bar.a}
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <span className="text-[14.5px] font-semibold text-text-bright">
+                      {spell.title}
+                    </span>
+                    <span className="num-flat text-[12px] text-text-faint">
+                      {minute(spell.fromS)}–{minute(spell.toS)}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-[13px] text-text-dim">
+                    {spell.headline}
+                    {spell.detail ? ` · ${spell.detail}` : ""}
+                  </span>
                 </span>
-              </span>
-            ))}
-          </div>
-        </Strip>
-      )}
-
-      {tilt && (
-        <Strip label="Where the play was" hint="Share of final-third play at their end">
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            className="block h-[56px] w-full"
-            role="img"
-            aria-label="Field tilt through the match"
-          >
-            <rect x="0" y="0" width="100" height="100" fill="var(--surface-2)" />
-            <path d={tilt.fill} fill="var(--accent-sea)" fillOpacity={0.5} />
-            <path
-              d={tilt.line}
-              fill="none"
-              stroke="var(--accent-sea)"
-              strokeWidth={1.6}
-              vectorEffect="non-scaling-stroke"
-            />
-            <line
-              x1="0"
-              y1="50"
-              x2="100"
-              y2="50"
-              stroke="var(--wire)"
-              strokeWidth={1}
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-        </Strip>
-      )}
-
-      {timeline.pressure.some((b) => b.a + b.b > 0) && (
-        <Strip label="Pressing" hint="Pressures applied per five minutes">
-          <div className="flex h-[58px] items-end gap-[3px]">
-            {timeline.pressure.map((bar, i) => {
-              const max = barMax(timeline.pressure);
-              const high = timeline.highTurnovers[i];
-              return (
-                <span key={i} className="relative flex h-full flex-1 items-end gap-[2px]">
-                  <span
-                    className="flex-1"
-                    style={{
-                      height: `${Math.max((bar.a / max) * 100, 3)}%`,
-                      background: teamA.kitColour,
-                      opacity: 0.9,
-                    }}
-                  />
-                  <span
-                    className="flex-1"
-                    style={{
-                      height: `${Math.max((bar.b / max) * 100, 3)}%`,
-                      background: teamB.kitColour,
-                      opacity: 0.65,
-                    }}
-                  />
-                  {high && high.a > 0 && (
-                    <span
-                      className="absolute -top-1 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-positive"
-                      title={`${high.a} won high`}
-                    />
-                  )}
+                <span className="num-flat shrink-0 self-center text-[11.5px] text-accent-sea">
+                  Watch
                 </span>
-              );
-            })}
-          </div>
-        </Strip>
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
 
-      {timeline.length.a.length > 0 && (
-        <Strip label="How long the team was" hint="Back to front, per minute">
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            className="block h-[56px] w-full"
-            role="img"
-            aria-label="Team length through the match"
-          >
-            <rect x="0" y="0" width="100" height="100" fill="var(--surface-2)" />
-            {(
-              [
-                ["a", teamA.kitColour],
-                ["b", teamB.kitColour],
-              ] as const
-            ).map(([side, colour]) => {
-              const series = timeline.length[side];
-              if (series.length === 0) return null;
-              const max = Math.max(...series.map((p) => p.value ?? 0), 50);
-              return (
-                <path
-                  key={side}
-                  d={series
-                    .map(
-                      (p, i) =>
-                        `${i === 0 ? "M" : "L"}${at(p.t).toFixed(2)} ${(100 - ((p.value ?? 0) / max) * 100).toFixed(2)}`,
-                    )
-                    .join(" ")}
-                  fill="none"
-                  stroke={colour}
-                  strokeWidth={1.3}
-                  strokeOpacity={side === "a" ? 1 : 0.55}
-                  vectorEffect="non-scaling-stroke"
-                />
-              );
-            })}
-          </svg>
-        </Strip>
-      )}
-
-      {timeline.sequences.length > 0 && (
-        <Strip label="Who had it" hint="Each block is one spell on the ball">
-          <div className="relative h-[18px] bg-surface-2">
-            {timeline.sequences.map((seq, i) => (
+      {/* The same spells as one ribbon, so the shape of the match is one glance
+          rather than a list to read. */}
+      {story.length > 0 && (
+        <div className="px-4 pb-1 pt-4 sm:px-5">
+          <div className="flex h-3 gap-[2px]">
+            {story.map((spell, i) => (
               <span
                 key={i}
-                className="absolute inset-y-0"
-                style={{
-                  left: `${at(seq.fromS)}%`,
-                  width: `${Math.max(at(seq.toS) - at(seq.fromS), 0.2)}%`,
-                  background: seq.team === "A" ? teamA.kitColour : teamB.kitColour,
-                  opacity: seq.team === "A" ? 0.85 : 0.5,
-                }}
+                className={cn("block", TONE[spell.tone])}
+                style={{ flexGrow: Math.max(spell.toS - spell.fromS, 1) }}
+                title={`${spell.title} ${minute(spell.fromS)}–${minute(spell.toS)}`}
               />
             ))}
           </div>
-        </Strip>
+        </div>
       )}
 
-      {/* The clock, once, under everything it applies to. */}
-      <div className="flex justify-between border-t border-wire px-4 py-2 text-[11px] text-text-faint sm:px-5">
-        <span>{minute(timeline.startS)}</span>
-        <span>half-time</span>
-        <span>{minute(timeline.endS)}</span>
+      {/* First half against second, one row each. The numbers are the answer;
+          the thumbnail beside them is how it got there. */}
+      <div className="rule-y border-y border-wire">
+        <div className="grid grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 py-2 sm:px-5">
+          <span className="label-xs text-text-faint">&nbsp;</span>
+          <span className="label-xs text-right text-text-faint">1st</span>
+          <span />
+          <span className="label-xs text-right text-text-faint">2nd</span>
+          <span />
+        </div>
+        {rows.map((row) => {
+          const moved =
+            row.first !== null && row.second !== null && row.first !== 0
+              ? (row.second - row.first) / Math.abs(row.first)
+              : 0;
+          const better =
+            row.goodWhen === "neither" || Math.abs(moved) < 0.05
+              ? null
+              : moved > 0 === (row.goodWhen === "up");
+          return (
+            <div
+              key={row.key}
+              className="grid min-h-12 grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 sm:px-5"
+            >
+              <span className="text-[13.5px] text-text-bright">{row.label}</span>
+              <span className="num text-right text-[17px] leading-none text-text-dim">
+                {show(row.first, row.unit)}
+              </span>
+              <ArrowRight size={13} aria-hidden="true" className="text-text-faint" />
+              <span
+                className={cn(
+                  "num text-right text-[19px] leading-none",
+                  better === null
+                    ? "text-text-bright"
+                    : better
+                      ? "text-positive"
+                      : "text-reaction-bad",
+                )}
+              >
+                {show(row.second, row.unit)}
+              </span>
+              <Spark points={row.series} colour={teamA.kitColour} />
+            </div>
+          );
+        })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-wire px-4 py-3 text-[11.5px] text-text-faint sm:px-5">
-        <span className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5"
-            style={{ background: teamA.kitColour }}
-            aria-hidden="true"
-          />
-          {teamA.name}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5"
-            style={{ background: teamB.kitColour }}
-            aria-hidden="true"
-          />
-          {teamB.name}
-        </span>
-        <span className={cn("flex items-center gap-1.5")}>
-          <span className="h-3 w-px bg-cream" aria-hidden="true" /> goal
-        </span>
-      </div>
+      {/* The one chart worth keeping: when the ball changed hands, against the
+          goals, with a way into the video. */}
+      {d && (
+        <div className="px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h4 className="text-[13px] font-semibold text-text-bright">
+              Who had the ball, minute by minute
+            </h4>
+            <p className="text-[11.5px] text-text-faint">
+              {teamA.shortCode} above the line, {teamB.shortCode} below
+            </p>
+          </div>
+          <div
+            className="relative mt-2 cursor-pointer"
+            onClick={jump}
+            role="presentation"
+            title="Open the video here"
+          >
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              className="block h-[96px] w-full"
+              role="img"
+              aria-label="Possession through the match"
+            >
+              <defs>
+                <clipPath id="tl-top">
+                  <rect x="0" y="0" width="100" height="50" />
+                </clipPath>
+                <clipPath id="tl-bottom">
+                  <rect x="0" y="50" width="100" height="50" />
+                </clipPath>
+              </defs>
+              <rect x="0" y="0" width="100" height="100" fill="var(--surface-2)" />
+              <path d={d.fill} fill={teamA.kitColour} fillOpacity={0.6} clipPath="url(#tl-top)" />
+              <path
+                d={d.fill}
+                fill={teamB.kitColour}
+                fillOpacity={0.55}
+                clipPath="url(#tl-bottom)"
+              />
+              <path
+                d={d.line}
+                fill="none"
+                stroke="var(--text-bright)"
+                strokeWidth={1.2}
+                vectorEffect="non-scaling-stroke"
+              />
+              <line
+                x1="0"
+                y1="50"
+                x2="100"
+                y2="50"
+                stroke="var(--text-faint)"
+                strokeWidth={1}
+                strokeDasharray="3 3"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            {timeline.spans.length >= 2 && (
+              <span
+                className="pointer-events-none absolute inset-y-0 w-px bg-wire"
+                style={{ left: `${at(timeline.spans[0]!.toS)}%` }}
+                aria-hidden="true"
+              />
+            )}
+            {timeline.goals.map((goal, i) => (
+              <span
+                key={i}
+                className="pointer-events-none absolute -top-1.5 flex h-[calc(100%+12px)] flex-col items-center"
+                style={{ left: `${at(goal.t)}%`, transform: "translateX(-50%)" }}
+                aria-hidden="true"
+              >
+                <span
+                  className="num-flat rounded-sm px-1 text-[9.5px] font-bold text-ink"
+                  style={{ background: goal.team === "A" ? teamA.kitColour : teamB.kitColour }}
+                >
+                  {goal.score}
+                </span>
+                <span
+                  className="w-px flex-1"
+                  style={{ background: goal.team === "A" ? teamA.kitColour : teamB.kitColour }}
+                />
+              </span>
+            ))}
+            {clockS !== undefined && (
+              <span
+                className="pointer-events-none absolute inset-y-0 w-[1.5px] bg-cream"
+                style={{ left: `${at(clockS)}%` }}
+                aria-hidden="true"
+              />
+            )}
+          </div>
+          <div className="mt-1 flex justify-between text-[11px] text-text-faint">
+            <span>{minute(timeline.startS)}</span>
+            <span>half-time</span>
+            <span>{minute(timeline.endS)}</span>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

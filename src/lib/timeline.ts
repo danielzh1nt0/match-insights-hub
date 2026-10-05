@@ -263,6 +263,38 @@ export function buildTimeline({
   };
 }
 
+/**
+ * What a series did in each half.
+ *
+ * A coach reads a match in halves — what we did, what changed after the break.
+ * A line that wanders is a picture of that; two numbers are the answer. Null
+ * when a half carries nothing, so the row says so rather than printing a zero.
+ */
+export function halves(points: Point[], spans: Span[]) {
+  const mean = (values: number[]) =>
+    values.length === 0 ? null : values.reduce((sum, v) => sum + v, 0) / values.length;
+  const inSpan = (span: Span | undefined) =>
+    span === undefined
+      ? []
+      : points
+          .filter((p) => p.value !== null && p.t >= span.fromS && p.t <= span.toS)
+          .map((p) => p.value!);
+  return { first: mean(inSpan(spans[0])), second: mean(inSpan(spans[1])) };
+}
+
+/** The same, for things counted into five-minute blocks. */
+export function barHalves(bars: Bar[], spans: Span[], side: "a" | "b" = "a") {
+  const sum = (span: Span | undefined) =>
+    span === undefined
+      ? null
+      : bars
+          .filter((bar) => bar.fromS >= span.fromS - 1 && bar.toS <= span.toS + BAR_S)
+          .reduce((total, bar) => total + bar[side], 0);
+  const first = sum(spans[0]);
+  const second = sum(spans[1]);
+  return { first, second };
+}
+
 /** Where a second sits on a chart, with half-time closed up. */
 export function playedScale(timeline: MatchTimeline) {
   const spans = timeline.spans.length
@@ -278,4 +310,154 @@ export function playedScale(timeline: MatchTimeline) {
     }
     return 100;
   };
+}
+
+/* ---------------- the match as spells ---------------- */
+
+export type SpellTone = "strong" | "even" | "lost";
+
+export type Spell = {
+  fromS: number;
+  toS: number;
+  tone: SpellTone;
+  /** What this spell was, in a coach's words. */
+  title: string;
+  /** The figure that makes the point. */
+  headline: string;
+  /** What else was true while it ran. */
+  detail: string | null;
+};
+
+/** A spell shorter than this is a wobble, not a passage of play. */
+const MIN_SPELL_S = 4 * 60;
+const BLOCK_S = 150;
+
+function toneOf(share: number): SpellTone {
+  if (share >= 0.58) return "strong";
+  if (share <= 0.42) return "lost";
+  return "even";
+}
+
+/**
+ * The match as a handful of spells a coach would describe out loud.
+ *
+ * Nobody watches a match and thinks "possession averaged 46%". They think: we
+ * were on top for twenty minutes, lost the middle of the first half, came out
+ * better after the break. So the clock is cut into blocks, each block is called
+ * strong, even or lost on who had the ball, neighbouring blocks that agree are
+ * joined, and anything too short to be a passage of play is absorbed.
+ *
+ * The naming is positional, because that is how the same figures mean different
+ * things: 60% in the opening ten minutes is a strong start, the same 60% after
+ * being on top of the game for an hour is just more of the same.
+ */
+export function buildStory(timeline: MatchTimeline): Spell[] {
+  const points = timeline.possession.filter((p) => p.value !== null) as {
+    t: number;
+    value: number;
+  }[];
+  if (points.length < 4) return [];
+
+  type Block = { fromS: number; toS: number; share: number };
+  const blocks: Block[] = [];
+  for (const span of timeline.spans.length
+    ? timeline.spans
+    : [{ fromS: timeline.startS, toS: timeline.endS }]) {
+    for (let from = span.fromS; from < span.toS; from += BLOCK_S) {
+      const toS = Math.min(from + BLOCK_S, span.toS);
+      const inside = points.filter((p) => p.t >= from && p.t < toS);
+      if (inside.length === 0) continue;
+      blocks.push({
+        fromS: from,
+        toS,
+        share: inside.reduce((sum, p) => sum + p.value, 0) / inside.length,
+      });
+    }
+  }
+  if (blocks.length === 0) return [];
+
+  // Join neighbours that agree.
+  const joined: { fromS: number; toS: number; tone: SpellTone; shares: number[] }[] = [];
+  for (const block of blocks) {
+    const tone = toneOf(block.share);
+    const last = joined.at(-1);
+    if (last && last.tone === tone && block.fromS - last.toS < BLOCK_S) {
+      last.toS = block.toS;
+      last.shares.push(block.share);
+    } else joined.push({ fromS: block.fromS, toS: block.toS, tone, shares: [block.share] });
+  }
+
+  // Absorb anything too short to be a passage of play into its neighbour.
+  const kept: typeof joined = [];
+  for (const spell of joined) {
+    const short = spell.toS - spell.fromS < MIN_SPELL_S;
+    const last = kept.at(-1);
+    if (short && last) {
+      last.toS = spell.toS;
+      last.shares.push(...spell.shares);
+    } else kept.push(spell);
+  }
+
+  const highs = timeline.highTurnovers;
+
+  let seenLost = false;
+  return kept.map((spell, i) => {
+    const share = spell.shares.reduce((sum, v) => sum + v, 0) / spell.shares.length;
+    const first = i === 0;
+    const last = i === kept.length - 1;
+
+    let title: string;
+    if (spell.tone === "strong")
+      title = first ? "Strong start" : seenLost ? "Took it back" : "On top";
+    else if (spell.tone === "lost")
+      title = first ? "Slow start" : last ? "Late pressure" : "Lost control";
+    else title = first ? "Even start" : last ? "Even finish" : "Even spell";
+    if (spell.tone === "lost") seenLost = true;
+
+    const won = highs
+      .filter((bar) => bar.fromS >= spell.fromS - 1 && bar.toS <= spell.toS + 300)
+      .reduce((sum, bar) => sum + bar.a, 0);
+    // Balls won in their half either way: a number a coach can picture, and a
+    // zero during a bad spell says more than a four-figure pressure count.
+    return {
+      fromS: spell.fromS,
+      toS: spell.toS,
+      tone: spell.tone,
+      title,
+      headline: `${Math.round(share * 100)}% of the ball`,
+      detail:
+        won > 0
+          ? `${won} ${won === 1 ? "ball" : "balls"} won in their half`
+          : spell.toS - spell.fromS > MIN_SPELL_S
+            ? "no balls won in their half"
+            : null,
+    };
+  });
+}
+
+/**
+ * The match in one sentence, from the spells rather than from an average.
+ *
+ * An average across ninety minutes hides exactly the thing worth saying: a team
+ * can be on top for twenty minutes, lose the next fifteen, and come out at 50%.
+ * This names the longest spell each way, which is what anyone who watched it
+ * would tell you first.
+ */
+export function storyLine(story: Spell[]): string {
+  if (story.length === 0) return "There is not enough in this file to tell the match's story yet.";
+  const longest = (tone: SpellTone) =>
+    story
+      .filter((spell) => spell.tone === tone)
+      .sort((a, b) => b.toS - b.fromS - (a.toS - a.fromS))[0];
+  const best = longest("strong");
+  const worst = longest("lost");
+  const mins = (spell: Spell) =>
+    `${Math.round(spell.fromS / 60)}\u2013${Math.round(spell.toS / 60)}'`;
+
+  if (best && worst)
+    return `On top for ${Math.round((best.toS - best.fromS) / 60)} minutes, and second best between ${mins(worst)}.`;
+  if (best) return `On top for ${Math.round((best.toS - best.fromS) / 60)} minutes, ${mins(best)}.`;
+  if (worst)
+    return `Second best for ${Math.round((worst.toS - worst.fromS) / 60)} minutes, ${mins(worst)}.`;
+  return "An even match throughout — neither side held the ball for long.";
 }
