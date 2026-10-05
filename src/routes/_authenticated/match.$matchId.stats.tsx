@@ -1,3 +1,5 @@
+import { MatchTimelineCard } from "@/components/ip/match-timeline";
+import { buildTimeline } from "@/lib/timeline";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
@@ -100,6 +102,15 @@ function Stats() {
 
       {match && active && (
         <>
+          {teamA && teamB && (
+            <MatchTimelineCard
+              timeline={buildTimeline({ stats, file, team: team ?? "A" })}
+              teamA={teamA}
+              teamB={teamB}
+              matchId={matchId}
+            />
+          )}
+
           <div
             className="tab-rail -mx-4 px-4 pb-1 md:mx-0 md:px-0"
             role="tablist"
