@@ -32,7 +32,8 @@ import { buildClips } from "@/lib/clips";
 import { formatClock } from "@/lib/sample-data";
 import { countEvents, downloadReviews, type ReviewedEvent } from "@/lib/event-reviews";
 import { feedLabel, type Frame } from "@/lib/match-source";
-import { teamRow } from "@/lib/match-analysis";
+import { teamRow, type StatsFile } from "@/lib/match-analysis";
+import { insidePeriods, shotsOf } from "@/lib/export-contract";
 import { cn } from "@/lib/utils";
 import { crestForTeam } from "@/lib/team-crests";
 import { shortTeamCode, type TeamIdentity } from "@/components/team/TeamToken";
@@ -139,6 +140,24 @@ function MatchScreen() {
   const [filter, setFilter] = useState<EventFilterValue>(DEFAULT_EVENT_FILTER);
   const [clock, setClock] = useState<number>(startT ?? 0);
   const liveFile = useFrameChunks(row?.files, file, clock);
+  /** Goals in time order, so the score can follow the video. */
+  const goalTimes = useMemo(
+    () =>
+      shotsOf(stats as StatsFile | undefined)
+        .filter((s) => s.goal && insidePeriods(s.t, file?.periods))
+        .map((s) => ({ t: s.t, team: s.team })),
+    [stats, file?.periods],
+  );
+  const liveScore = useMemo(() => {
+    let a = 0;
+    let b = 0;
+    for (const g of goalTimes) {
+      if (g.t > clock) continue;
+      if (g.team === "A") a += 1;
+      else b += 1;
+    }
+    return { a, b };
+  }, [goalTimes, clock]);
   const [playing, setPlaying] = useState(false);
   const [visibleCount, setVisibleCount] = useState(0);
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -516,7 +535,7 @@ function MatchScreen() {
                 </span>
                 {match.status === "ready" && (
                   <span className="display-i bg-black/55 px-2 py-0.5 text-[15px] font-extrabold text-white">
-                    {match.scoreA}–{match.scoreB}
+                    {liveScore.a}–{liveScore.b}
                   </span>
                 )}
                 <span
