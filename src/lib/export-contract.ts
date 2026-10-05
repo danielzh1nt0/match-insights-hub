@@ -193,11 +193,13 @@ export function insidePeriods(t: number, periods: Periods): boolean {
  *
  * Moments outside the periods are warm-up and stoppages, and are not goals.
  */
-export function goalsFrom(stats: StatsFile | undefined, periods: Periods) {
+export function goalsFrom(stats: StatsFile | undefined, periods: Periods, upToS?: number) {
   let a = 0;
   let b = 0;
   for (const shot of shotsOf(stats)) {
     if (!shot.goal || !insidePeriods(shot.t, periods)) continue;
+    // With a playhead, only what has already happened on screen counts.
+    if (upToS !== undefined && shot.t > upToS) continue;
     if (shot.team === "A") a += 1;
     else b += 1;
   }

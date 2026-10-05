@@ -37,7 +37,6 @@ import type {
 } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import {
-  shotCoordinateCheck,
   insidePeriods,
   passCompleted,
   periodWindow,
@@ -1246,11 +1245,15 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
   // the near one, already the right way round for both halves. Drawn as they
   // are stored, each side's shots cluster at the goal it was attacking — so
   // nothing here mirrors anything.
-  const all = (metricShots.length ? metricShots : eventShots).filter(
-    (shot) => shot.x !== null && shot.y !== null && insidePeriods(shot.t, file?.periods),
+  const all = (metricShots.length ? metricShots : eventShots).filter((shot) =>
+    insidePeriods(shot.t, file?.periods),
   );
   const shots = scopeBoth ? all : all.filter((shot) => shot.team === team);
-  const check = shotCoordinateCheck(stats);
+  // A shot whose origin has not been marked by eye yet carries no position.
+  // It still happened, so it stays in the count and in the timeline — it just
+  // cannot be drawn on a pitch, and a guessed position is worse than none.
+  const placed = shots.filter((shot) => shot.x !== null && shot.y !== null);
+  const unplaced = shots.length - placed.length;
   if (!shots.length)
     return (
       <EvidenceUnavailable
@@ -1259,46 +1262,6 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
         caption="The location and outcome of each reliable shot."
       />
     );
-  // Drawing shots we cannot place is worse than not drawing them: they stack on
-  // the touchline and read as a broken pitch. The counts underneath are still
-  // true, so those are what the card shows, with the range it actually saw.
-  if (check && !check.fits)
-    return (
-      <Card
-        question="Where did shots come from?"
-        icon={Goal}
-        caption="The positions in this match file do not land on a pitch, so only the counts are shown."
-        honesty={`${check.offPitch} of ${check.total} off the pitch`}
-      >
-        <div className="rule-y border border-wire">
-          {[
-            { id: "A" as TeamKey, who: teamA },
-            { id: "B" as TeamKey, who: teamB },
-          ].map(({ id, who }) => (
-            <div key={id} className="flex items-baseline justify-between gap-4 px-4 py-3">
-              <span className="text-[14px] text-text-bright">{who.name}</span>
-              <span className="num text-[24px] leading-none text-text-bright">
-                {all.filter((shot) => shot.team === id).length}
-              </span>
-            </div>
-          ))}
-        </div>
-        <p className="mt-3 text-[12px] leading-relaxed text-text-dim">
-          Read as {check.unit}, {check.offPitch} of {check.total} shots fall outside a{" "}
-          {Math.round(check.pitch.length)} × {Math.round(check.pitch.width)} m pitch. The
-          file&apos;s <span className="num-flat">{check.key}</span> runs{" "}
-          <span className="num-flat">
-            {Math.round(check.xRange[0])}–{Math.round(check.xRange[1])}
-          </span>{" "}
-          across and{" "}
-          <span className="num-flat">
-            {Math.round(check.yRange[0])}–{Math.round(check.yRange[1])}
-          </span>{" "}
-          down.
-        </p>
-      </Card>
-    );
-
   return (
     <Card
       question="Where did shots come from?"
@@ -1306,7 +1269,7 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
       caption="Filled means on target. A cream ring marks a goal. Each side shoots towards the goal it was attacking."
       honesty={`${shots.length} ${shots.length === 1 ? "shot" : "shots"}${
         scopeBoth ? "" : ` · ${(team === "A" ? teamA : teamB).shortCode}`
-      }`}
+      }${unplaced > 0 ? " · positions being added" : ""}`}
     >
       {scopeBoth && (
         <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -1327,39 +1290,120 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
           ))}
         </div>
       )}
-      <Pitch>
-        {shots.map((shot, index) => {
-          const shotTeam = shot.team;
-          const x = shot.x!;
-          const y = shot.y!;
-          const t = shot.t;
-          const goal = shot.goal;
-          const on = shot.onTarget;
-          return (
-            <Link
-              key={shot.id || index}
-              to="/match/$matchId/match"
-              params={{ matchId }}
-              search={{ t }}
-              aria-label={`Watch ${shotTeam} shot`}
-            >
-              {/* Drawn inside the pitch rectangle, not the viewBox. The pitch
+      {/* Every shot on a strip of match time, so a match whose positions are
+          not marked yet still has something to look at. */}
+      <ShotTimeline shots={shots} colours={colours} file={file} matchId={matchId} />
+
+      {placed.length > 0 && (
+        <Pitch>
+          {placed.map((shot, index) => {
+            const shotTeam = shot.team;
+            const x = shot.x!;
+            const y = shot.y!;
+            const t = shot.t;
+            const goal = shot.goal;
+            const on = shot.onTarget;
+            return (
+              <Link
+                key={shot.id || index}
+                to="/match/$matchId/match"
+                params={{ matchId }}
+                search={{ t }}
+                aria-label={`Watch ${shotTeam} shot`}
+              >
+                {/* Drawn inside the pitch rectangle, not the viewBox. The pitch
                   is inset, so plotting straight into viewBox space put a shot
                   on the goal line three units outside the drawn goal. */}
-              <circle
-                cx={3 + (clamp(x) / 100) * 94}
-                cy={1.5 + (clamp(y) / 100) * 60.9}
-                r={goal ? 1.9 : 1.4}
-                fill={on ? colours[shotTeam] : "transparent"}
-                fillOpacity={on ? 0.9 : 1}
-                stroke={goal ? "var(--cream)" : colours[shotTeam]}
-                strokeWidth={goal ? 0.9 : 0.6}
-              />
-            </Link>
-          );
-        })}
-      </Pitch>
+                <circle
+                  cx={3 + (clamp(x) / 100) * 94}
+                  cy={1.5 + (clamp(y) / 100) * 60.9}
+                  r={goal ? 1.9 : 1.4}
+                  fill={on ? colours[shotTeam] : "transparent"}
+                  fillOpacity={on ? 0.9 : 1}
+                  stroke={goal ? "var(--cream)" : colours[shotTeam]}
+                  strokeWidth={goal ? 0.9 : 0.6}
+                />
+              </Link>
+            );
+          })}
+        </Pitch>
+      )}
     </Card>
+  );
+}
+
+/**
+ * Every shot on a strip of match time.
+ *
+ * Positions are added by eye after the fact, so a freshly processed match has
+ * shots with no place on a pitch. They still happened, at a known minute, to a
+ * known side — which is enough for a coach to see the shape of the match and
+ * to open any of them in the video. It is also what the shot map falls back to
+ * rather than drawing a pitch with nothing on it.
+ */
+function ShotTimeline({
+  shots,
+  colours,
+  file,
+  matchId,
+}: {
+  shots: Shot[];
+  colours: { A: string; B: string };
+  file: MatchDataFile | undefined;
+  matchId: string;
+}) {
+  if (shots.length === 0) return null;
+  const periods = file?.periods ?? [];
+  const end = Math.max(periods.at(-1)?.t_end ?? 0, ...shots.map((shot) => shot.t), 1);
+  const pct = (t: number) => Math.max(0, Math.min(100, (t / end) * 100));
+
+  return (
+    <div className="mb-4">
+      <div className="relative h-16 border border-wire bg-surface-2">
+        {/* Half-time, so the gap in play is visible rather than implied. */}
+        {periods.length >= 2 && (
+          <span
+            className="absolute inset-y-0 bg-bg"
+            style={{
+              left: `${pct(periods[0]!.t_end)}%`,
+              width: `${Math.max(pct(periods[1]!.t_start) - pct(periods[0]!.t_end), 0.6)}%`,
+            }}
+            aria-hidden="true"
+          />
+        )}
+        <span className="absolute inset-x-0 top-1/2 h-px bg-wire" aria-hidden="true" />
+        {shots.map((shot, i) => (
+          <Link
+            key={shot.id || i}
+            to="/match/$matchId/match"
+            params={{ matchId }}
+            search={{ t: Math.round(shot.t * 10) / 10 }}
+            aria-label={`Watch ${shot.team === "A" ? "our" : "their"} ${shot.goal ? "goal" : "shot"} at ${Math.floor(shot.t / 60)} minutes`}
+            className="absolute -translate-x-1/2"
+            style={{
+              left: `${pct(shot.t)}%`,
+              // Ours above the line, theirs below, so the two sides read apart.
+              top: shot.team === "A" ? "22%" : "58%",
+            }}
+          >
+            <span
+              className="block rounded-full"
+              style={{
+                width: shot.goal ? 13 : 9,
+                height: shot.goal ? 13 : 9,
+                background: shot.onTarget ? colours[shot.team] : "transparent",
+                border: `${shot.goal ? 2 : 1.5}px solid ${shot.goal ? "var(--cream)" : colours[shot.team]}`,
+              }}
+            />
+          </Link>
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between text-[11px] text-text-faint">
+        <span>0&apos;</span>
+        <span>{Math.round(end / 120)}&apos;</span>
+        <span>{Math.round(end / 60)}&apos;</span>
+      </div>
+    </div>
   );
 }
 

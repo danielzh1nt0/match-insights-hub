@@ -106,11 +106,7 @@ function Stats() {
             aria-label="Stat groups"
           >
             {shownSections.map((t) => (
-              <Chip
-                key={t.key}
-                active={tab === t.key}
-                onClick={() => setTab(t.key)}
-              >
+              <Chip key={t.key} active={tab === t.key} onClick={() => setTab(t.key)}>
                 {t.label}
               </Chip>
             ))}

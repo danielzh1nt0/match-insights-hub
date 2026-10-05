@@ -98,7 +98,13 @@ export function verdict(model: InsightsModel): { headline: string; sub: string |
       sub: "Nothing in this match crossed a threshold. The phases below show what the numbers were.",
     };
   }
-  return { headline: model.top.headline, sub: model.top.interpretation };
+  // The quote has to be about *this* match. The headline is the coaching
+  // instruction and reads the same on any match where the same threshold is
+  // crossed — three in a row said "press faster when we lose the ball", which
+  // looks like a canned app sentence even though it was honestly derived. The
+  // interpretation is the same finding stated in this match's own figures, so
+  // it leads, and the instruction follows it.
+  return { headline: model.top.interpretation, sub: model.top.headline };
 }
 
 /**

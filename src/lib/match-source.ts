@@ -128,7 +128,11 @@ export function listableEvents<E extends { type: string }>(events: E[], showBeta
 }
 
 /** True when t sits inside the video and inside some period window (±5 s). */
-export function inVideo(t: number, durationS: number | null | undefined, periods?: MatchDataFile["periods"]) {
+export function inVideo(
+  t: number,
+  durationS: number | null | undefined,
+  periods?: MatchDataFile["periods"],
+) {
   if (typeof t !== "number") return true;
   if (durationS && t > durationS) return false;
   if (periods?.length) return periods.some((p) => t >= p.t_start - 5 && t <= p.t_end + 5);
@@ -147,8 +151,8 @@ export async function fetchMatches(): Promise<MatchListItem[]> {
   );
   let list = (rows ?? []) as MatchRow[];
   if (DEMO_MATCH_IDS.length) {
-    list = DEMO_MATCH_IDS.map((id) => list.find((r) => r.id === id)).filter(
-      (r): r is MatchRow => Boolean(r),
+    list = DEMO_MATCH_IDS.map((id) => list.find((r) => r.id === id)).filter((r): r is MatchRow =>
+      Boolean(r),
     );
   }
   return list.map((row) => ({ row, label: byId.get(row.id) ?? null }));
@@ -200,21 +204,40 @@ export async function signedUrl(path: string): Promise<string> {
 
 const jsonCache = new Map<string, Promise<any>>();
 
-function loadJson<T>(path: string): Promise<T> {
-  const cached = jsonCache.get(path);
+/**
+ * A match file, keyed by the version of the match it belongs to.
+ *
+ * The exports are rewritten in place, so the path alone is not an identity:
+ * the app was holding a stats file from before the shot positions were redone
+ * and had no way to notice. The row's `updated_at` goes into the cache key and
+ * onto the request, so a new export invalidates both our own cache and the
+ * browser's.
+ */
+function loadJson<T>(path: string, version?: string | null): Promise<T> {
+  const key = version ? `${path}@${version}` : path;
+  const cached = jsonCache.get(key);
   if (cached) return cached as Promise<T>;
   const promise = signedUrl(path)
-    .then((url) => fetch(url))
+    .then((url) =>
+      fetch(
+        version ? `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(version)}` : url,
+      ),
+    )
     .then((res) => {
       if (!res.ok) throw new Error(`Could not load ${path}`);
       return res.json();
     })
     .catch((err) => {
-      jsonCache.delete(path);
+      jsonCache.delete(key);
       throw err;
     });
-  jsonCache.set(path, promise);
+  jsonCache.set(key, promise);
   return promise as Promise<T>;
+}
+
+/** What makes one version of a match's files different from the next. */
+function versionOf(row: MatchRow) {
+  return (row as { updated_at?: string }).updated_at ?? row.created_at ?? null;
 }
 
 /** Sorted by t, deduped by id — the only events list in the app. */
@@ -230,7 +253,7 @@ export function normaliseEvents(events: FeedEvent[] | undefined): FeedEvent[] {
 }
 
 export async function fetchMatchData(row: MatchRow): Promise<MatchDataFile> {
-  const file = await loadJson<MatchDataFile>(row.files.match_data);
+  const file = await loadJson<MatchDataFile>(row.files.match_data, versionOf(row));
   const events = normaliseEvents(file.events).filter((e) =>
     inVideo(e.t, row.duration_s, file.periods),
   );
@@ -239,8 +262,8 @@ export async function fetchMatchData(row: MatchRow): Promise<MatchDataFile> {
 
 export async function fetchMatchStats(row: MatchRow): Promise<Record<string, any>> {
   const [stats, file] = await Promise.all([
-    loadJson<Record<string, any>>(row.files.stats),
-    loadJson<MatchDataFile>(row.files.match_data).catch(() => null),
+    loadJson<Record<string, any>>(row.files.stats, versionOf(row)),
+    loadJson<MatchDataFile>(row.files.match_data, versionOf(row)).catch(() => null),
   ]);
   const shots = stats?.["metrics"]?.["shots"];
   if (!Array.isArray(shots)) return stats;
@@ -248,7 +271,9 @@ export async function fetchMatchStats(row: MatchRow): Promise<Record<string, any
     ...stats,
     metrics: {
       ...stats["metrics"],
-      shots: shots.filter((s: { t?: number }) => inVideo(s?.t as number, row.duration_s, file?.periods)),
+      shots: shots.filter((s: { t?: number }) =>
+        inVideo(s?.t as number, row.duration_s, file?.periods),
+      ),
     },
   };
 }

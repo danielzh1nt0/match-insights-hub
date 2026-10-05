@@ -273,3 +273,32 @@ test("real metres pass the check", () => {
   } as never;
   expect(shotCoordinateCheck(stats)!.fits).toBe(true);
 });
+
+test("the score at a moment is the goals scored by then", () => {
+  // Vallentuna: 0-0 until 60:04, then 1-0, 1-1, 1-2, 2-2, 3-2.
+  const stats = {
+    pitch: { length: 106, width: 64 },
+    metrics: {
+      shots: [
+        { team: "A", t: 3604, goal: true, x_m: 99, y_m: 32 },
+        { team: "B", t: 3742, goal: true, x_m: 7, y_m: 30 },
+        { team: "B", t: 3840, goal: true, x_m: 6, y_m: 33 },
+        { team: "A", t: 5513, goal: true, x_m: 98, y_m: 31 },
+        { team: "A", t: 5593, goal: true, x_m: 97, y_m: 30 },
+      ],
+    },
+  } as never;
+  const periods = [
+    { t_start: 435, t_end: 2890 },
+    { t_start: 3220, t_end: 5645, mirrored: true },
+  ];
+
+  expect(goalsFrom(stats, periods, 3000)).toEqual({ a: 0, b: 0 });
+  expect(goalsFrom(stats, periods, 3700)).toEqual({ a: 1, b: 0 });
+  expect(goalsFrom(stats, periods, 3800)).toEqual({ a: 1, b: 1 });
+  expect(goalsFrom(stats, periods, 3900)).toEqual({ a: 1, b: 2 });
+  expect(goalsFrom(stats, periods, 5550)).toEqual({ a: 2, b: 2 });
+  expect(goalsFrom(stats, periods, 5645)).toEqual({ a: 3, b: 2 });
+  // Without a playhead it is still the full-time score.
+  expect(goalsFrom(stats, periods)).toEqual({ a: 3, b: 2 });
+});

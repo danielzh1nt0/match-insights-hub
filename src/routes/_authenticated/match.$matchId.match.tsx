@@ -26,6 +26,7 @@ import { MatchSide, FeedHeading, type SideTab } from "@/components/match/MatchSi
 import { MomentumStrip } from "@/components/match/MomentumStrip";
 import type { StatIconName } from "@/components/match/StatIcon";
 import { useAnalysis } from "@/hooks/use-match";
+import { goalsFrom } from "@/lib/export-contract";
 import { listableEvents } from "@/lib/match-source";
 import { useMatchVideo } from "@/hooks/use-match-video";
 import { buildClips } from "@/lib/clips";
@@ -124,10 +125,24 @@ function MatchScreen() {
   const { t: startT } = Route.useSearch();
   const [scope, setScope] = useState<TeamScope>("both");
   const [period, setPeriod] = useState<Period>("full");
-  const { match, row, label, file, stats, team, colours, loading, events: allEvents, hiddenEvents, review } =
-    useAnalysis(matchId, scope);
+  const {
+    match,
+    row,
+    label,
+    file,
+    stats,
+    team,
+    colours,
+    loading,
+    events: allEvents,
+    hiddenEvents,
+    review,
+  } = useAnalysis(matchId, scope);
   const [showBeta, setShowBeta] = useState(false);
-  const hasBeta = useMemo(() => allEvents.some((e) => (e as { tier?: string }).tier === "beta"), [allEvents]);
+  const hasBeta = useMemo(
+    () => allEvents.some((e) => (e as { tier?: string }).tier === "beta"),
+    [allEvents],
+  );
   /** Only verified moments are listed; beta behind a toggle, hidden never. */
   const events = useMemo(() => listableEvents(allEvents, showBeta), [allEvents, showBeta]);
   const [typesOverride, setTypesOverride] = useState<string[] | null>(null);
@@ -443,10 +458,23 @@ function MatchScreen() {
 
   const staleSchema = row ? row.schema_version !== 1 : false;
 
+  /**
+   * The score as it stood at the moment on screen.
+   *
+   * The header showed the final score from the first frame, which gives away
+   * every goal before the coach has watched them and makes the video feel like
+   * a recap rather than the match. Goals are counted up to the playhead.
+   */
+  const liveMatch = useMemo(() => {
+    if (!match) return match;
+    const goals = goalsFrom(stats, file?.periods, clock);
+    return { ...match, scoreA: goals.a, scoreB: goals.b };
+  }, [match, stats, file?.periods, clock]);
+
   return (
     <MatchShell
       matchId={matchId}
-      match={match}
+      match={liveMatch}
       scope={scope}
       setScope={setScope}
       period={period}
