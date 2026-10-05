@@ -38,11 +38,55 @@ export type Shot = {
   y: number | null;
   t: number;
   goal: boolean;
-  onTarget: boolean;
+  /** Whether the ball was heading in. Null when the file does not say. */
+  onTarget: boolean | null;
 };
 
 /** Outcome words that mean the ball was heading in. */
-const ON_TARGET = new Set(["goal", "on_target", "saved", "scored"]);
+const ON_TARGET = new Set(["goal", "on_target", "saved", "scored", "blocked_on_line"]);
+/** Outcome words that mean it was not. */
+const OFF_TARGET = new Set([
+  "off_target",
+  "missed",
+  "miss",
+  "wide",
+  "over",
+  "high",
+  "blocked",
+  "post",
+  "woodwork",
+]);
+
+/**
+ * On target, off target, or not recorded.
+ *
+ * The old rule had two states and so had to file "we were not told" under
+ * "off target". A match with two marked goals and six attempts nobody had
+ * graded then read as two on target and six wide — a shooting accuracy the
+ * coach never produced, and one that makes his side look worse than the
+ * footage does. A miss and an unknown are different facts, so the type carries
+ * three states and the screen only claims the ones the file actually states.
+ */
+function onTargetOf(raw: Record<string, unknown>, goal: boolean): boolean | null {
+  if (goal) return true;
+  if (typeof raw["on_target"] === "boolean") return raw["on_target"];
+  const outcome = String(raw["outcome"] ?? "").toLowerCase();
+  if (ON_TARGET.has(outcome)) return true;
+  if (OFF_TARGET.has(outcome)) return false;
+  return null;
+}
+
+/** The outcome split, counted only over the shots whose outcome was recorded. */
+export function accuracyOf(shots: Shot[]) {
+  const judged = shots.filter((shot) => shot.onTarget !== null);
+  const on = judged.filter((shot) => shot.onTarget === true).length;
+  return {
+    judged: judged.length,
+    on,
+    off: judged.length - on,
+    unknown: shots.length - judged.length,
+  };
+}
 
 /**
  * One shot, whichever way this export spells it.
@@ -75,7 +119,7 @@ export function normaliseShot(
     y: rawY === null ? null : unit === "metres" ? (rawY / pitch.width) * 100 : rawY,
     t: finite(raw["t"]) ?? 0,
     goal,
-    onTarget: goal || raw["on_target"] === true || ON_TARGET.has(outcome),
+    onTarget: onTargetOf(raw, goal),
   };
 }
 

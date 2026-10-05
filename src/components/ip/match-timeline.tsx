@@ -1,9 +1,11 @@
 import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Activity, ArrowRight } from "lucide-react";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import {
   barHalves,
   buildStory,
+  keyMoments,
   storyLine,
   halves,
   playedScale,
@@ -42,6 +44,89 @@ function show(value: number | null, unit: Row["unit"]) {
   if (unit === "pct") return `${Math.round(value * 100)}%`;
   if (unit === "metres") return `${Math.round(value)} m`;
   return `${Math.round(value)}`;
+}
+
+/**
+ * Where the play was, as a pitch.
+ *
+ * "Share of final-third play at their end: 53%" is a sentence a coach has to
+ * decode. A pitch with the busier end shaded is the same fact in a shape he has
+ * read ten thousand times. Our goal is on the left, so weight to the right is a
+ * team playing in the other half.
+ */
+function TerritoryPitch({
+  share,
+  teamA,
+  teamB,
+}: {
+  share: number;
+  teamA: StatsTeamIdentity;
+  teamB: StatsTeamIdentity;
+}) {
+  const theirs = Math.max(0, Math.min(1, share));
+  const edge = theirs * 100;
+  return (
+    <div>
+      <svg
+        viewBox="0 0 100 62"
+        className="block w-full"
+        role="img"
+        aria-label={`${Math.round(theirs * 100)} per cent of the play was in their half`}
+      >
+        <rect x="0" y="0" width="100" height="62" fill="var(--pitch-top)" />
+        {/* Territory as a length, not a tint. Two shades of the same colour at
+            68% and at 50% look alike at a glance, which defeats the point of
+            drawing a pitch at all; an edge sitting clear of the halfway line
+            does not. Our colour reaches as far up the pitch as we played. */}
+        <rect x="0" y="0" width={edge} height="62" fill={teamA.kitColour} fillOpacity={0.68} />
+        <rect
+          x={edge}
+          y="0"
+          width={100 - edge}
+          height="62"
+          fill={teamB.kitColour}
+          fillOpacity={0.34}
+        />
+        <g stroke="var(--cream)" fill="none">
+          <g strokeOpacity="0.45" strokeWidth="0.6">
+            <rect x="1" y="1" width="98" height="60" />
+            <circle cx="50" cy="31" r="8" />
+            <rect x="1" y="16" width="12" height="30" />
+            <rect x="87" y="16" width="12" height="30" />
+          </g>
+          {/* The halfway line is what the edge is read against, so it stays
+              brighter than the rest of the markings. */}
+          <line x1="50" y1="1" x2="50" y2="61" strokeOpacity="0.85" strokeWidth="0.7" />
+          <line
+            x1="33"
+            y1="1"
+            x2="33"
+            y2="61"
+            strokeDasharray="2 2"
+            strokeOpacity="0.3"
+            strokeWidth="0.5"
+          />
+          <line
+            x1="67"
+            y1="1"
+            x2="67"
+            y2="61"
+            strokeDasharray="2 2"
+            strokeOpacity="0.3"
+            strokeWidth="0.5"
+          />
+          <line x1={edge} y1="0" x2={edge} y2="62" strokeWidth="1.1" />
+        </g>
+      </svg>
+      <div className="mt-2 flex items-baseline justify-between gap-3">
+        <span className="text-[12px] text-text-faint">our end</span>
+        <span className="num text-[17px] leading-none text-text-bright">
+          {Math.round(theirs * 100)}% in their half
+        </span>
+        <span className="text-[12px] text-text-faint">their end</span>
+      </div>
+    </div>
+  );
 }
 
 /** A thumbnail of the shape, no axes — it is there to be glanced at. */
@@ -98,6 +183,9 @@ export function MatchTimelineCard({
 }) {
   const navigate = useNavigate();
   const at = playedScale(timeline);
+  // A coach opens this to know what happened. Everything an analyst would want
+  // is still here, one tap away, rather than in front of the answer.
+  const [detailed, setDetailed] = useState(false);
 
   if (timeline.empty)
     return (
@@ -111,6 +199,7 @@ export function MatchTimelineCard({
     );
 
   const story = buildStory(timeline);
+  const moments = keyMoments(timeline, story);
   const possession = halves(timeline.possession, timeline.spans);
   const tilt = halves(timeline.tilt, timeline.spans);
   const pressing = barHalves(timeline.pressure, timeline.spans, "a");
@@ -125,15 +214,6 @@ export function MatchTimelineCard({
       unit: "pct",
       goodWhen: "up",
       series: timeline.possession,
-    },
-    {
-      key: "tilt",
-      label: "Play in their half",
-      first: tilt.first,
-      second: tilt.second,
-      unit: "pct",
-      goodWhen: "up",
-      series: timeline.tilt,
     },
     {
       key: "press",
@@ -209,8 +289,72 @@ export function MatchTimelineCard({
             </h3>
             <p className="mt-1 text-[13.5px] leading-snug text-text">{headline}</p>
           </div>
+          <div
+            className="ml-auto flex shrink-0 border border-wire"
+            role="group"
+            aria-label="How much detail"
+          >
+            {(
+              [
+                ["Quick", false],
+                ["Detailed", true],
+              ] as const
+            ).map(([label, on]) => (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={detailed === on}
+                onClick={() => setDetailed(on)}
+                className={cn(
+                  "min-h-9 border-l border-wire px-2.5 text-[11.5px] font-bold transition-colors first:border-l-0",
+                  detailed === on
+                    ? "bg-accent-sea text-ink"
+                    : "text-text-dim hover:bg-surface-2 hover:text-text",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
+
+      {/* The two or three worth opening, before anything that needs reading. */}
+      {moments.length > 0 && (
+        <div className="border-t border-wire px-4 py-3 sm:px-5">
+          <p className="label-xs mb-2 text-text-faint">Worth watching</p>
+          <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {moments.map((moment, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() =>
+                  void navigate({
+                    to: "/match/$matchId/match",
+                    params: { matchId },
+                    search: { t: Math.round(Math.max(0, moment.t - 5) * 10) / 10 },
+                  })
+                }
+                className="flex min-w-[112px] flex-1 flex-col gap-1 border border-wire bg-surface-2 p-3 text-left transition-colors hover:border-accent-sea"
+              >
+                <span className="flex items-center gap-2">
+                  <span
+                    className={cn("h-2 w-2 shrink-0 rounded-full", TONE[moment.tone])}
+                    aria-hidden="true"
+                  />
+                  <span className="num text-[15px] leading-none text-text-bright">
+                    {minute(moment.t)}
+                  </span>
+                </span>
+                <span className="text-[13px] font-semibold leading-snug text-text-bright">
+                  {moment.label}
+                </span>
+                <span className="text-[11.5px] text-text-faint">{moment.note}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* The spells, in the words a coach would use telling someone about the
           match. Each one opens the video where it started. */}
@@ -275,55 +419,71 @@ export function MatchTimelineCard({
 
       {/* First half against second, one row each. The numbers are the answer;
           the thumbnail beside them is how it got there. */}
-      <div className="rule-y border-y border-wire">
-        <div className="grid grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 py-2 sm:px-5">
-          <span className="label-xs text-text-faint">&nbsp;</span>
-          <span className="label-xs text-right text-text-faint">1st</span>
-          <span />
-          <span className="label-xs text-right text-text-faint">2nd</span>
-          <span />
-        </div>
-        {rows.map((row) => {
-          const moved =
-            row.first !== null && row.second !== null && row.first !== 0
-              ? (row.second - row.first) / Math.abs(row.first)
-              : 0;
-          const better =
-            row.goodWhen === "neither" || Math.abs(moved) < 0.05
-              ? null
-              : moved > 0 === (row.goodWhen === "up");
-          return (
-            <div
-              key={row.key}
-              className="grid min-h-12 grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 sm:px-5"
-            >
-              <span className="text-[13.5px] text-text-bright">{row.label}</span>
-              <span className="num text-right text-[17px] leading-none text-text-dim">
-                {show(row.first, row.unit)}
-              </span>
-              <ArrowRight size={13} aria-hidden="true" className="text-text-faint" />
-              <span
-                className={cn(
-                  "num text-right text-[19px] leading-none",
-                  better === null
-                    ? "text-text-bright"
-                    : better
-                      ? "text-positive"
-                      : "text-reaction-bad",
-                )}
+      {detailed && (
+        <div className="rule-y border-y border-wire">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 py-2 sm:px-5">
+            <span className="label-xs text-text-faint">&nbsp;</span>
+            <span className="label-xs text-right text-text-faint">1st</span>
+            <span />
+            <span className="label-xs text-right text-text-faint">2nd</span>
+            <span />
+          </div>
+          {rows.map((row) => {
+            const moved =
+              row.first !== null && row.second !== null && row.first !== 0
+                ? (row.second - row.first) / Math.abs(row.first)
+                : 0;
+            const better =
+              row.goodWhen === "neither" || Math.abs(moved) < 0.05
+                ? null
+                : moved > 0 === (row.goodWhen === "up");
+            return (
+              <div
+                key={row.key}
+                className="grid min-h-12 grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 sm:px-5"
               >
-                {show(row.second, row.unit)}
-              </span>
-              <Spark points={row.series} colour={teamA.kitColour} />
-            </div>
-          );
-        })}
-      </div>
+                <span className="text-[13.5px] text-text-bright">{row.label}</span>
+                <span className="num text-right text-[17px] leading-none text-text-dim">
+                  {show(row.first, row.unit)}
+                </span>
+                <ArrowRight size={13} aria-hidden="true" className="text-text-faint" />
+                <span
+                  className={cn(
+                    "num text-right text-[19px] leading-none",
+                    better === null
+                      ? "text-text-bright"
+                      : better
+                        ? "text-positive"
+                        : "text-reaction-bad",
+                  )}
+                >
+                  {show(row.second, row.unit)}
+                </span>
+                <Spark points={row.series} colour={teamA.kitColour} />
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* The one chart worth keeping: when the ball changed hands, against the
           goals, with a way into the video. */}
-      {d && (
-        <div className="px-4 py-4 sm:px-5">
+      {detailed && tilt.first !== null && (
+        <div className="border-t border-wire px-4 py-4 sm:px-5">
+          <h4 className="text-[13px] font-semibold text-text-bright">Where did we play?</h4>
+          <p className="mb-3 mt-0.5 text-[11.5px] text-text-faint">
+            Where the ball was, our goal on the left
+          </p>
+          <TerritoryPitch
+            share={((tilt.first ?? 0) + (tilt.second ?? tilt.first ?? 0)) / 2}
+            teamA={teamA}
+            teamB={teamB}
+          />
+        </div>
+      )}
+
+      {detailed && d && (
+        <div className="border-t border-wire px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h4 className="text-[13px] font-semibold text-text-bright">
               Who had the ball, minute by minute

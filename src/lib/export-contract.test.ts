@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+  accuracyOf,
   completionOf,
   finalThirdEntries,
   goalsFrom,
@@ -64,6 +65,30 @@ test("reads the outcome word as well as the booleans", () => {
 test("a shot with no position stays unplaced rather than taking a default", () => {
   const stats = { metrics: { shots: [{ team: "A", outcome: "goal" }] } } as never;
   expect(shotsOf(stats)[0]!.x).toBeNull();
+});
+
+test("an ungraded shot is not a miss", () => {
+  // The old rule had two states, so every attempt nobody had graded counted as
+  // off target: two goals and six ungraded shots reported 25% accuracy the
+  // coach never produced. Ungraded is now its own answer.
+  const stats = {
+    metrics: {
+      shots: [
+        { team: "A", outcome: "goal" },
+        { team: "A", outcome: "wide" },
+        { team: "A", x_m: 80, y_m: 30 },
+        { team: "A", x_m: 78, y_m: 31 },
+      ],
+    },
+  } as never;
+
+  const shots = shotsOf(stats, "A");
+  expect(shots.map((shot) => shot.onTarget)).toEqual([true, false, null, null]);
+
+  const split = accuracyOf(shots);
+  expect(split).toEqual({ judged: 2, on: 1, off: 1, unknown: 2 });
+  // Accuracy is reported out of the graded two, never out of all four.
+  expect(split.on / split.judged).toBe(0.5);
 });
 
 /* ---------------- passes ---------------- */

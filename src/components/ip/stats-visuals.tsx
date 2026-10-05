@@ -40,6 +40,7 @@ import {
   insidePeriods,
   passCompleted,
   periodWindow,
+  accuracyOf,
   shotsOf as contractShots,
   type Shot,
 } from "@/lib/export-contract";
@@ -1235,7 +1236,12 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
         x: point?.x ?? null,
         y: point?.y ?? null,
         goal: event.type === "goal",
-        onTarget: event.type === "goal" || event.payload?.["on_target"] === true,
+        onTarget:
+          event.type === "goal"
+            ? true
+            : typeof event.payload?.["on_target"] === "boolean"
+              ? (event.payload["on_target"] as boolean)
+              : null,
       };
     });
   // A shot with no position cannot be drawn on a pitch. It used to be planted
@@ -1266,10 +1272,10 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
     <Card
       question="Where did shots come from?"
       icon={Goal}
-      caption="Filled means on target. A cream ring marks a goal. Each side shoots towards the goal it was attacking."
+      caption="Filled means on target, hollow a miss, dashed not graded yet. A cream ring marks a goal. Each side shoots towards the goal it was attacking."
       honesty={`${shots.length} ${shots.length === 1 ? "shot" : "shots"}${
         scopeBoth ? "" : ` · ${(team === "A" ? teamA : teamB).shortCode}`
-      }${unplaced > 0 ? " · positions being added" : ""}`}
+      }${unplaced > 0 ? ` · ${placed.length} placed on the pitch` : ""}`}
     >
       {scopeBoth && (
         <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -1293,6 +1299,13 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
       {/* Every shot on a strip of match time, so a match whose positions are
           not marked yet still has something to look at. */}
       <ShotTimeline shots={shots} colours={colours} file={file} matchId={matchId} />
+      {unplaced > 0 && (
+        <p className="mt-2 text-[12px] text-text-dim">
+          {unplaced} of {shots.length} {unplaced === 1 ? "shot has" : "shots have"} no marked
+          position yet, so {unplaced === 1 ? "it is" : "they are"} on the strip above but not on the
+          pitch. Tap any of them to watch it.
+        </p>
+      )}
 
       {placed.length > 0 && (
         <Pitch>
@@ -1318,10 +1331,11 @@ function ShotMap({ stats, colours, matchId, events, file, team, scopeBoth, teamA
                   cx={3 + (clamp(x) / 100) * 94}
                   cy={1.5 + (clamp(y) / 100) * 60.9}
                   r={goal ? 1.9 : 1.4}
-                  fill={on ? colours[shotTeam] : "transparent"}
-                  fillOpacity={on ? 0.9 : 1}
+                  fill={on === true ? colours[shotTeam] : "transparent"}
+                  fillOpacity={on === true ? 0.9 : 1}
                   stroke={goal ? "var(--cream)" : colours[shotTeam]}
                   strokeWidth={goal ? 0.9 : 0.6}
+                  strokeDasharray={on === null ? "1 0.8" : undefined}
                 />
               </Link>
             );
@@ -1391,8 +1405,9 @@ function ShotTimeline({
               style={{
                 width: shot.goal ? 13 : 9,
                 height: shot.goal ? 13 : 9,
-                background: shot.onTarget ? colours[shot.team] : "transparent",
-                border: `${shot.goal ? 2 : 1.5}px solid ${shot.goal ? "var(--cream)" : colours[shot.team]}`,
+                background: shot.onTarget === true ? colours[shot.team] : "transparent",
+                border: `${shot.goal ? 2 : 1.5}px ${shot.onTarget === null ? "dashed" : "solid"} ${shot.goal ? "var(--cream)" : colours[shot.team]}`,
+                opacity: shot.onTarget === null ? 0.65 : 1,
               }}
             />
           </Link>
@@ -1420,7 +1435,12 @@ function ShotSummary({ stats, team, events }: Props) {
           x: finite(event.payload?.["x"]),
           y: finite(event.payload?.["y"]),
           goal: event.type === "goal",
-          onTarget: event.type === "goal" || event.payload?.["on_target"] === true,
+          onTarget:
+            event.type === "goal"
+              ? true
+              : typeof event.payload?.["on_target"] === "boolean"
+                ? (event.payload["on_target"] as boolean)
+                : null,
         }));
   if (!shots.length)
     return (
@@ -1430,9 +1450,11 @@ function ShotSummary({ stats, team, events }: Props) {
         caption="Shot volume, accuracy and penalty-area share."
       />
     );
-  const on = shots.filter((shot) => shot.onTarget).length;
+  const accuracy = accuracyOf(shots);
   const goals = shots.filter((shot) => shot.goal).length;
-  // Only shots we can place can be said to be inside the box.
+  // Only shots we can place can be said to be inside the box — so the figure is
+  // reported out of the placed ones, not out of every shot. Out of every shot it
+  // read as though the unplaced ones had been shown to be outside the area.
   const placed = shots.filter((shot) => shot.x !== null);
   const box = placed.filter((shot) => shot.x! < 18 || shot.x! > 82).length;
   return (
@@ -1440,16 +1462,33 @@ function ShotSummary({ stats, team, events }: Props) {
       question="What did our shooting produce?"
       icon={Zap}
       caption="The shot total, accuracy and penalty-area share without a score dial."
-      honesty={`${shots.length} shot moments`}
+      honesty={`${shots.length} shot moments${
+        accuracy.unknown > 0 ? ` · ${accuracy.judged} with the outcome recorded` : ""
+      }`}
     >
       <div className="grid grid-cols-3 rule-x border border-wire">
         <Metric value={`${shots.length}`} label="shots" />
-        <Metric value={`${on}`} label="on target" />
+        {/* Accuracy over the graded shots only. A dash beats a number that
+            counts every ungraded attempt as a miss. */}
+        <Metric
+          value={accuracy.judged === 0 ? "—" : `${accuracy.on}`}
+          label={accuracy.judged === 0 ? "on target" : `on target of ${accuracy.judged}`}
+        />
         <Metric value={`${goals}`} label="goals" />
       </div>
       <p className="mt-3 text-[12px] text-text-dim">
-        {box} of {shots.length} attempts came from inside the penalty area.
+        {accuracy.judged === 0
+          ? "No shot has been graded on target or wide yet, so accuracy is withheld rather than guessed."
+          : `${accuracy.off} of the ${accuracy.judged} graded attempts missed the target.`}
+        {accuracy.unknown > 0 &&
+          ` ${accuracy.unknown} ${accuracy.unknown === 1 ? "shot is" : "shots are"} still ungraded.`}
       </p>
+      {placed.length > 0 && (
+        <p className="mt-1 text-[12px] text-text-dim">
+          {box} of the {placed.length} shots with a marked position came from inside the penalty
+          area.
+        </p>
+      )}
     </Card>
   );
 }

@@ -461,3 +461,54 @@ export function storyLine(story: Spell[]): string {
     return `Second best for ${Math.round((worst.toS - worst.fromS) / 60)} minutes, ${mins(worst)}.`;
   return "An even match throughout — neither side held the ball for long.";
 }
+
+/* ---------------- the moments worth opening ---------------- */
+
+export type KeyMoment = {
+  t: number;
+  tone: SpellTone;
+  /** Two or three words. */
+  label: string;
+  /** The figure or score behind it. */
+  note: string;
+};
+
+/**
+ * The two or three moments a coach should actually watch.
+ *
+ * Goals pick themselves. Past those, the thing worth opening is the turn: the
+ * minute a good spell started and the minute a bad one did, because that is
+ * where the cause is. Anything more than four and it stops being a shortlist
+ * and becomes another list to read.
+ */
+export function keyMoments(timeline: MatchTimeline, story: Spell[]): KeyMoment[] {
+  const out: KeyMoment[] = [];
+
+  const worst = story
+    .filter((spell) => spell.tone === "lost")
+    .sort((a, b) => b.toS - b.fromS - (a.toS - a.fromS))[0];
+  if (worst)
+    out.push({
+      t: worst.fromS,
+      tone: "lost",
+      label: worst.title,
+      note: worst.headline,
+    });
+
+  const best = story
+    .filter((spell) => spell.tone === "strong")
+    .sort((a, b) => b.toS - b.fromS - (a.toS - a.fromS))[0];
+  if (best) out.push({ t: best.fromS, tone: "strong", label: best.title, note: best.headline });
+
+  // The goal that changed the match: the last one, which settled the score.
+  const decisive = timeline.goals.at(-1);
+  if (decisive)
+    out.push({
+      t: decisive.t,
+      tone: decisive.team === "A" ? "strong" : "lost",
+      label: "Goal",
+      note: decisive.score,
+    });
+
+  return out.sort((a, b) => a.t - b.t).slice(0, 4);
+}
