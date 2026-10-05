@@ -539,8 +539,15 @@ export function MatchCanvas({
         const dh = vh * scale;
         const ox = (rect.width - dw) / 2;
         const oy = (rect.height - dh) / 2;
-        const sx = dw / (data.width || vw);
-        const sy = dh / (data.height || vh);
+        // `players[].px` is in pixels of a 1920 x 1080 frame, whatever
+        // resolution the file was processed at. Scaling it by the processing
+        // resolution instead stretched every pin away from the top-left corner,
+        // which is why they sat below the players and drifted further the lower
+        // down the picture they were.
+        const PX_W = 1920;
+        const PX_H = 1080;
+        const sx = dw / PX_W;
+        const sy = dh / PX_H;
         map = (point) => [ox + point[0] * sx, oy + point[1] * sy];
         const cam = (data as unknown as { camera?: CylCamera | null }).camera;
         if (cam && cam.camera === "cylindrical") {
