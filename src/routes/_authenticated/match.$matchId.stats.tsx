@@ -1,10 +1,9 @@
-import { cn } from "@/lib/utils";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Chip } from "@/components/ip/primitives";
-import { NotVerifiedYet, StatsVisuals } from "@/components/ip/stats-visuals";
+import { StatsVisuals } from "@/components/ip/stats-visuals";
 import { ScopeChips } from "@/components/ip/scope-chips";
 import { HeadToHeadBand } from "@/components/ip/head-to-head-band";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
@@ -73,27 +72,11 @@ function Stats() {
       }
     : null;
 
-  const grade = row?.summary?.["ball_grade"] as
-    { possession_ok?: boolean; events_ok?: boolean } | undefined;
-  // Absent means an older file we never graded, which stays allowed. Only an
-  // explicit false withholds anything.
-  const possessionOk = grade?.possession_ok !== false;
-
-  /** Tabs that rest on the ball being tracked well enough to believe. */
-  const NEEDS_BALL = new Set(["ball", "pressing", "passes", "setpieces"]);
-  /** Rows inside the surviving tabs that rest on the same thing. */
-  const NEEDS_BALL_ROW = /possession|loss|lost|turnover|pass|tilt|third|press|set piece|sequence/i;
-
-  // The tabs stay on screen either way. Removing four of them made the app
-  // look broken rather than careful — you could not tell whether pressing had
-  // been dropped from the product or was simply not ready for this match.
-  const shownSections = sections.map((section) => ({
-    ...section,
-    locked: !possessionOk && NEEDS_BALL.has(section.key),
-    rows: possessionOk ? section.rows : section.rows.filter((r) => !NEEDS_BALL_ROW.test(r.label)),
-  }));
+  // Daniel, 4 Oct: don't hide stuff. Every tab and every card shows for every
+  // match, with the Beta label on the match carrying the caveat. The data team
+  // is fixing the numbers at source and the app picks up new files on its own.
+  const shownSections = sections;
   const shownActive = shownSections.find((s) => s.key === tab) ?? shownSections[0];
-  const locked = Boolean(shownActive?.locked);
 
   return (
     <MatchShell
@@ -127,15 +110,8 @@ function Stats() {
                 key={t.key}
                 active={tab === t.key}
                 onClick={() => setTab(t.key)}
-                className={cn(t.locked && tab !== t.key && "opacity-45")}
-                title={t.locked ? "Still being verified for this match" : undefined}
               >
                 {t.label}
-                {t.locked && (
-                  <span className="label-xs text-text-faint" aria-label="not verified yet">
-                    ·
-                  </span>
-                )}
               </Chip>
             ))}
           </div>
@@ -152,15 +128,9 @@ function Stats() {
             />
           )}
 
-          {locked ? (
-            <NotVerifiedYet
-              what={`${shownActive?.label} is still being verified for this match — the ball was not tracked well enough here to stand behind these numbers, so they are not shown. Score, shots, shape and the tracked players on the video are unaffected.`}
-            />
-          ) : (
-            <p className="text-[12px] text-text-faint">{shownActive?.caption}</p>
-          )}
+          <p className="text-[12px] text-text-faint">{shownActive?.caption}</p>
 
-          {!locked && teamA && teamB && shownActive && shownActive.rows.length > 0 && (
+          {teamA && teamB && shownActive && shownActive.rows.length > 0 && (
             <HeadToHeadBand
               rows={shownActive.rows}
               teamA={teamA}
@@ -169,7 +139,7 @@ function Stats() {
             />
           )}
 
-          {!locked && teamA && teamB && (
+          {teamA && teamB && (
             <StatsVisuals
               tab={shownActive?.key ?? "shooting"}
               players={players}
@@ -186,7 +156,7 @@ function Stats() {
               lineDefending={lineDefending}
               teamA={teamA}
               teamB={teamB}
-              ballGrade={grade ?? null}
+              ballGrade={null}
             />
           )}
         </>

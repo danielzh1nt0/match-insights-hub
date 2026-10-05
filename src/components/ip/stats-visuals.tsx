@@ -683,9 +683,9 @@ function Distance({ players, colour }: { players: PlayerStat[]; colour: string }
   const max = Math.max(...ranked.map((p) => p.distanceM / p.minutes));
   return (
     <Card
-      question="Who covered the ground?"
+      question="Distance covered (while in camera view)"
       icon={Footprints}
-      caption="Sorted by distance per visible minute. Bright segment marks the top-intensity share."
+      caption="The camera follows the ball, so a player out of shot is not counted. Sorted by distance per visible minute."
       honesty={`${ranked.length} observed players`}
     >
       <div className="rule-y">
@@ -2700,8 +2700,11 @@ export function StatsVisuals(props: Props) {
       <HeatMap key="heat" frames={frames} team={props.team} colour={colour} file={props.file} />,
       <SequenceLength key="sequence" {...p} />,
       <Runs key="runs" frames={frames} team={props.team} colour={colour} />,
-      // Distance covered only counts a player while the camera can see him,
-      // so the figure is far below the truth. Out until it is whole.
+      <Distance
+        key="distance"
+        players={props.players.filter((x) => x.team === props.team)}
+        colour={colour}
+      />,
     ];
   if (props.tab === "pressing")
     cards = [
@@ -2800,9 +2803,9 @@ export function StatsVisuals(props: Props) {
         identity={identity}
         opponentPasses={opponentPasses}
       />,
-      // The pass map and the located-pass count are roughly 30% short of the
-      // real passes, so neither is shown.
+      <PassMap key="map" passes={passes} colour={colour} matchId={props.matchId} />,
       <Interceptions key="interceptions" {...p} colour={colour} />,
+      <PassLog key="log" passes={passes} matchId={props.matchId} />,
     ];
   const shown = cards.filter(Boolean);
   return (
