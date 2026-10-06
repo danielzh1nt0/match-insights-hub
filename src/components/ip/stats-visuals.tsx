@@ -2150,6 +2150,21 @@ const COL_NAME = [
 const ROW_NAME = ["left", "centre", "right"];
 const zoneName = (z: Zone) => `${COL_NAME[z.col]} ${ROW_NAME[z.row]}`;
 
+/**
+ * A route in words.
+ *
+ * Two columns share each name -- 2 and 3 are both "midfield" -- so a forward
+ * pass from one to the other came out as "from midfield left to midfield left",
+ * which reads as a mistake even though the lane is real. When both ends land on
+ * the same name the route is described as movement through that area instead of
+ * between two identical ones.
+ */
+function routeName(from: Zone, to: Zone) {
+  const a = zoneName(from);
+  const b = zoneName(to);
+  return a === b ? `forward through ${a}` : `from ${a} to ${b}`;
+}
+
 /* The drawing area inside StatsPitch: the touchlines sit at x 3..97, y 1.5..62.4. */
 const PX = (x: number) => 3 + (x / 100) * 94;
 const PY = (y: number) => 1.5 + (y / 100) * 60.9;
@@ -2204,7 +2219,16 @@ function routesOf(located: { start: Point; end: Point; completed: boolean | null
   return [...map.values()];
 }
 
-const rateOf = (route: Route) => (route.judged === 0 ? 0 : route.completed / route.judged);
+/**
+ * Success rate over every pass on the route, graded or not.
+ *
+ * The spec's denominator, chosen deliberately: an ungraded pass counts against
+ * the lane. That reads a lane the pipeline has not finished grading as a lane
+ * the team struggled with, so the figure is only honest while the export grades
+ * most of what it detects. `ungraded` rides along in the tap detail and in the
+ * card's caption so the gap is visible rather than assumed away.
+ */
+const rateOf = (route: Route) => (volumeOf(route) === 0 ? 0 : route.completed / volumeOf(route));
 const volumeOf = (route: Route) => route.judged + route.ungraded;
 
 /** A bowed line, so two routes between the same pair of zones do not overlap. */
@@ -2262,21 +2286,31 @@ function PassMap({
   const between = routes.filter((route) => route.from !== route.to);
   const within = routes.filter((route) => route.from === route.to);
 
-  // Ranked by how often the route is used, so the map shows the team's habits
-  // rather than its fourteen rarest passes.
-  const drawn = [...between].sort((a, b) => volumeOf(b) - volumeOf(a)).slice(0, ROUTES_SHOWN);
-  const busiest = Math.max(1, ...drawn.map(volumeOf));
+  // Weighted by completed passes: a map weighted by attempts draws its thickest
+  // arrow along a lane where nothing arrives. If nothing in the file carries an
+  // outcome at all, weight falls back to attempts so the map is not blank.
+  const anyCompleted = between.some((route) => route.completed > 0);
+  const weightOf = (route: Route) => (anyCompleted ? route.completed : volumeOf(route));
 
   // Only forward routes are ranked. A square ball and a pass back to the
   // goalkeeper almost always arrive, so a table open to every direction is won
   // by the passes that risk nothing and tells the coach to play backwards.
-  const rankable = between.filter((route) => route.forward && route.judged >= LANE_MIN_PASSES);
-  const byRate = [...rankable].sort((a, b) => rateOf(b) - rateOf(a) || b.judged - a.judged);
+  const rankable = between.filter((route) => route.forward && volumeOf(route) >= LANE_MIN_PASSES);
+  const byRate = [...rankable].sort((a, b) => rateOf(b) - rateOf(a) || volumeOf(b) - volumeOf(a));
   const best = byRate.slice(0, 3);
   const hardest = [...rankable]
-    .sort((a, b) => rateOf(a) - rateOf(b) || b.judged - a.judged)
+    .sort((a, b) => rateOf(a) - rateOf(b) || volumeOf(b) - volumeOf(a))
     .filter((route) => !best.includes(route))
     .slice(0, 2);
+
+  // The busiest routes, plus every ranked lane. A high success rate rarely
+  // belongs to the highest-volume route, so taking the top fourteen alone left
+  // the sentence under the map naming a lane that was nowhere on it.
+  const busiestRoutes = [...between]
+    .sort((a, b) => weightOf(b) - weightOf(a))
+    .slice(0, ROUTES_SHOWN);
+  const drawn = [...new Set([...busiestRoutes, ...best, ...hardest])];
+  const busiest = Math.max(1, ...drawn.map(weightOf));
 
   const toneOf = (route: Route) =>
     best.includes(route) ? "best" : hardest.includes(route) ? "hard" : "muted";
@@ -2287,6 +2321,11 @@ function PassMap({
   const entriesDone = entries.filter((pass) => pass.completed === true).length;
   const entriesUngraded = entries.filter((pass) => pass.completed === null).length;
 
+  // Every percentage on this card charges an ungraded pass to the lane, so the
+  // share of them is the single number that says how much to trust the rest.
+  const ungradedShare = Math.round(
+    (located.filter((pass) => pass.completed === null).length / Math.max(1, located.length)) * 100,
+  );
   const headline = best[0];
   const selectedRoute = drawn.find((route) => `${route.from}>${route.to}` === selected);
 
@@ -2303,8 +2342,8 @@ function PassMap({
               }`
         }
         honesty={`${located.length} located passes${
-          withoutTime > 0 ? ` · ${withoutTime} without a clock, not shown` : ""
-        } · Beta`}
+          ungradedShare > 0 ? ` · ${ungradedShare}% without a recorded outcome` : ""
+        }${withoutTime > 0 ? ` · ${withoutTime} without a clock, not shown` : ""} · Beta`}
       >
         <div
           className="mb-3 inline-flex border border-wire p-0.5"
@@ -2403,26 +2442,6 @@ function PassMap({
             <>
               {/* Passes that never left their zone have no direction to draw, so
                 they are a count rather than an arrow. */}
-              {within.map((route) => {
-                const centre = zoneCentre(zoneFromKey(route.from));
-                return (
-                  <text
-                    key={`w${route.from}`}
-                    x={centre.x - 6.2}
-                    y={centre.y - 6}
-                    textAnchor="start"
-                    fontSize="2.4"
-                    fill="var(--text-faint)"
-                    stroke="var(--pitch-top)"
-                    strokeWidth="0.6"
-                    paintOrder="stroke"
-                    opacity="0.8"
-                  >
-                    {volumeOf(route)}
-                  </text>
-                );
-              })}
-
               {/* Muted first, ranked lanes on top, so a green lane is never hidden
                 under a busier grey one. */}
               {[...drawn]
@@ -2432,7 +2451,7 @@ function PassMap({
                   const from = zoneCentre(zoneFromKey(route.from));
                   const to = zoneCentre(zoneFromKey(route.to));
                   const key = `${route.from}>${route.to}`;
-                  const weight = volumeOf(route) / busiest;
+                  const weight = weightOf(route) / busiest;
                   const stroke =
                     tone === "best"
                       ? "var(--positive)"
@@ -2456,6 +2475,26 @@ function PassMap({
                   );
                 })}
 
+              {within.map((route) => {
+                const centre = zoneCentre(zoneFromKey(route.from));
+                return (
+                  <text
+                    key={`w${route.from}`}
+                    x={centre.x - 6.2}
+                    y={centre.y - 6}
+                    textAnchor="start"
+                    fontSize="2.4"
+                    fill="var(--text-faint)"
+                    stroke="var(--pitch-top)"
+                    strokeWidth="0.6"
+                    paintOrder="stroke"
+                    opacity="0.8"
+                  >
+                    {volumeOf(route)}
+                  </text>
+                );
+              })}
+
               {/* Labels last, so a thick grey route can never sit over the one
                 number on the map a coach is meant to read. */}
               {[...best, ...hardest]
@@ -2475,7 +2514,7 @@ function PassMap({
                       strokeWidth="0.9"
                       paintOrder="stroke"
                     >
-                      {route.completed}/{route.judged} · {Math.round(rateOf(route) * 100)}%
+                      {route.completed}/{volumeOf(route)} · {Math.round(rateOf(route) * 100)}%
                     </text>
                   );
                 })}
@@ -2526,22 +2565,22 @@ function PassMap({
             </p>
             <p className="mt-2 text-[13px] leading-snug text-text-bright">
               {headline
-                ? `Best lane: from ${zoneName(zoneFromKey(headline.from))} to ${zoneName(
+                ? `Best lane: ${routeName(
+                    zoneFromKey(headline.from),
                     zoneFromKey(headline.to),
-                  )}, ${headline.completed} of ${headline.judged} passes arrived (${Math.round(
+                  )}, ${headline.completed} of ${volumeOf(headline)} passes arrived (${Math.round(
                     rateOf(headline) * 100,
                   )}%).`
                 : "Too few forward passes to rank lanes."}
             </p>
             {selectedRoute && (
               <p className="mt-2 border-t border-wire pt-2 text-[12.5px] text-text-dim">
-                {zoneName(zoneFromKey(selectedRoute.from))} →{" "}
-                {zoneName(zoneFromKey(selectedRoute.to))}
+                {routeName(zoneFromKey(selectedRoute.from), zoneFromKey(selectedRoute.to))}
                 {" · "}
-                {volumeOf(selectedRoute)} passes · {selectedRoute.completed} completed
-                {selectedRoute.judged > 0
-                  ? ` · ${Math.round(rateOf(selectedRoute) * 100)}%`
-                  : " · outcome not graded"}
+                {volumeOf(selectedRoute)} passes · {selectedRoute.completed} completed ·{" "}
+                {Math.round(rateOf(selectedRoute) * 100)}%
+                {selectedRoute.ungraded > 0 &&
+                  ` · ${selectedRoute.ungraded} of them ungraded, counted as not arrived`}
               </p>
             )}
           </>
