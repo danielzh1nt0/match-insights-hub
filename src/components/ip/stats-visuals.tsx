@@ -37,11 +37,12 @@ import type {
 } from "@/lib/match-analysis";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import {
+  accuracyOf,
   insidePeriods,
   passCompleted,
   periodWindow,
-  accuracyOf,
   shotsOf as contractShots,
+  type Periods,
   type Shot,
 } from "@/lib/export-contract";
 import { cn } from "@/lib/utils";
@@ -1637,10 +1638,32 @@ function PlayerCards({ players, stats, matchId, colours }: Props) {
   );
 }
 
-function passSet(stats: StatsFile | undefined, team: TeamKey, range: number[]) {
+/**
+ * One team's passes, inside the match.
+ *
+ * Two things used to slip through. The "Full" filter is the whole recording,
+ * not the match, so warm-up and half-time passes were counted alongside the
+ * ones that mattered; and inRange waves a null time through, so a pass with no
+ * clock at all landed in every period at once. Both inflate a pass count that
+ * the audit already says is 1.5 to 2 times too high.
+ *
+ * A pass with no time cannot be shown to belong to this match, so it is left
+ * out and counted separately rather than dropped quietly.
+ */
+function passSet(stats: StatsFile | undefined, team: TeamKey, range: number[], periods: Periods) {
+  return (stats?.passes ?? []).filter((pass: any) => {
+    if (passTeam(pass) !== team) return false;
+    const t = passTime(pass);
+    if (t === null) return false;
+    return insidePeriods(t, periods) && inRange(t, range);
+  }) as Pass[];
+}
+
+/** Passes for this team that carry no usable clock, so the card can say so. */
+function passesWithoutTime(stats: StatsFile | undefined, team: TeamKey) {
   return (stats?.passes ?? []).filter(
-    (pass: any) => passTeam(pass) === team && inRange(passTime(pass), range),
-  ) as Pass[];
+    (pass: any) => passTeam(pass) === team && passTime(pass) === null,
+  ).length;
 }
 type PairCount = {
   from: number;
@@ -2074,6 +2097,23 @@ function PassNetwork({
 /* ---------------- pass map ---------------- */
 
 /**
+ * Forces one-team scope for a card that only ever draws one team.
+ *
+ * The page's Both toggle sets a context flag that makes every card wear a
+ * two-team pill. The pass map takes a single team's passes by construction, so
+ * under Both it was captioned for two teams and drawn for one.
+ */
+function OneTeamCard({ children }: { children: React.ReactNode }) {
+  const context = useContext(StatsCardContext);
+  if (!context) return <>{children}</>;
+  return (
+    <StatsCardContext.Provider value={{ ...context, both: false }}>
+      {children}
+    </StatsCardContext.Provider>
+  );
+}
+
+/**
  * The pitch is cut into zones rather than drawn pass by pass.
  *
  * A line per pass puts 1,300 strokes on one pitch, and the result is a grey
@@ -2182,7 +2222,18 @@ function curvePath(a: { x: number; y: number }, b: { x: number; y: number }) {
 const LANE_MIN_PASSES = 5;
 const ROUTES_SHOWN = 14;
 
-function PassMap({ passes, matchId, colour }: { passes: Pass[]; matchId: string; colour: string }) {
+function PassMap({
+  passes,
+  matchId,
+  colour,
+  withoutTime,
+}: {
+  passes: Pass[];
+  matchId: string;
+  colour: string;
+  /** Passes this team made that carry no clock, so none of them are drawn. */
+  withoutTime: number;
+}) {
   const [view, setView] = useState<"routes" | "entries">("routes");
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -2201,7 +2252,7 @@ function PassMap({ passes, matchId, colour }: { passes: Pass[]; matchId: string;
   if (!located.length)
     return (
       <EvidenceUnavailable
-        question="Where do our passes go?"
+        question="Where the passes go"
         icon={RouteIcon}
         caption="The routes passes travel between areas of the pitch."
       />
@@ -2240,264 +2291,273 @@ function PassMap({ passes, matchId, colour }: { passes: Pass[]; matchId: string;
   const selectedRoute = drawn.find((route) => `${route.from}>${route.to}` === selected);
 
   return (
-    <Card
-      question={view === "routes" ? "Where do our passes go?" : "Passes into the final third"}
-      icon={RouteIcon}
-      caption={
-        view === "routes"
-          ? "Top routes between zones · arrow width = number of passes"
-          : `${entries.length} ${entries.length === 1 ? "pass" : "passes"} · ${entriesDone} completed${
-              entriesUngraded > 0 ? ` · ${entriesUngraded} not graded` : ""
-            }`
-      }
-      honesty={`${located.length} located passes · Beta`}
-    >
-      <div
-        className="mb-3 inline-flex border border-wire p-0.5"
-        role="group"
-        aria-label="Pass map view"
+    <OneTeamCard>
+      <Card
+        question={view === "routes" ? "Where the passes go" : "Passes into the final third"}
+        icon={RouteIcon}
+        caption={
+          view === "routes"
+            ? "Top routes between zones · arrow width = number of passes"
+            : `${entries.length} ${entries.length === 1 ? "pass" : "passes"} · ${entriesDone} completed${
+                entriesUngraded > 0 ? ` · ${entriesUngraded} not graded` : ""
+              }`
+        }
+        honesty={`${located.length} located passes${
+          withoutTime > 0 ? ` · ${withoutTime} without a clock, not shown` : ""
+        } · Beta`}
       >
-        {(
-          [
-            ["routes", "Routes"],
-            ["entries", "Into the final third"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => {
-              setView(id);
-              setSelected(null);
-            }}
-            aria-pressed={view === id}
-            className={cn(
-              "px-3 py-1.5 text-[12px] font-semibold transition-colors",
-              view === id ? "bg-accent-sea text-ink" : "text-text-dim hover:text-text-bright",
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <Pitch>
-        <defs>
-          <marker
-            id="pm-head-muted"
-            markerUnits="userSpaceOnUse"
-            markerWidth="2.6"
-            markerHeight="2.6"
-            refX="2.2"
-            refY="1.3"
-            orient="auto"
-          >
-            <path d="M0,0.35 L2.3,1.3 L0,2.25 Z" fill={colour} opacity="0.8" />
-          </marker>
-          <marker
-            id="pm-head-best"
-            markerUnits="userSpaceOnUse"
-            markerWidth="3"
-            markerHeight="3"
-            refX="2.5"
-            refY="1.5"
-            orient="auto"
-          >
-            <path d="M0,0.4 L2.6,1.5 L0,2.6 Z" fill="var(--positive)" />
-          </marker>
-          <marker
-            id="pm-head-hard"
-            markerUnits="userSpaceOnUse"
-            markerWidth="3"
-            markerHeight="3"
-            refX="2.5"
-            refY="1.5"
-            orient="auto"
-          >
-            <path d="M0,0.4 L2.6,1.5 L0,2.6 Z" fill="var(--reaction-bad)" />
-          </marker>
-        </defs>
-
-        {/* Zone lines, faint enough to read the arrows over. */}
-        <g stroke="var(--cream)" strokeOpacity="0.16" strokeWidth="0.25" strokeDasharray="1.2 1.6">
-          {Array.from({ length: ZONE_COLS - 1 }, (_, i) => (
-            <line
-              key={`c${i}`}
-              x1={PX(((i + 1) / ZONE_COLS) * 100)}
-              y1={PY(0)}
-              x2={PX(((i + 1) / ZONE_COLS) * 100)}
-              y2={PY(100)}
-            />
+        <div
+          className="mb-3 inline-flex border border-wire p-0.5"
+          role="group"
+          aria-label="Pass map view"
+        >
+          {(
+            [
+              ["routes", "Routes"],
+              ["entries", "Into the final third"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setView(id);
+                setSelected(null);
+              }}
+              aria-pressed={view === id}
+              className={cn(
+                "px-3 py-1.5 text-[12px] font-semibold transition-colors",
+                view === id ? "bg-accent-sea text-ink" : "text-text-dim hover:text-text-bright",
+              )}
+            >
+              {label}
+            </button>
           ))}
-          {Array.from({ length: ZONE_ROWS - 1 }, (_, i) => (
-            <line
-              key={`r${i}`}
-              x1={PX(0)}
-              y1={PY(((i + 1) / ZONE_ROWS) * 100)}
-              x2={PX(100)}
-              y2={PY(((i + 1) / ZONE_ROWS) * 100)}
-            />
-          ))}
-        </g>
+        </div>
 
-        {view === "routes" ? (
-          <>
-            {/* Passes that never left their zone have no direction to draw, so
+        <Pitch>
+          <defs>
+            <marker
+              id="pm-head-muted"
+              markerUnits="userSpaceOnUse"
+              markerWidth="2.6"
+              markerHeight="2.6"
+              refX="2.2"
+              refY="1.3"
+              orient="auto"
+            >
+              <path d="M0,0.35 L2.3,1.3 L0,2.25 Z" fill={colour} opacity="0.8" />
+            </marker>
+            <marker
+              id="pm-head-best"
+              markerUnits="userSpaceOnUse"
+              markerWidth="3"
+              markerHeight="3"
+              refX="2.5"
+              refY="1.5"
+              orient="auto"
+            >
+              <path d="M0,0.4 L2.6,1.5 L0,2.6 Z" fill="var(--positive)" />
+            </marker>
+            <marker
+              id="pm-head-hard"
+              markerUnits="userSpaceOnUse"
+              markerWidth="3"
+              markerHeight="3"
+              refX="2.5"
+              refY="1.5"
+              orient="auto"
+            >
+              <path d="M0,0.4 L2.6,1.5 L0,2.6 Z" fill="var(--reaction-bad)" />
+            </marker>
+          </defs>
+
+          {/* Zone lines, faint enough to read the arrows over. */}
+          <g
+            stroke="var(--cream)"
+            strokeOpacity="0.16"
+            strokeWidth="0.25"
+            strokeDasharray="1.2 1.6"
+          >
+            {Array.from({ length: ZONE_COLS - 1 }, (_, i) => (
+              <line
+                key={`c${i}`}
+                x1={PX(((i + 1) / ZONE_COLS) * 100)}
+                y1={PY(0)}
+                x2={PX(((i + 1) / ZONE_COLS) * 100)}
+                y2={PY(100)}
+              />
+            ))}
+            {Array.from({ length: ZONE_ROWS - 1 }, (_, i) => (
+              <line
+                key={`r${i}`}
+                x1={PX(0)}
+                y1={PY(((i + 1) / ZONE_ROWS) * 100)}
+                x2={PX(100)}
+                y2={PY(((i + 1) / ZONE_ROWS) * 100)}
+              />
+            ))}
+          </g>
+
+          {view === "routes" ? (
+            <>
+              {/* Passes that never left their zone have no direction to draw, so
                 they are a count rather than an arrow. */}
-            {within.map((route) => {
-              const centre = zoneCentre(zoneFromKey(route.from));
-              return (
-                <text
-                  key={`w${route.from}`}
-                  x={centre.x - 6.2}
-                  y={centre.y - 6}
-                  textAnchor="start"
-                  fontSize="2.4"
-                  fill="var(--text-faint)"
-                  stroke="var(--pitch-top)"
-                  strokeWidth="0.6"
-                  paintOrder="stroke"
-                  opacity="0.8"
-                >
-                  {volumeOf(route)}
-                </text>
-              );
-            })}
-
-            {/* Muted first, ranked lanes on top, so a green lane is never hidden
-                under a busier grey one. */}
-            {[...drawn]
-              .sort((a, b) => (toneOf(a) === "muted" ? -1 : 1) - (toneOf(b) === "muted" ? -1 : 1))
-              .map((route) => {
-                const tone = toneOf(route);
-                const from = zoneCentre(zoneFromKey(route.from));
-                const to = zoneCentre(zoneFromKey(route.to));
-                const key = `${route.from}>${route.to}`;
-                const weight = volumeOf(route) / busiest;
-                const stroke =
-                  tone === "best"
-                    ? "var(--positive)"
-                    : tone === "hard"
-                      ? "var(--reaction-bad)"
-                      : colour;
-                return (
-                  <g key={key}>
-                    <path
-                      d={curvePath(from, to)}
-                      fill="none"
-                      stroke={stroke}
-                      strokeWidth={tone === "muted" ? 0.3 + weight * 1.1 : 0.8 + weight * 0.8}
-                      strokeOpacity={tone === "muted" ? 0.3 + weight * 0.45 : 0.95}
-                      strokeDasharray={tone === "hard" ? "3 1.5" : undefined}
-                      markerEnd={`url(#pm-head-${tone})`}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => setSelected(selected === key ? null : key)}
-                    />
-                  </g>
-                );
-              })}
-
-            {/* Labels last, so a thick grey route can never sit over the one
-                number on the map a coach is meant to read. */}
-            {[...best, ...hardest]
-              .filter((route) => drawn.includes(route))
-              .map((route) => {
-                const head = zoneCentre(zoneFromKey(route.to));
+              {within.map((route) => {
+                const centre = zoneCentre(zoneFromKey(route.from));
                 return (
                   <text
-                    key={`l${route.from}>${route.to}`}
-                    x={head.x}
-                    y={head.y - 3.4}
-                    textAnchor="middle"
+                    key={`w${route.from}`}
+                    x={centre.x - 6.2}
+                    y={centre.y - 6}
+                    textAnchor="start"
                     fontSize="2.4"
-                    fontWeight="600"
-                    fill={best.includes(route) ? "var(--positive)" : "var(--reaction-bad)"}
+                    fill="var(--text-faint)"
                     stroke="var(--pitch-top)"
-                    strokeWidth="0.9"
+                    strokeWidth="0.6"
                     paintOrder="stroke"
+                    opacity="0.8"
                   >
-                    {route.completed}/{route.judged} · {Math.round(rateOf(route) * 100)}%
+                    {volumeOf(route)}
                   </text>
                 );
               })}
+
+              {/* Muted first, ranked lanes on top, so a green lane is never hidden
+                under a busier grey one. */}
+              {[...drawn]
+                .sort((a, b) => (toneOf(a) === "muted" ? -1 : 1) - (toneOf(b) === "muted" ? -1 : 1))
+                .map((route) => {
+                  const tone = toneOf(route);
+                  const from = zoneCentre(zoneFromKey(route.from));
+                  const to = zoneCentre(zoneFromKey(route.to));
+                  const key = `${route.from}>${route.to}`;
+                  const weight = volumeOf(route) / busiest;
+                  const stroke =
+                    tone === "best"
+                      ? "var(--positive)"
+                      : tone === "hard"
+                        ? "var(--reaction-bad)"
+                        : colour;
+                  return (
+                    <g key={key}>
+                      <path
+                        d={curvePath(from, to)}
+                        fill="none"
+                        stroke={stroke}
+                        strokeWidth={tone === "muted" ? 0.3 + weight * 1.1 : 0.8 + weight * 0.8}
+                        strokeOpacity={tone === "muted" ? 0.3 + weight * 0.45 : 0.95}
+                        strokeDasharray={tone === "hard" ? "3 1.5" : undefined}
+                        markerEnd={`url(#pm-head-${tone})`}
+                        style={{ cursor: "pointer" }}
+                        onClick={() => setSelected(selected === key ? null : key)}
+                      />
+                    </g>
+                  );
+                })}
+
+              {/* Labels last, so a thick grey route can never sit over the one
+                number on the map a coach is meant to read. */}
+              {[...best, ...hardest]
+                .filter((route) => drawn.includes(route))
+                .map((route) => {
+                  const head = zoneCentre(zoneFromKey(route.to));
+                  return (
+                    <text
+                      key={`l${route.from}>${route.to}`}
+                      x={head.x}
+                      y={head.y - 3.4}
+                      textAnchor="middle"
+                      fontSize="2.4"
+                      fontWeight="600"
+                      fill={best.includes(route) ? "var(--positive)" : "var(--reaction-bad)"}
+                      stroke="var(--pitch-top)"
+                      strokeWidth="0.9"
+                      paintOrder="stroke"
+                    >
+                      {route.completed}/{route.judged} · {Math.round(rateOf(route) * 100)}%
+                    </text>
+                  );
+                })}
+            </>
+          ) : (
+            <>
+              <line
+                x1={PX(FINAL_THIRD_PCT)}
+                y1={PY(0)}
+                x2={PX(FINAL_THIRD_PCT)}
+                y2={PY(100)}
+                stroke="var(--cream)"
+                strokeOpacity="0.45"
+                strokeWidth="0.4"
+                strokeDasharray="2 2"
+              />
+              {entries.map((pass, index) => (
+                <Link
+                  key={index}
+                  to="/match/$matchId/match"
+                  params={{ matchId }}
+                  search={{ t: passTime(pass.pass) ?? 0 }}
+                  aria-label={`Watch pass into the final third at ${fmt(passTime(pass.pass) ?? 0)}`}
+                >
+                  <line
+                    x1={PX(pass.start.x)}
+                    y1={PY(pass.start.y)}
+                    x2={PX(pass.end.x)}
+                    y2={PY(pass.end.y)}
+                    stroke={pass.completed === true ? colour : "var(--text-faint)"}
+                    strokeWidth={pass.completed === true ? 0.55 : 0.4}
+                    strokeOpacity={pass.completed === null ? 0.35 : 0.8}
+                    strokeDasharray={pass.completed === true ? undefined : "2 1.4"}
+                    markerEnd={pass.completed === true ? "url(#pm-head-muted)" : undefined}
+                  />
+                </Link>
+              ))}
+            </>
+          )}
+        </Pitch>
+
+        {view === "routes" ? (
+          <>
+            <p className="mt-3 text-[12px] leading-snug text-text-dim">
+              <span className="text-positive">Green</span> = best forward lanes (most passes
+              arrived) · <span className="text-reaction-bad">Red</span> = forward lanes where most
+              passes were lost · <span className="text-text-faint">Grey</span> = other routes
+            </p>
+            <p className="mt-2 text-[13px] leading-snug text-text-bright">
+              {headline
+                ? `Best lane: from ${zoneName(zoneFromKey(headline.from))} to ${zoneName(
+                    zoneFromKey(headline.to),
+                  )}, ${headline.completed} of ${headline.judged} passes arrived (${Math.round(
+                    rateOf(headline) * 100,
+                  )}%).`
+                : "Too few forward passes to rank lanes."}
+            </p>
+            {selectedRoute && (
+              <p className="mt-2 border-t border-wire pt-2 text-[12.5px] text-text-dim">
+                {zoneName(zoneFromKey(selectedRoute.from))} →{" "}
+                {zoneName(zoneFromKey(selectedRoute.to))}
+                {" · "}
+                {volumeOf(selectedRoute)} passes · {selectedRoute.completed} completed
+                {selectedRoute.judged > 0
+                  ? ` · ${Math.round(rateOf(selectedRoute) * 100)}%`
+                  : " · outcome not graded"}
+              </p>
+            )}
           </>
         ) : (
-          <>
-            <line
-              x1={PX(FINAL_THIRD_PCT)}
-              y1={PY(0)}
-              x2={PX(FINAL_THIRD_PCT)}
-              y2={PY(100)}
-              stroke="var(--cream)"
-              strokeOpacity="0.45"
-              strokeWidth="0.4"
-              strokeDasharray="2 2"
-            />
-            {entries.map((pass, index) => (
-              <Link
-                key={index}
-                to="/match/$matchId/match"
-                params={{ matchId }}
-                search={{ t: passTime(pass.pass) ?? 0 }}
-                aria-label={`Watch pass into the final third at ${fmt(passTime(pass.pass) ?? 0)}`}
-              >
-                <line
-                  x1={PX(pass.start.x)}
-                  y1={PY(pass.start.y)}
-                  x2={PX(pass.end.x)}
-                  y2={PY(pass.end.y)}
-                  stroke={pass.completed === true ? colour : "var(--text-faint)"}
-                  strokeWidth={pass.completed === true ? 0.55 : 0.4}
-                  strokeOpacity={pass.completed === null ? 0.35 : 0.8}
-                  strokeDasharray={pass.completed === true ? undefined : "2 1.4"}
-                  markerEnd={pass.completed === true ? "url(#pm-head-muted)" : undefined}
-                />
-              </Link>
-            ))}
-          </>
-        )}
-      </Pitch>
-
-      {view === "routes" ? (
-        <>
-          <p className="mt-3 text-[12px] leading-snug text-text-dim">
-            <span className="text-positive">Green</span> = best forward lanes (most passes arrived)
-            · <span className="text-reaction-bad">Red</span> = forward lanes where most passes were
-            lost · <span className="text-text-faint">Grey</span> = other routes
-          </p>
-          <p className="mt-2 text-[13px] leading-snug text-text-bright">
-            {headline
-              ? `Best lane: from ${zoneName(zoneFromKey(headline.from))} to ${zoneName(
-                  zoneFromKey(headline.to),
-                )}, ${headline.completed} of ${headline.judged} passes arrived (${Math.round(
-                  rateOf(headline) * 100,
-                )}%).`
-              : "Too few forward passes to rank lanes."}
-          </p>
-          {selectedRoute && (
-            <p className="mt-2 border-t border-wire pt-2 text-[12.5px] text-text-dim">
-              {zoneName(zoneFromKey(selectedRoute.from))} →{" "}
-              {zoneName(zoneFromKey(selectedRoute.to))}
-              {" · "}
-              {volumeOf(selectedRoute)} passes · {selectedRoute.completed} completed
-              {selectedRoute.judged > 0
-                ? ` · ${Math.round(rateOf(selectedRoute) * 100)}%`
-                : " · outcome not graded"}
+          entries.length === 0 && (
+            <p className="mt-3 text-[13px] text-text-dim">
+              No pass in this period started outside the final third and ended inside it.
             </p>
-          )}
-        </>
-      ) : (
-        entries.length === 0 && (
-          <p className="mt-3 text-[13px] text-text-dim">
-            No pass in this period started outside the final third and ended inside it.
-          </p>
-        )
-      )}
+          )
+        )}
 
-      <p className="mt-3 text-[11.5px] leading-snug text-text-faint">
-        Passes are detected automatically from the video and are still being calibrated (Beta).
-      </p>
-    </Card>
+        <p className="mt-3 text-[11.5px] leading-snug text-text-faint">
+          Passes are detected automatically from the video and are still being calibrated (Beta).
+        </p>
+      </Card>
+    </OneTeamCard>
   );
 }
 
@@ -3148,12 +3208,17 @@ export function StatsVisuals(props: Props) {
   const range = periodRange(props.file, props.period);
   const frames = (props.file?.frames ?? []).filter((frame) => inRange(frame.t, range));
   const events = props.events.filter((event) => inRange(event.t, range));
-  const passes = passSet(props.stats, props.team, range);
+  const passes = passSet(props.stats, props.team, range, props.file?.periods);
   const p = { ...props, events };
   const colour = props.colours[props.team];
   const identity = props.team === "A" ? props.teamA : props.teamB;
   const other = props.team === "A" ? props.teamB : props.teamA;
-  const opponentPasses = passSet(props.stats, props.team === "A" ? "B" : "A", range).length;
+  const opponentPasses = passSet(
+    props.stats,
+    props.team === "A" ? "B" : "A",
+    range,
+    props.file?.periods,
+  ).length;
   let cards: React.ReactNode[] = [];
   if (props.tab === "ball")
     cards = [
@@ -3265,7 +3330,13 @@ export function StatsVisuals(props: Props) {
         identity={identity}
         opponentPasses={opponentPasses}
       />,
-      <PassMap key="map" passes={passes} colour={colour} matchId={props.matchId} />,
+      <PassMap
+        key="map"
+        passes={passes}
+        colour={colour}
+        matchId={props.matchId}
+        withoutTime={passesWithoutTime(props.stats, props.team)}
+      />,
       <Interceptions key="interceptions" {...p} colour={colour} />,
       <PassLog key="log" passes={passes} matchId={props.matchId} />,
     ];
