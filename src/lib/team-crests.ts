@@ -29,7 +29,7 @@ export function crestForTeam(name: string) {
     .filter(Boolean);
   const hasCode = (code: string) => words.includes(code);
 
-  if (normalised.includes("sollentuna") || hasCode("sfk")) return sollentunaCrest.url;
+  if (normalised.includes("sollentuna") || hasCode("sfk") || hasCode("p15") || hasCode("p15u")) return sollentunaCrest.url;
   if (
     normalised.includes("brommapojkarna") ||
     normalised.includes("bpsod") ||
