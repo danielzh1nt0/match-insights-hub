@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Individual pass maps use the existing Stats card, pitch and pass-data helpers; this preserves team identity, coordinate normalization and period filtering without duplicating the data contract.

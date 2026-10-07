@@ -23,7 +23,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
 import type { Period } from "./chrome";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import { setPieceKind } from "@/lib/match-analysis";
@@ -250,11 +250,13 @@ function StatsPitch({
   portrait = false,
   attackLabel,
   ariaLabel,
+  chalk = "var(--cream)",
 }: {
   children?: React.ReactNode;
   portrait?: boolean;
   attackLabel: string;
   ariaLabel: string;
+  chalk?: string;
 }) {
   const viewBox = portrait ? "0 0 64 100" : "0 0 100 64";
   return (
@@ -274,7 +276,7 @@ function StatsPitch({
           fill={`url(#${portrait ? "turf-p" : "turf-l"})`}
         />
         {portrait ? (
-          <g stroke="var(--cream)" fill="none">
+          <g stroke={chalk} fill="none">
             <g strokeOpacity=".85" strokeWidth=".5">
               <rect x="2" y="3" width="60" height="94" />
               <rect x="25" y="0.5" width="14" height="2.5" />
@@ -290,7 +292,7 @@ function StatsPitch({
             </g>
           </g>
         ) : (
-          <g stroke="var(--cream)" fill="none">
+          <g stroke={chalk} fill="none">
             <g strokeOpacity=".85" strokeWidth=".45">
               <rect x="3" y="1.5" width="94" height="60.9" />
               <rect x=".5" y="25" width="2.5" height="14" />
@@ -2246,6 +2248,90 @@ function curvePath(a: { x: number; y: number }, b: { x: number; y: number }) {
 const LANE_MIN_PASSES = 5;
 const ROUTES_SHOWN = 14;
 
+function IndividualPassMap({
+  passes,
+  colour,
+  identity,
+  opponentPasses,
+}: {
+  passes: Pass[];
+  colour: string;
+  identity: StatsTeamIdentity;
+  opponentPasses: number;
+}) {
+  const markerId = useId().replace(/:/g, "");
+  const [outcome, setOutcome] = useState<"all" | "completed" | "incomplete" | "unknown">("all");
+  const [player, setPlayer] = useState("all");
+  const located = passes.flatMap((pass, index) => {
+    const start = passPoint(pass, "start");
+    const end = passPoint(pass, "end");
+    return start && end ? [{ pass, index, start, end, completed: passCompleted(pass), from: passPlayer(pass, "from") }] : [];
+  });
+  const playerIds = [...new Set(located.flatMap((p) => p.from === null ? [] : [p.from]))].sort((a, b) => a - b);
+  const shown = located.filter((p) =>
+    (player === "all" || String(p.from) === player) &&
+    (outcome === "all" || (outcome === "completed" && p.completed === true) ||
+      (outcome === "incomplete" && p.completed === false) || (outcome === "unknown" && p.completed === null)),
+  );
+  const completed = shown.filter((p) => p.completed === true).length;
+  const incomplete = shown.filter((p) => p.completed === false).length;
+  const unknown = shown.length - completed - incomplete;
+  const tone = (result: boolean | null) => result === true ? colour : result === false ? "var(--pitch-chalk)" : "var(--text-faint)";
+  return (
+    <Card
+      question="Where did our passes go?"
+      caption={`${identity.name} · ${shown.length} passes${player === "all" ? "" : ` · Player ${player}`}`}
+      icon={RouteIcon}
+      comparison={{ target: "—", opponent: `${opponentPasses} passes`, last5: "—" }}
+      honesty={`${shown.length} detected passes · ${completed + incomplete} with an outcome`}
+      footer={passes.length > located.length ? `${passes.length - located.length} without coordinates` : "Selected period"}
+    >
+      <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Pass outcomes">
+        {([['all', 'All'], ['completed', 'Completed'], ['incomplete', 'Incomplete'], ['unknown', 'Unrated']] as const).map(([key, label]) => (
+          <Button key={key} variant={outcome === key ? "primary" : "ghost"} aria-pressed={outcome === key} onClick={() => setOutcome(key)} className="min-h-11 px-3">{label}</Button>
+        ))}
+      </div>
+      <label className="mb-4 flex items-center gap-3 text-[12.5px] text-text-dim">
+        Player
+        <select aria-label="Pass map player" value={player} onChange={(e) => setPlayer(e.target.value)} className="min-h-11 min-w-0 flex-1 border border-wire bg-surface-2 px-3 text-text focus-visible:outline-2 focus-visible:outline-cream">
+          <option value="all">All players</option>
+          {playerIds.map((id) => <option key={id} value={id}>Player {id}</option>)}
+        </select>
+      </label>
+      <StatsPitch chalk="var(--pitch-chalk)" attackLabel={identity.shortCode} ariaLabel={`${identity.name} individual pass map: ${completed} completed, ${incomplete} incomplete, ${unknown} unrated`}>
+        <defs>
+          {([true, false, null] as const).map((result, i) => (
+            <marker key={i} id={`${markerId}-${i}`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3.5" markerHeight="3.5" orient="auto-start-reverse" markerUnits="strokeWidth">
+              <path d="M0 0 L6 3 L0 6 Z" fill={tone(result)} />
+            </marker>
+          ))}
+        </defs>
+        {shown.filter((p) => p.completed === true).map((p) => (
+          <line key={`outline-${p.index}`} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
+            stroke="var(--pitch-chalk)" strokeWidth=".65" strokeOpacity=".3" />
+        ))}
+        {[...shown].sort((a, b) => Number(a.completed === true) - Number(b.completed === true)).map((p) => (
+          <line key={p.index} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
+            stroke={tone(p.completed)} strokeWidth=".35" strokeOpacity={p.completed === null ? .35 : .7}
+            strokeDasharray={p.completed === false ? "1.5 1" : undefined}
+            markerEnd={`url(#${markerId}-${p.completed === true ? 0 : p.completed === false ? 1 : 2})`}>
+            <title>{`${p.completed === true ? "Completed" : p.completed === false ? "Incomplete" : "Unrated"} pass${p.from === null ? "" : ` · Player ${p.from}`}${passTime(p.pass) === null ? "" : ` · ${fmt(passTime(p.pass) ?? 0)}`}`}</title>
+          </line>
+        ))}
+      </StatsPitch>
+      {shown.length === 0 && <p className="mt-3 text-[12.5px] text-text-faint">No passes match this selection.</p>}
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-text-dim" aria-label="Pass map legend">
+        {([[true, 'Completed', completed], [false, 'Incomplete', incomplete], [null, 'Unrated', unknown]] as const).map(([result, label, count]) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            <svg width="24" height="12" viewBox="0 0 24 12" aria-hidden="true"><path d="M0 6 H20 M16 2 L20 6 L16 10" fill="none" stroke={tone(result)} strokeWidth="1.5" strokeDasharray={result === false ? "3 2" : undefined} /></svg>
+            {label} · {count}
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function PassMap({
   passes,
   matchId,
@@ -3361,6 +3447,7 @@ export function StatsVisuals(props: Props) {
   if (props.tab === "passes")
     cards = [
       <LanesTable key="lanes" passes={passes} colour={colour} identity={identity} />,
+      <IndividualPassMap key={`individual-${props.team}-${props.period}`} passes={passes} colour={colour} identity={identity} opponentPasses={opponentPasses} />,
       <BetterOption key="better" {...p} colour={colour} />,
       <PassNetwork
         key="network"
