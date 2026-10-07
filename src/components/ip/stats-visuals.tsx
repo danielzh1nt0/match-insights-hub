@@ -250,11 +250,13 @@ function StatsPitch({
   portrait = false,
   attackLabel,
   ariaLabel,
+  chalk = "var(--cream)",
 }: {
   children?: React.ReactNode;
   portrait?: boolean;
   attackLabel: string;
   ariaLabel: string;
+  chalk?: string;
 }) {
   const viewBox = portrait ? "0 0 64 100" : "0 0 100 64";
   return (
@@ -274,7 +276,7 @@ function StatsPitch({
           fill={`url(#${portrait ? "turf-p" : "turf-l"})`}
         />
         {portrait ? (
-          <g stroke="var(--cream)" fill="none">
+          <g stroke={chalk} fill="none">
             <g strokeOpacity=".85" strokeWidth=".5">
               <rect x="2" y="3" width="60" height="94" />
               <rect x="25" y="0.5" width="14" height="2.5" />
@@ -290,7 +292,7 @@ function StatsPitch({
             </g>
           </g>
         ) : (
-          <g stroke="var(--cream)" fill="none">
+          <g stroke={chalk} fill="none">
             <g strokeOpacity=".85" strokeWidth=".45">
               <rect x="3" y="1.5" width="94" height="60.9" />
               <rect x=".5" y="25" width="2.5" height="14" />
@@ -2274,7 +2276,7 @@ function IndividualPassMap({
   const completed = shown.filter((p) => p.completed === true).length;
   const incomplete = shown.filter((p) => p.completed === false).length;
   const unknown = shown.length - completed - incomplete;
-  const tone = (result: boolean | null) => result === true ? colour : result === false ? "var(--cream)" : "var(--text-faint)";
+  const tone = (result: boolean | null) => result === true ? colour : result === false ? "var(--pitch-chalk)" : "var(--text-faint)";
   return (
     <Card
       question="Where did our passes go?"
@@ -2296,14 +2298,18 @@ function IndividualPassMap({
           {playerIds.map((id) => <option key={id} value={id}>Player {id}</option>)}
         </select>
       </label>
-      <StatsPitch attackLabel={identity.shortCode} ariaLabel={`${identity.name} individual pass map: ${completed} completed, ${incomplete} incomplete, ${unknown} unrated`}>
+      <StatsPitch chalk="var(--pitch-chalk)" attackLabel={identity.shortCode} ariaLabel={`${identity.name} individual pass map: ${completed} completed, ${incomplete} incomplete, ${unknown} unrated`}>
         <defs>
           {([true, false, null] as const).map((result, i) => (
-            <marker key={i} id={`${markerId}-${i}`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse" markerUnits="strokeWidth">
+            <marker key={i} id={`${markerId}-${i}`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3.5" markerHeight="3.5" orient="auto-start-reverse" markerUnits="strokeWidth">
               <path d="M0 0 L6 3 L0 6 Z" fill={tone(result)} />
             </marker>
           ))}
         </defs>
+        {shown.filter((p) => p.completed === true).map((p) => (
+          <line key={`outline-${p.index}`} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
+            stroke="var(--pitch-chalk)" strokeWidth=".65" strokeOpacity=".3" />
+        ))}
         {[...shown].sort((a, b) => Number(a.completed === true) - Number(b.completed === true)).map((p) => (
           <line key={p.index} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
             stroke={tone(p.completed)} strokeWidth=".35" strokeOpacity={p.completed === null ? .35 : .7}
