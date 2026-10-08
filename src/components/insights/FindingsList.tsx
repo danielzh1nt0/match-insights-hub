@@ -35,7 +35,6 @@ export function FindingsList({
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {findings.map((finding, index) => {
-            const unit = finding.unit === "%" ? "%" : ` ${finding.unit}`;
             return (
               <article
                 key={finding.id}
@@ -48,15 +47,7 @@ export function FindingsList({
                   {finding.headline}
                 </h3>
                 <p className="mt-1 text-[12.5px] text-text-faint">
-                  {finding.value}
-                  {unit} against a {finding.target}
-                  {unit} target ·{" "}
-                  {/* How many moments show the fault, out of how many were
-                      measured. "116 moments" against a 35% figure invited the
-                      reading that all 116 were bad. */}
-                  {finding.evidence === "exact" && finding.population > finding.events
-                    ? `${finding.events} of ${finding.population} moments`
-                    : `${finding.events} ${finding.events === 1 ? "moment" : "moments"}`}
+                  {findingLine(finding)}
                   {finding.basis
                     ? ` · ${finding.basis === "confirmed" ? "confirmed" : "detected"}`
                     : ""}
@@ -112,4 +103,39 @@ export function FindingsList({
       )}
     </section>
   );
+}
+
+/** "1 player", "411 times", "34%" — a figure with its unit, in plain words. */
+function withUnit(value: number, unit: string) {
+  if (unit === "%") return `${value}%`;
+  const one = unit.endsWith("s") ? unit.slice(0, -1) : unit;
+  return `${value} ${value === 1 ? one : unit}`;
+}
+
+/**
+ * The line under a finding's headline: the figure, the target, and how many
+ * moments show it. A count with a target of one ("411 times against a 1 times
+ * target") said nothing, so counts carry no target.
+ */
+function findingLine(finding: {
+  value: number;
+  target: number;
+  unit: string;
+  higherIsWorse: boolean;
+  events: number;
+  population: number;
+  evidence: string;
+}) {
+  const figure = withUnit(finding.value, finding.unit);
+  const target =
+    finding.unit === "times"
+      ? ""
+      : ` · target ${finding.higherIsWorse ? "at most" : "at least"} ${withUnit(finding.target, finding.unit)}`;
+  const moments =
+    finding.events === 0
+      ? ""
+      : finding.evidence === "exact" && finding.population > finding.events
+        ? ` · ${finding.events} of ${finding.population} moments show it`
+        : ` · ${finding.events} ${finding.events === 1 ? "moment" : "moments"}`;
+  return figure + target + moments;
 }

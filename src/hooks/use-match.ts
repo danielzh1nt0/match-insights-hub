@@ -16,6 +16,7 @@ import {
 import { goalsFrom } from "@/lib/export-contract";
 import {
   fetchMatch,
+  fetchAllFrames,
   fetchMatchData,
   fetchMatchStats,
   isLabelled,
@@ -74,8 +75,23 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     staleTime: Infinity,
   });
 
+  // Full matches carry no inline frames; load the whole match, thinned, once.
+  const chunks = dataQuery.data?.frame_chunks;
+  const needsFrames = Boolean(row && chunks?.length && !dataQuery.data?.frames.length);
+  const framesQuery = useQuery({
+    queryKey: ["match-frames", matchId],
+    queryFn: () => fetchAllFrames(row!.files, chunks!),
+    enabled: needsFrames,
+    staleTime: Infinity,
+    gcTime: 10 * 60_000,
+  });
+
   const review = useReviews(matchId);
-  const raw: MatchDataFile | undefined = dataQuery.data;
+  const raw: MatchDataFile | undefined = useMemo(() => {
+    const data = dataQuery.data;
+    if (!data || !needsFrames || !framesQuery.data) return data;
+    return { ...data, frames: framesQuery.data };
+  }, [dataQuery.data, needsFrames, framesQuery.data]);
   const stats = statsQuery.data;
   const team = teamKey(scope);
   const thresholds = useMemo(() => thresholdsFrom(label), [label]);
@@ -158,6 +174,8 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     basis,
     review,
     loading: recordPending || dataQuery.isPending || statsQuery.isPending,
+    /** True while a full match's tracking is still downloading. */
+    framesLoading: needsFrames && framesQuery.isPending,
     error: dataQuery.error ?? statsQuery.error,
     needsSetup: Boolean(item && !isLabelled(item.label)),
   };

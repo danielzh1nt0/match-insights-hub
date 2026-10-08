@@ -79,6 +79,8 @@ type Props = {
   teamB: StatsTeamIdentity;
   /** from matches.summary.ball_grade; missing on older matches (then phases are allowed) */
   ballGrade?: { possession_ok?: boolean; events_ok?: boolean } | null;
+  /** a full match's tracking is still downloading */
+  framesLoading?: boolean;
 };
 
 type Pass = Record<string, unknown>;
@@ -351,6 +353,9 @@ function EmptyTab() {
   );
 }
 
+/** True while a full match's tracking is still downloading, so empty cards say so. */
+const FramesLoading = createContext(false);
+
 function EvidenceUnavailable({
   question,
   caption,
@@ -360,16 +365,19 @@ function EvidenceUnavailable({
   caption: string;
   icon?: LucideIcon;
 }) {
+  const loading = useContext(FramesLoading);
   return (
     <Card
       question={question}
       caption={caption}
-      footer="Evidence threshold not met"
+      footer={loading ? "Loading" : "Evidence threshold not met"}
       {...(icon ? { icon } : {})}
     >
       <div className="flex min-h-28 items-center border-l-2 border-text-faint bg-surface-2 px-4">
         <p className="max-w-[460px] text-[12.5px] leading-relaxed text-text-dim">
-          This match does not contain enough reliable evidence to answer this coaching question.
+          {loading
+            ? "Loading the tracking for the whole match. This fills in by itself in a few seconds."
+            : "This match does not contain enough reliable evidence to answer this coaching question."}
         </p>
       </div>
     </Card>
@@ -858,12 +866,13 @@ function PressureMap({
 }
 
 function PressMap({ events, team, matchId, colour, file }: Props & { colour: string }) {
+  // A ball won high is also written as a ball won, so counting both put the
+  // same moment on the pitch twice. High ones only count when there is no
+  // plain record of the balls won.
+  const hasWon = events.some((event) => event.team === team && event.type === "turnover_won");
+  const types = hasWon ? ["pressure", "press", "turnover_won"] : ["pressure", "press", "high_turnover"];
   const press = events
-    .filter(
-      (event) =>
-        event.team === team &&
-        ["pressure", "press", "turnover_won", "high_turnover"].includes(event.type),
-    )
+    .filter((event) => event.team === team && types.includes(event.type))
     .map((event) => ({ event, point: eventPoint(event, file) }))
     .filter((item): item is { event: ReviewedEvent; point: Point } => item.point !== null);
   if (!press.length) return null;
@@ -3435,14 +3444,16 @@ export function StatsVisuals(props: Props) {
     ];
   const shown = cards.filter(Boolean);
   return (
-    <StatsCardContext.Provider value={{ identity, other, both: props.scopeBoth }}>
-      {shown.length ? (
-        <div className="gap-4 min-[1100px]:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
-          {shown}
-        </div>
-      ) : (
-        <EmptyTab />
-      )}
-    </StatsCardContext.Provider>
+    <FramesLoading.Provider value={Boolean(props.framesLoading)}>
+      <StatsCardContext.Provider value={{ identity, other, both: props.scopeBoth }}>
+        {shown.length ? (
+          <div className="gap-4 min-[1100px]:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
+            {shown}
+          </div>
+        ) : (
+          <EmptyTab />
+        )}
+      </StatsCardContext.Provider>
+    </FramesLoading.Provider>
   );
 }

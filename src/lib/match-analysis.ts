@@ -552,7 +552,7 @@ export function buildFindings(
         target: thresholds.pressWithin2s,
         unit: "%",
         higherIsWorse: false,
-        interpretation: `Of ${lost.length} balls lost, only ${pressed}% got pressure inside two seconds. In the rest the nearest player waited instead of stepping in.`,
+        interpretation: `Of ${optionalNum(row.losses) ?? lost.length} balls lost, only ${pressed}% got pressure inside two seconds. In the rest the nearest player waited instead of stepping in.`,
         population: lost,
         // The claim is about the losses that were slow, so those are the clips.
         moments: faulty(lost, (event) => {
@@ -598,7 +598,7 @@ export function buildFindings(
         target: 2,
         unit: "players",
         higherIsWorse: false,
-        interpretation: `Two seconds after losing the ball there were typically ${alone} team-mates within five metres, so the press could be played around.`,
+        interpretation: `Two seconds after losing the ball there ${alone === 1 ? "was typically 1 team-mate" : `were typically ${alone} team-mates`} within five metres, so the press could be played around.`,
         population: lost,
         moments: faulty(lost, (event) => {
           const near = payloadNum(event, "near_at_2s");
@@ -658,16 +658,19 @@ export function buildFindings(
     );
   }
 
-  if (better.length >= 3) {
+  // The pass list is the record the stats card counts from; the events are
+  // the clips. Counting the finding from the events let the two disagree.
+  const betterCount = optionalNum(row.better_option_count) ?? better.length;
+  if (betterCount >= 3) {
     out.push(
       finding({
         id: "better_option",
         headline: "Look for the forward option.",
-        value: better.length,
+        value: betterCount,
         target: 1,
         unit: "times",
         higherIsWorse: true,
-        interpretation: `${better.length} times the ball went sideways or backwards while a better forward pass was open.`,
+        interpretation: `${betterCount} times a better pass was open than the one we played.`,
         // Every one of these events is itself an instance of the fault.
         population: better,
         moments: better,

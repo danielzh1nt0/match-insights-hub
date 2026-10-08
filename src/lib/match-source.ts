@@ -310,7 +310,9 @@ export function toLibraryMatch({ row, label }: MatchListItem): LibraryMatch {
     teamB: label?.name_b || label?.opponent || "Team B",
     ...(label?.competition ? { label: label.competition } : {}),
     date: label?.date || row.created_at.slice(0, 10),
-    competition: label?.competition || "Setup needed",
+    // "Setup needed" only when the teams are not named yet; a named match with
+    // no competition filled in just leaves the field out.
+    competition: label?.competition || (isLabelled(label) ? "" : "Setup needed"),
     durationS: Math.round(row.duration_s ?? 0),
     status: row.status,
     scoreA: label?.score_a ?? 0,
@@ -364,4 +366,34 @@ export async function fetchFrameChunk(files: MatchFiles, key: string): Promise<F
   if (!res.ok) throw new Error(`Could not load ${key}`);
   const body = (await res.json()) as { frames?: Frame[] };
   return body.frames ?? [];
+}
+
+/**
+ * Every frame of a full match, thinned, for the views that read the whole game
+ * (stats, insights, territory, story). Full matches keep frames only in
+ * 5-minute files, so `match_data.frames` is empty and every frame-based card
+ * used to say "not enough evidence". Every `step`-th frame is kept (the export
+ * is 10 a second, so 3 keeps ~3 a second) and the per-frame pass lanes and
+ * pitch lines are dropped: nothing outside the live video reads them.
+ */
+export async function fetchAllFrames(
+  files: MatchFiles,
+  chunks: { key: string; t_start: number }[],
+  step = 3,
+  parallel = 3,
+): Promise<Frame[]> {
+  const ordered = [...chunks].sort((a, b) => a.t_start - b.t_start);
+  const out: Frame[][] = new Array(ordered.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < ordered.length) {
+      const i = next++;
+      const frames = await fetchFrameChunk(files, ordered[i]!.key).catch(() => [] as Frame[]);
+      out[i] = frames
+        .filter((_, k) => k % step === 0)
+        .map((f) => ({ ...f, lanes: null, pitch_lines: null }));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(parallel, ordered.length) }, worker));
+  return out.flat();
 }
