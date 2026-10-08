@@ -768,7 +768,22 @@ export function buildFindings(
     );
   }
 
-  return out;
+  // Worst first, as three screens promise. The miss is measured against the
+  // target in the target's own units, so a 34% press against a 60% target
+  // (missed by 43% of the target) outranks a 32% regain against 35% (9%).
+  // Counts with no real target ("411 times") cannot be ranked that way, so
+  // they come after the targeted findings, biggest count first.
+  const miss = (f: Finding) => {
+    if (f.unit === "times" || f.target <= 0) return null;
+    return (f.higherIsWorse ? f.value - f.target : f.target - f.value) / f.target;
+  };
+  return out.sort((a, b) => {
+    const ma = miss(a);
+    const mb = miss(b);
+    if (ma !== null && mb !== null) return mb - ma;
+    if (ma === null && mb === null) return b.value - a.value;
+    return ma === null ? 1 : -1;
+  });
 }
 
 /**

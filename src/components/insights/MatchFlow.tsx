@@ -18,7 +18,7 @@ export type FlowWindow = {
 /**
  * The match as one line.
  *
- * Above the axis is our territory, below it is theirs, and the line is drawn
+ * Above the axis we had the ball, below it they did, and the line is drawn
  * from the same tracked moments as every number on the page. A coach reads two
  * things off it in a second: when the game turned, and whether the goals came
  * from the run of play or against it. That is the whole purpose — the figures
@@ -75,8 +75,8 @@ export function MatchFlow({
           </h2>
         </div>
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <Key swatch={<Crest team={teamA} size={16} />}>{teamA.shortCode} territory</Key>
-          <Key swatch={<Crest team={teamB} size={16} />}>{teamB.shortCode} territory</Key>
+          <Key swatch={<Crest team={teamA} size={16} />}>{teamA.shortCode} on the ball</Key>
+          <Key swatch={<Crest team={teamB} size={16} />}>{teamB.shortCode} on the ball</Key>
           <Key swatch={<span className="h-2 w-2 rounded-full bg-positive" />}>
             Confirmed turnover ({confirmed})
           </Key>
@@ -92,7 +92,7 @@ export function MatchFlow({
           preserveAspectRatio="none"
           className="h-[150px] w-full sm:h-[190px]"
           role="img"
-          aria-label={`Territory through the match. ${goals.length} goals.`}
+          aria-label={`Who had the ball through the match. ${goals.length} goals.`}
         >
           {/* Their half of the chart, filled; ours is drawn as a line, because
               the two kits must not both become blocks of colour. */}

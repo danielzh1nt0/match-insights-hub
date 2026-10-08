@@ -71,7 +71,7 @@ function TerritoryPitch({
         viewBox="0 0 100 62"
         className="block w-full"
         role="img"
-        aria-label={`${Math.round(theirs * 100)} per cent of the play was in their half`}
+        aria-label={`${Math.round(theirs * 100)} per cent of the final-third play was in their third`}
       >
         <rect x="0" y="0" width="100" height="62" fill="var(--pitch-top)" />
         {/* Territory as a length, not a tint. Two shades of the same colour at
@@ -203,6 +203,14 @@ export function MatchTimelineCard({
   const moments = keyMoments(timeline, story);
   const possession = halves(timeline.possession, timeline.spans);
   const tilt = halves(timeline.tilt, timeline.spans);
+  // The whole match, every window weighted the same, rather than the mean of
+  // two half figures (a 44-minute half and a 51-minute half are not equal).
+  const tiltKnown = timeline.tilt.filter(
+    (p): p is { t: number; value: number } => p.value !== null,
+  );
+  const tiltMatch = tiltKnown.length
+    ? tiltKnown.reduce((sum, p) => sum + p.value, 0) / tiltKnown.length
+    : null;
   const pressing = barHalves(timeline.pressure, timeline.spans, "a");
   const length = halves(timeline.length.a, timeline.spans);
 
@@ -500,17 +508,13 @@ export function MatchTimelineCard({
 
       {/* The one chart worth keeping: when the ball changed hands, against the
           goals, with a way into the video. */}
-      {open && detailed && tilt.first !== null && (
+      {open && detailed && tiltMatch !== null && (
         <div className="border-t border-wire px-4 py-4 sm:px-5">
           <h4 className="text-[13px] font-semibold text-text-bright">Where did we play?</h4>
           <p className="mb-3 mt-0.5 text-[11.5px] text-text-faint">
-            Where the ball was, our goal on the left
+            Of the play in either final third, how much was in theirs. Our goal on the left.
           </p>
-          <TerritoryPitch
-            share={((tilt.first ?? 0) + (tilt.second ?? tilt.first ?? 0)) / 2}
-            teamA={teamA}
-            teamB={teamB}
-          />
+          <TerritoryPitch share={tiltMatch} teamA={teamA} teamB={teamB} />
         </div>
       )}
 

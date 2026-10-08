@@ -70,27 +70,59 @@ export function useMatchModel({
     () => moments.filter((event) => event.team === ownTeam && event.type === "turnover_lost"),
     [moments, ownTeam],
   );
-  const shots = moments.filter((event) => event.team === ownTeam && event.type === "shot").length;
-  const otherShots = moments.filter(
-    (event) => event.team === otherTeam && event.type === "shot",
-  ).length;
+  // A goal is written as a "goal" event, not a "shot": attempts are both.
+  const isShot = (event: ReviewedEvent) => event.type === "shot" || event.type === "goal";
+  const shots = moments.filter((event) => event.team === ownTeam && isShot(event)).length;
+  const otherShots = moments.filter((event) => event.team === otherTeam && isShot(event)).length;
   const setPieces = moments.filter((event) => event.type === "set_piece").length;
   const confirmed = moments.filter((event) => event.status === "confirmed").length;
 
   const model = useMemo(() => buildInsightsModel(findings), [findings]);
   const { headline } = verdict(model);
 
-  /** One value per thirtieth of the match: our tracked moments against theirs. */
+  /**
+   * One value per thirtieth of the match, -1..1, ours positive: who had the
+   * ball, from the pipeline's 15-second possession windows inside the periods.
+   *
+   * It used to be the share of EVENTS by team, over every event type. The side
+   * whose mistakes were detected most read as dominant: SFK with 411 "better
+   * pass was open" moments against 232 was drawn as owning the whole match.
+   * A slice with no window in it is flat, not invented.
+   */
   const momentum = useMemo(() => {
     const SLICES = 30;
+    const metrics = (stats?.metrics ?? {}) as Record<string, unknown>;
+    const windows = Array.isArray(metrics["tilt_windows"])
+      ? (metrics["tilt_windows"] as Record<string, unknown>[])
+      : [];
+    const periods = ((stats as Record<string, unknown> | undefined)?.["periods"] ?? []) as {
+      t_start?: number;
+      t_end?: number;
+    }[];
+    const inPlay = (t: number) =>
+      periods.length === 0 ||
+      periods.some(
+        (p) =>
+          typeof p.t_start === "number" &&
+          typeof p.t_end === "number" &&
+          t >= p.t_start &&
+          t <= p.t_end,
+      );
+    const samples = windows
+      .map((w) => ({ t: numeric(w, "t"), share: numeric(w, "possession_A") }))
+      .filter(
+        (w): w is { t: number; share: number } => w.t !== null && w.share !== null && inPlay(w.t),
+      );
     return Array.from({ length: SLICES }, (_, i) => {
       const from = (duration / SLICES) * i;
       const to = (duration / SLICES) * (i + 1);
-      const inSlice = moments.filter((event) => event.t >= from && event.t < to);
+      const inSlice = samples.filter((w) => w.t >= from && w.t < to);
       if (inSlice.length === 0) return 0;
-      return (inSlice.filter((event) => event.team === ownTeam).length * 2) / inSlice.length - 1;
+      const shareA = inSlice.reduce((sum, w) => sum + w.share, 0) / inSlice.length;
+      const ours = ownTeam === "A" ? shareA : 1 - shareA;
+      return ours * 2 - 1;
     });
-  }, [moments, duration, ownTeam]);
+  }, [stats, duration, ownTeam]);
 
   /** The goals, each carrying the score as it stood immediately after it. */
   const goals = useMemo<FlowGoal[]>(() => {

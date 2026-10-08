@@ -549,7 +549,11 @@ function Thirds({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colo
     frame.players
       .filter((player) => player.team === team && player.state !== "stale")
       .forEach((player) => {
-        const index = Math.min(2, Math.floor(clamp(player.m[0], 0, 104.99) / 35));
+        // Oriented so the team attacks right, whichever way it really plays,
+        // and in thirds of this pitch's length rather than a fixed 35 m.
+        const point = metresToPct(player.m, team);
+        if (!point) return;
+        const index = Math.min(2, Math.floor((point.x / 100) * 3));
         counts[index] = (counts[index] ?? 0) + 1;
       }),
   );
