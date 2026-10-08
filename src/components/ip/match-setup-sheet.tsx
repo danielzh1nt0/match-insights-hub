@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import { GhostButton, Input, PrimaryButton, Segmented } from "@/components/ip/primitives";
 import { saveMatchLabel, signedUrl, type MatchListItem } from "@/lib/match-source";
+import { kpiTargetsFrom } from "@/lib/kpi";
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
@@ -27,8 +28,12 @@ export function MatchSetupSheet({
   const isSfkBp = item.row.id.toUpperCase().includes("SFKBP");
   const [nameA, setNameA] = useState(label?.name_a ?? (isSfkBp ? "SFK" : ""));
   const [nameB, setNameB] = useState(label?.name_b ?? (isSfkBp ? "BP" : ""));
-  const [colourA, setColourA] = useState(label?.colour_a ?? (isSfkBp ? "var(--ink)" : "var(--reaction-bad)"));
-  const [colourB, setColourB] = useState(label?.colour_b ?? (isSfkBp ? "#e7eaee" : "var(--positive)"));
+  const [colourA, setColourA] = useState(
+    label?.colour_a ?? (isSfkBp ? "var(--ink)" : "var(--reaction-bad)"),
+  );
+  const [colourB, setColourB] = useState(
+    label?.colour_b ?? (isSfkBp ? "#e7eaee" : "var(--positive)"),
+  );
   const [attackRight, setAttackRight] = useState<"left" | "right">(
     label?.attack_right_override?.["A"] === true ? "right" : "left",
   );
@@ -49,6 +54,17 @@ export function MatchSetupSheet({
   const [press, setPress] = useState(String(thresholds["press_within_2s"] ?? 60));
   const [regain, setRegain] = useState(String(thresholds["regain_within_5s"] ?? 60));
   const [block, setBlock] = useState(String(thresholds["block_ceiling_m"] ?? 38));
+
+  // The season's targets, scored on the stats page. Kept on the match label
+  // alongside the thresholds so one save writes both.
+  const kpi = kpiTargetsFrom(thresholds);
+  const [kPoss, setKPoss] = useState(String(kpi.possessionPct));
+  const [kShots, setKShots] = useState(String(kpi.shots));
+  const [kEntries, setKEntries] = useState(String(kpi.finalThirdEntries));
+  const [kComp, setKComp] = useState(String(kpi.passCompletionPct));
+  const [kShotsAg, setKShotsAg] = useState(String(kpi.shotsConceded));
+  const [kGoalsAg, setKGoalsAg] = useState(String(kpi.goalsConceded));
+  const [kEntriesAg, setKEntriesAg] = useState(String(kpi.entriesConceded));
 
   const queryClient = useQueryClient();
   const save = useMutation({
@@ -74,6 +90,13 @@ export function MatchSetupSheet({
           press_within_2s: Number(press) || 0,
           regain_within_5s: Number(regain) || 0,
           block_ceiling_m: Number(block) || 0,
+          kpi_possession_pct: Number(kPoss) || 0,
+          kpi_shots: Number(kShots) || 0,
+          kpi_final_third_entries: Number(kEntries) || 0,
+          kpi_pass_completion_pct: Number(kComp) || 0,
+          kpi_shots_conceded: Number(kShotsAg) || 0,
+          kpi_goals_conceded: Number(kGoalsAg) || 0,
+          kpi_entries_conceded: Number(kEntriesAg) || 0,
         },
       }),
     onSuccess: () => {
@@ -266,6 +289,83 @@ export function MatchSetupSheet({
               inputMode="numeric"
               onChange={(e) => setBlock(e.target.value)}
               aria-label="Block length ceiling"
+            />
+          </div>
+        </div>
+
+        <h3 className="display mt-5 text-[14px] uppercase text-text-dim">
+          Team KPIs — what we are aiming for
+        </h3>
+        <p className="mt-1 text-[11.5px] text-text-faint">
+          Scored on the stats page as Attack, Defence and Overall. A target this match file cannot
+          measure is left out of the score rather than counted as missed.
+        </p>
+        <p className="label-xs mt-3 text-text-faint">Attack — at least</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
+            <Label>Possession %</Label>
+            <Input
+              value={kPoss}
+              inputMode="numeric"
+              onChange={(e) => setKPoss(e.target.value)}
+              aria-label="Possession target"
+            />
+          </div>
+          <div>
+            <Label>Shots</Label>
+            <Input
+              value={kShots}
+              inputMode="numeric"
+              onChange={(e) => setKShots(e.target.value)}
+              aria-label="Shots target"
+            />
+          </div>
+          <div>
+            <Label>Final-third entries</Label>
+            <Input
+              value={kEntries}
+              inputMode="numeric"
+              onChange={(e) => setKEntries(e.target.value)}
+              aria-label="Final-third entries target"
+            />
+          </div>
+          <div>
+            <Label>Pass completion %</Label>
+            <Input
+              value={kComp}
+              inputMode="numeric"
+              onChange={(e) => setKComp(e.target.value)}
+              aria-label="Pass completion target"
+            />
+          </div>
+        </div>
+        <p className="label-xs mt-3 text-text-faint">Defence — at most</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
+            <Label>Shots conceded</Label>
+            <Input
+              value={kShotsAg}
+              inputMode="numeric"
+              onChange={(e) => setKShotsAg(e.target.value)}
+              aria-label="Shots conceded target"
+            />
+          </div>
+          <div>
+            <Label>Goals conceded</Label>
+            <Input
+              value={kGoalsAg}
+              inputMode="numeric"
+              onChange={(e) => setKGoalsAg(e.target.value)}
+              aria-label="Goals conceded target"
+            />
+          </div>
+          <div>
+            <Label>Entries conceded</Label>
+            <Input
+              value={kEntriesAg}
+              inputMode="numeric"
+              onChange={(e) => setKEntriesAg(e.target.value)}
+              aria-label="Entries conceded target"
             />
           </div>
         </div>

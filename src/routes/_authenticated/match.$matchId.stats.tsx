@@ -1,7 +1,7 @@
 import { MatchTimelineCard } from "@/components/ip/match-timeline";
 import { buildTimeline } from "@/lib/timeline";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Chip } from "@/components/ip/primitives";
@@ -10,6 +10,9 @@ import { ScopeChips } from "@/components/ip/scope-chips";
 import { HeadToHeadBand } from "@/components/ip/head-to-head-band";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import { useAnalysis } from "@/hooks/use-match";
+import { TeamKpiCard } from "@/components/ip/team-kpi";
+import { MatchSetupSheet } from "@/components/ip/match-setup-sheet";
+import { buildKpi, kpiTargetsFrom } from "@/lib/kpi";
 import { crestForTeam } from "@/lib/team-crests";
 import { shortTeamCode } from "@/components/team/TeamToken";
 
@@ -34,8 +37,11 @@ function Stats() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
+  const [targetsOpen, setTargetsOpen] = useState(false);
   const {
     match,
+    item,
+    label,
     row,
     team,
     colours,
@@ -54,6 +60,24 @@ function Stats() {
   const [tab, setTab] = useState("pressing");
 
   const active = sections.find((t) => t.key === tab);
+
+  // One timeline for both the story and the KPI card, so the possession the
+  // scorecard grades is the possession the chart draws.
+  const timeline = useMemo(
+    () => buildTimeline({ stats, file, team: team ?? "A" }),
+    [stats, file, team],
+  );
+  const kpi = useMemo(
+    () =>
+      buildKpi({
+        stats,
+        file,
+        team: team ?? "A",
+        timeline,
+        targets: kpiTargetsFrom(label?.thresholds),
+      }),
+    [stats, file, team, timeline, label],
+  );
 
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
@@ -103,12 +127,15 @@ function Stats() {
       {match && active && (
         <>
           {teamA && teamB && (
-            <MatchTimelineCard
-              timeline={buildTimeline({ stats, file, team: team ?? "A" })}
-              teamA={teamA}
-              teamB={teamB}
-              matchId={matchId}
+            <TeamKpiCard
+              kpi={kpi}
+              teamName={(team === "B" ? teamB : teamA).name}
+              onEditTargets={item ? () => setTargetsOpen(true) : undefined}
             />
+          )}
+
+          {teamA && teamB && (
+            <MatchTimelineCard timeline={timeline} teamA={teamA} teamB={teamB} matchId={matchId} />
           )}
 
           <div
@@ -167,6 +194,10 @@ function Stats() {
             />
           )}
         </>
+      )}
+
+      {item && (
+        <MatchSetupSheet item={item} open={targetsOpen} onClose={() => setTargetsOpen(false)} />
       )}
     </MatchShell>
   );

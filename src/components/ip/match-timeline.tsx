@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Activity, ArrowRight } from "lucide-react";
+import { Activity, ChevronDown, ArrowRight } from "lucide-react";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import {
   barHalves,
@@ -186,6 +186,7 @@ export function MatchTimelineCard({
   // A coach opens this to know what happened. Everything an analyst would want
   // is still here, one tap away, rather than in front of the answer.
   const [detailed, setDetailed] = useState(false);
+  const [open, setOpen] = useState(false);
 
   if (timeline.empty)
     return (
@@ -278,7 +279,7 @@ export function MatchTimelineCard({
 
   return (
     <section className="border border-wire bg-surface" aria-labelledby="match-timeline">
-      <header className="p-4 sm:p-5">
+      <header className="p-4 pb-3 sm:px-5">
         <div className="flex items-start gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center border border-wire text-accent-sea">
             <Activity size={17} strokeWidth={1.75} aria-hidden="true" />
@@ -290,7 +291,7 @@ export function MatchTimelineCard({
             <p className="mt-1 text-[13.5px] leading-snug text-text">{headline}</p>
           </div>
           <div
-            className="ml-auto flex shrink-0 border border-wire"
+            className={cn("ml-auto shrink-0 border border-wire", open ? "flex" : "hidden")}
             role="group"
             aria-label="How much detail"
           >
@@ -319,8 +320,56 @@ export function MatchTimelineCard({
         </div>
       </header>
 
+      {/* The shape of the match as one ribbon. This is the part that stays on
+          screen when the card is shut: it is a glance, not a read, and the
+          spell list behind it is what a coach opens once he wants the minutes.
+          Each band jumps the video to where that spell began. */}
+      {story.length > 0 && (
+        <div className="px-4 pb-4 sm:px-5">
+          <div className="flex h-3 gap-[2px]">
+            {story.map((spell, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() =>
+                  void navigate({
+                    to: "/match/$matchId/match",
+                    params: { matchId },
+                    search: { t: Math.round(spell.fromS * 10) / 10 },
+                  })
+                }
+                className={cn("block", TONE[spell.tone])}
+                style={{ flexGrow: Math.max(spell.toS - spell.fromS, 1) }}
+                title={`${spell.title} ${minute(spell.fromS)}–${minute(spell.toS)}`}
+                aria-label={`${spell.title}, ${minute(spell.fromS)} to ${minute(spell.toS)}`}
+              />
+            ))}
+          </div>
+          <div className="num-flat mt-1 flex justify-between text-[10.5px] text-text-faint">
+            <span>{minute(story[0]!.fromS)}</span>
+            <span>{minute(story.at(-1)!.toS)}</span>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="flex min-h-10 w-full items-center justify-center gap-1.5 border-t border-wire text-[12px] text-text-faint transition-colors hover:bg-surface-2 hover:text-text"
+      >
+        {open
+          ? "Hide the detail"
+          : `Spell by spell${moments.length > 0 ? ` · ${moments.length} worth watching` : ""}`}
+        <ChevronDown
+          size={14}
+          className={cn("transition-transform", open && "rotate-180")}
+          aria-hidden="true"
+        />
+      </button>
+
       {/* The two or three worth opening, before anything that needs reading. */}
-      {moments.length > 0 && (
+      {open && moments.length > 0 && (
         <div className="border-t border-wire px-4 py-3 sm:px-5">
           <p className="label-xs mb-2 text-text-faint">Worth watching</p>
           <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -358,7 +407,7 @@ export function MatchTimelineCard({
 
       {/* The spells, in the words a coach would use telling someone about the
           match. Each one opens the video where it started. */}
-      {story.length > 0 && (
+      {open && story.length > 0 && (
         <ul className="rule-y border-t border-wire">
           {story.map((spell, i) => (
             <li key={i}>
@@ -400,26 +449,9 @@ export function MatchTimelineCard({
         </ul>
       )}
 
-      {/* The same spells as one ribbon, so the shape of the match is one glance
-          rather than a list to read. */}
-      {story.length > 0 && (
-        <div className="px-4 pb-1 pt-4 sm:px-5">
-          <div className="flex h-3 gap-[2px]">
-            {story.map((spell, i) => (
-              <span
-                key={i}
-                className={cn("block", TONE[spell.tone])}
-                style={{ flexGrow: Math.max(spell.toS - spell.fromS, 1) }}
-                title={`${spell.title} ${minute(spell.fromS)}–${minute(spell.toS)}`}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* First half against second, one row each. The numbers are the answer;
           the thumbnail beside them is how it got there. */}
-      {detailed && (
+      {open && detailed && (
         <div className="rule-y border-y border-wire">
           <div className="grid grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 py-2 sm:px-5">
             <span className="label-xs text-text-faint">&nbsp;</span>
@@ -468,7 +500,7 @@ export function MatchTimelineCard({
 
       {/* The one chart worth keeping: when the ball changed hands, against the
           goals, with a way into the video. */}
-      {detailed && tilt.first !== null && (
+      {open && detailed && tilt.first !== null && (
         <div className="border-t border-wire px-4 py-4 sm:px-5">
           <h4 className="text-[13px] font-semibold text-text-bright">Where did we play?</h4>
           <p className="mb-3 mt-0.5 text-[11.5px] text-text-faint">
@@ -482,7 +514,7 @@ export function MatchTimelineCard({
         </div>
       )}
 
-      {detailed && d && (
+      {open && detailed && d && (
         <div className="border-t border-wire px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h4 className="text-[13px] font-semibold text-text-bright">
