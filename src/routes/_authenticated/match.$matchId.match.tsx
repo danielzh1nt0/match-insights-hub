@@ -341,7 +341,11 @@ function MatchScreen() {
     void node
       .requestFullscreen?.()
       .then(() => {
-        void window.screen.orientation?.lock?.("landscape").catch(() => undefined);
+        // lock() is missing from the DOM types; it exists on phones.
+        const orientation = window.screen.orientation as ScreenOrientation & {
+          lock?: (o: string) => Promise<void>;
+        };
+        void orientation?.lock?.("landscape").catch(() => undefined);
       })
       .catch(() => undefined);
   }, []);

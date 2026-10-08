@@ -156,6 +156,7 @@
   --pitch-line: rgba(239, 232, 218, 0.5);
   --pitch-control: rgba(0, 0, 0, 0.5);
   --pitch-insight: #182d1b;
+  --pitch-chalk: #ede6d6;
   --ball-detail: #15121f;
 
   --club-bvb: #fde100;
@@ -838,3 +839,14 @@ body::before {
     text-decoration: none;
   }
 }
+
+/* Defensive-height analysis: real heights on one continuous pitch axis. */
+.defensive-height-map { position: relative; padding: 24px 0; }
+.defensive-height-goal, .defensive-height-home { font-size: 10px; text-transform: uppercase; text-align: center; margin-left: 38px; }
+.defensive-height-goal { position: absolute; top: 0; left: 0; right: 0; }
+.defensive-height-home { position: absolute; bottom: 0; left: 0; right: 0; }
+.defensive-height-axis { position: absolute; top: 24px; bottom: 24px; left: 0; width: 34px; font-size: 9px; }
+.defensive-height-axis span { position: absolute; transform: translateY(-50%); }
+.defensive-height-field { position: relative; height: 560px; margin-left: 38px; background: var(--pitch-insight); }
+.defensive-height-pitch { position: absolute; inset: 0; width: 100%; height: 100%; }
+.defensive-height-zone { position: absolute; left: 12px; right: 12px; transform: translateY(-50%); }

@@ -23,7 +23,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
 import type { Period } from "./chrome";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import { setPieceKind } from "@/lib/match-analysis";
@@ -79,6 +79,8 @@ type Props = {
   teamB: StatsTeamIdentity;
   /** from matches.summary.ball_grade; missing on older matches (then phases are allowed) */
   ballGrade?: { possession_ok?: boolean; events_ok?: boolean } | null;
+  /** a full match's tracking is still downloading */
+  framesLoading?: boolean;
 };
 
 type Pass = Record<string, unknown>;
@@ -250,11 +252,13 @@ function StatsPitch({
   portrait = false,
   attackLabel,
   ariaLabel,
+  chalk = "var(--cream)",
 }: {
   children?: React.ReactNode;
   portrait?: boolean;
   attackLabel: string;
   ariaLabel: string;
+  chalk?: string;
 }) {
   const viewBox = portrait ? "0 0 64 100" : "0 0 100 64";
   return (
@@ -274,7 +278,7 @@ function StatsPitch({
           fill={`url(#${portrait ? "turf-p" : "turf-l"})`}
         />
         {portrait ? (
-          <g stroke="var(--cream)" fill="none">
+          <g stroke={chalk} fill="none">
             <g strokeOpacity=".85" strokeWidth=".5">
               <rect x="2" y="3" width="60" height="94" />
               <rect x="25" y="0.5" width="14" height="2.5" />
@@ -290,7 +294,7 @@ function StatsPitch({
             </g>
           </g>
         ) : (
-          <g stroke="var(--cream)" fill="none">
+          <g stroke={chalk} fill="none">
             <g strokeOpacity=".85" strokeWidth=".45">
               <rect x="3" y="1.5" width="94" height="60.9" />
               <rect x=".5" y="25" width="2.5" height="14" />
@@ -349,6 +353,9 @@ function EmptyTab() {
   );
 }
 
+/** True while a full match's tracking is still downloading, so empty cards say so. */
+const FramesLoading = createContext(false);
+
 function EvidenceUnavailable({
   question,
   caption,
@@ -358,16 +365,19 @@ function EvidenceUnavailable({
   caption: string;
   icon?: LucideIcon;
 }) {
+  const loading = useContext(FramesLoading);
   return (
     <Card
       question={question}
       caption={caption}
-      footer="Evidence threshold not met"
+      footer={loading ? "Loading" : "Evidence threshold not met"}
       {...(icon ? { icon } : {})}
     >
       <div className="flex min-h-28 items-center border-l-2 border-text-faint bg-surface-2 px-4">
         <p className="max-w-[460px] text-[12.5px] leading-relaxed text-text-dim">
-          This match does not contain enough reliable evidence to answer this coaching question.
+          {loading
+            ? "Loading the tracking for the whole match. This fills in by itself in a few seconds."
+            : "This match does not contain enough reliable evidence to answer this coaching question."}
         </p>
       </div>
     </Card>
@@ -856,12 +866,13 @@ function PressureMap({
 }
 
 function PressMap({ events, team, matchId, colour, file }: Props & { colour: string }) {
+  // A ball won high is also written as a ball won, so counting both put the
+  // same moment on the pitch twice. High ones only count when there is no
+  // plain record of the balls won.
+  const hasWon = events.some((event) => event.team === team && event.type === "turnover_won");
+  const types = hasWon ? ["pressure", "press", "turnover_won"] : ["pressure", "press", "high_turnover"];
   const press = events
-    .filter(
-      (event) =>
-        event.team === team &&
-        ["pressure", "press", "turnover_won", "high_turnover"].includes(event.type),
-    )
+    .filter((event) => event.team === team && types.includes(event.type))
     .map((event) => ({ event, point: eventPoint(event, file) }))
     .filter((item): item is { event: ReviewedEvent; point: Point } => item.point !== null);
   if (!press.length) return null;
@@ -2246,6 +2257,90 @@ function curvePath(a: { x: number; y: number }, b: { x: number; y: number }) {
 const LANE_MIN_PASSES = 5;
 const ROUTES_SHOWN = 14;
 
+function IndividualPassMap({
+  passes,
+  colour,
+  identity,
+  opponentPasses,
+}: {
+  passes: Pass[];
+  colour: string;
+  identity: StatsTeamIdentity;
+  opponentPasses: number;
+}) {
+  const markerId = useId().replace(/:/g, "");
+  const [outcome, setOutcome] = useState<"all" | "completed" | "incomplete" | "unknown">("all");
+  const [player, setPlayer] = useState("all");
+  const located = passes.flatMap((pass, index) => {
+    const start = passPoint(pass, "start");
+    const end = passPoint(pass, "end");
+    return start && end ? [{ pass, index, start, end, completed: passCompleted(pass), from: passPlayer(pass, "from") }] : [];
+  });
+  const playerIds = [...new Set(located.flatMap((p) => p.from === null ? [] : [p.from]))].sort((a, b) => a - b);
+  const shown = located.filter((p) =>
+    (player === "all" || String(p.from) === player) &&
+    (outcome === "all" || (outcome === "completed" && p.completed === true) ||
+      (outcome === "incomplete" && p.completed === false) || (outcome === "unknown" && p.completed === null)),
+  );
+  const completed = shown.filter((p) => p.completed === true).length;
+  const incomplete = shown.filter((p) => p.completed === false).length;
+  const unknown = shown.length - completed - incomplete;
+  const tone = (result: boolean | null) => result === true ? colour : result === false ? "var(--pitch-chalk)" : "var(--text-faint)";
+  return (
+    <Card
+      question="Where did our passes go?"
+      caption={`${identity.name} · ${shown.length} passes${player === "all" ? "" : ` · Player ${player}`}`}
+      icon={RouteIcon}
+      comparison={{ target: "—", opponent: `${opponentPasses} passes`, last5: "—" }}
+      honesty={`${shown.length} detected passes · ${completed + incomplete} with an outcome`}
+      footer={passes.length > located.length ? `${passes.length - located.length} without coordinates` : "Selected period"}
+    >
+      <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Pass outcomes">
+        {([['all', 'All'], ['completed', 'Completed'], ['incomplete', 'Incomplete'], ['unknown', 'Unrated']] as const).map(([key, label]) => (
+          <Button key={key} variant={outcome === key ? "primary" : "ghost"} aria-pressed={outcome === key} onClick={() => setOutcome(key)} className="min-h-11 px-3">{label}</Button>
+        ))}
+      </div>
+      <label className="mb-4 flex items-center gap-3 text-[12.5px] text-text-dim">
+        Player
+        <select aria-label="Pass map player" value={player} onChange={(e) => setPlayer(e.target.value)} className="min-h-11 min-w-0 flex-1 border border-wire bg-surface-2 px-3 text-text focus-visible:outline-2 focus-visible:outline-cream">
+          <option value="all">All players</option>
+          {playerIds.map((id) => <option key={id} value={id}>Player {id}</option>)}
+        </select>
+      </label>
+      <StatsPitch chalk="var(--pitch-chalk)" attackLabel={identity.shortCode} ariaLabel={`${identity.name} individual pass map: ${completed} completed, ${incomplete} incomplete, ${unknown} unrated`}>
+        <defs>
+          {([true, false, null] as const).map((result, i) => (
+            <marker key={i} id={`${markerId}-${i}`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3.5" markerHeight="3.5" orient="auto-start-reverse" markerUnits="strokeWidth">
+              <path d="M0 0 L6 3 L0 6 Z" fill={tone(result)} />
+            </marker>
+          ))}
+        </defs>
+        {shown.filter((p) => p.completed === true).map((p) => (
+          <line key={`outline-${p.index}`} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
+            stroke="var(--pitch-chalk)" strokeWidth=".65" strokeOpacity=".3" />
+        ))}
+        {[...shown].sort((a, b) => Number(a.completed === true) - Number(b.completed === true)).map((p) => (
+          <line key={p.index} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
+            stroke={tone(p.completed)} strokeWidth=".35" strokeOpacity={p.completed === null ? .35 : .7}
+            strokeDasharray={p.completed === false ? "1.5 1" : undefined}
+            markerEnd={`url(#${markerId}-${p.completed === true ? 0 : p.completed === false ? 1 : 2})`}>
+            <title>{`${p.completed === true ? "Completed" : p.completed === false ? "Incomplete" : "Unrated"} pass${p.from === null ? "" : ` · Player ${p.from}`}${passTime(p.pass) === null ? "" : ` · ${fmt(passTime(p.pass) ?? 0)}`}`}</title>
+          </line>
+        ))}
+      </StatsPitch>
+      {shown.length === 0 && <p className="mt-3 text-[12.5px] text-text-faint">No passes match this selection.</p>}
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-text-dim" aria-label="Pass map legend">
+        {([[true, 'Completed', completed], [false, 'Incomplete', incomplete], [null, 'Unrated', unknown]] as const).map(([result, label, count]) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            <svg width="24" height="12" viewBox="0 0 24 12" aria-hidden="true"><path d="M0 6 H20 M16 2 L20 6 L16 10" fill="none" stroke={tone(result)} strokeWidth="1.5" strokeDasharray={result === false ? "3 2" : undefined} /></svg>
+            {label} · {count}
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function PassMap({
   passes,
   matchId,
@@ -2924,114 +3019,81 @@ function ShapeByPhase({
 function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) {
   const tl = lineDefending.timeline;
   if (!lineDefending.states.length || tl.length < 2) return null;
-  const dt =
-    median(
-      tl
-        .slice(1)
-        .map((p, i) => p.t - (tl[i]?.t ?? p.t))
-        .filter((d) => d > 0),
-    ) || 1;
+  const dt = median(tl.slice(1).map((p, i) => p.t - (tl[i]?.t ?? p.t)).filter((d) => d > 0)) || 1;
   const stateOf = (h: number) => (h < 30 ? "low" : h <= 38 ? "mid" : "high");
-  const minutes = (key: string) => (tl.filter((p) => stateOf(p.height) === key).length * dt) / 60;
   const rows = lineDefending.states
-    .map((s) => ({ ...s, min: minutes(s.key) }))
+    .map((s) => ({ ...s, min: tl.filter((p) => stateOf(p.height) === s.key).length * dt / 60 }))
     .filter((r) => r.min > 0)
     .sort((a, b) => b.height - a.height);
-
-  /**
-   * How much of a spell it takes before a rate means anything.
-   *
-   * One shot in seven minutes reads as the worst rate in the match and is
-   * nothing of the sort — it is one shot.
-   */
-  const ENOUGH_MIN = 8;
-  const ENOUGH_SHOTS = 3;
-  const rate = (r: { shots: number; min: number }) => r.shots / Math.max(r.min, 0.1);
-  const judged = rows.filter((r) => r.min >= ENOUGH_MIN && r.shots >= ENOUGH_SHOTS);
-  const worst = [...judged].sort((a, b) => rate(b) - rate(a))[0];
-  const mostShots = [...rows].sort((a, b) => b.shots - a.shots || b.goals - a.goals)[0];
-  const name = (k: string) => (k === "high" ? "High line" : k === "mid" ? "Mid line" : "Low line");
-  const where = (k: string) => (k === "high" ? "pushed up" : k === "mid" ? "halfway back" : "deep");
+  const rate = (r: { shots: number; min: number }) => r.shots / r.min;
+  const highest = [...rows].sort((a, b) => rate(b) - rate(a))[0];
+  const mostTime = [...rows].sort((a, b) => b.min - a.min)[0];
   const maxMin = Math.max(...rows.map((r) => r.min), 1);
+  const small = (r: { shots: number; min: number }) => r.min < 8 || r.shots < 3;
+  const name = (key: string) => `${key.charAt(0).toUpperCase()}${key.slice(1)} line`;
+  const time = (min: number) => min < 1 ? `${Math.round(min * 60)} s` : `${Math.round(min)} min`;
 
   return (
     <Card
       question="How high did we defend, and what did it cost?"
       icon={Shield}
-      caption="How long we spent at each height, and what we gave up there."
-      honesty={`${lineDefending.shots.length} shots conceded · ${tl.length} line samples`}
+      caption="Defensive height · time spent · shots conceded per minute."
+      honesty={`${lineDefending.shotConfirmed} confirmed · ${lineDefending.shots.length} detected shots · ${tl.length} line samples`}
     >
-      {/* Three rows, longest bar = most time. A coach reads down it once and
-          knows where the team sat and what happened there. The pitch diagram
-          this replaced was clever and unreadable. */}
-      <ul className="flex flex-col gap-3">
-        {rows.map((r) => {
-          const alarm = worst?.key === r.key;
-          return (
-            <li key={r.key}>
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <span className="flex items-baseline gap-2">
-                  <span className="text-[14px] font-semibold text-text-bright">{name(r.key)}</span>
-                  <span className="num text-[12px] text-text-faint">
-                    {Math.round(r.height)} m · {where(r.key)}
-                  </span>
-                </span>
-                <span className="num-flat text-[12px] text-text-dim">
-                  {r.min < 1 ? `${Math.round(r.min * 60)} s` : `${Math.round(r.min)} min`}
-                </span>
+      <div className="defensive-height-map" role="img" aria-label="Defensive heights on a vertical 0 to 100 metre pitch axis, with time spent and shots conceded">
+        <div className="defensive-height-goal text-text-faint">Opponent goal ↑</div>
+        <div className="defensive-height-axis text-text-faint" aria-hidden="true">
+          {[100, 80, 60, 40, 20, 0].map((m) => <span key={m} style={{ top: `${100 - m}%` }}>{m} m</span>)}
+        </div>
+        <div className="defensive-height-field">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" className="defensive-height-pitch">
+            <g fill="none" stroke="var(--pitch-chalk)" strokeWidth=".35" opacity=".25">
+              <rect x="1" y="1" width="98" height="98" />
+              <rect x="44" y="0" width="12" height="1" />
+              <rect x="44" y="99" width="12" height="1" />
+              <rect x="22" y="1" width="56" height="16" />
+              <rect x="22" y="83" width="56" height="16" />
+              <line x1="1" y1="50" x2="99" y2="50" />
+              <ellipse cx="50" cy="50" rx="12" ry="8" />
+              <path d="M1 33.33H99M1 66.67H99" strokeDasharray="1 2" />
+            </g>
+          </svg>
+          {rows.map((r) => {
+            const peak = highest?.key === r.key && r.shots > 0;
+            return (
+              <div key={r.key} className="defensive-height-zone" style={{ top: `${100 - Math.min(90, Math.max(10, r.height))}%` }}>
+                <div className="flex items-end justify-between gap-2">
+                  <div>
+                    <span className="display text-[12px] uppercase text-text-dim">{name(r.key)}</span>
+                    <div className="display-i text-[34px] leading-none text-cream">{Math.round(r.height)}<span className="ml-1 text-[16px]">m</span></div>
+                  </div>
+                  <div className="text-right">
+                    <div className={cn("num-flat text-[22px] leading-none", peak ? "text-reaction-warn" : "text-cream")}>{rate(r).toFixed(3)}</div>
+                    <div className="text-[10px] text-text-faint">shots / min</div>
+                  </div>
+                </div>
+                <div className="relative mt-2 h-1 bg-surface-2">
+                  <span className="absolute inset-y-0 left-0 bg-cream/40" style={{ width: `${r.min / maxMin * 100}%` }} />
+                </div>
+                <div className="mt-1.5 flex flex-wrap justify-between gap-x-2 text-[11.5px] text-text-dim">
+                  <span>{time(r.min)}</span>
+                  <span>{r.shots} {r.shots === 1 ? "shot" : "shots"} · {r.goals} {r.goals === 1 ? "goal" : "goals"}</span>
+                </div>
+                {peak && <div className="mt-1 text-[10px] uppercase text-reaction-warn">Highest rate{small(r) ? " · Small sample" : ""}</div>}
               </div>
-
-              <div className="mt-1.5 flex h-7 items-center gap-2">
-                <span className="relative h-full flex-1 bg-surface-2">
-                  <span
-                    className={cn(
-                      "absolute inset-y-0 left-0",
-                      alarm ? "bg-reaction-bad/35" : "bg-cream/20",
-                    )}
-                    style={{ width: `${(r.min / maxMin) * 100}%` }}
-                  />
-                  {/* One mark per shot conceded while we defended at this
-                      height, filled where it went in. */}
-                  <span className="absolute inset-y-0 left-2 flex items-center gap-1.5">
-                    {Array.from({ length: Math.min(r.shots, 14) }, (_, i) => (
-                      <span
-                        key={i}
-                        className={cn(
-                          "h-2 w-2 shrink-0 rounded-full",
-                          i < r.goals ? "bg-reaction-bad" : "border border-text-dim bg-transparent",
-                        )}
-                      />
-                    ))}
-                  </span>
-                </span>
-                <span className="num-flat w-[118px] shrink-0 text-right text-[12px] text-text-dim">
-                  {r.shots} {r.shots === 1 ? "shot" : "shots"}
-                  {r.goals > 0 ? `, ${r.goals} in` : ""}
-                </span>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="mt-4 flex items-center gap-4 border-t border-wire pt-3">
-        <span className="flex items-center gap-1.5 text-[11.5px] text-text-faint">
-          <span className="h-2 w-2 rounded-full border border-text-dim" aria-hidden="true" />
-          shot conceded
-        </span>
-        <span className="flex items-center gap-1.5 text-[11.5px] text-text-faint">
-          <span className="h-2 w-2 rounded-full bg-reaction-bad" aria-hidden="true" />
-          goal
-        </span>
+            );
+          })}
+        </div>
+        <div className="defensive-height-home text-text-faint">Our goal</div>
       </div>
-
-      <p className="mt-3 text-[12px] leading-relaxed text-text-dim">
-        {worst
-          ? `Per minute spent there, we gave up most while defending ${where(worst.key)} (${Math.round(worst.height)} m).`
-          : mostShots && mostShots.shots > 0
-            ? `Most of what we conceded came while defending ${where(mostShots.key)} — ${mostShots.shots} of ${lineDefending.shots.length} shots. No height was used long enough to compare rates fairly.`
-            : "No shots conceded in any line state in this period."}
-      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-text-faint">
+        <span className="h-1 w-6 bg-cream/40" aria-hidden="true" /> Width = time spent
+      </div>
+      {mostTime && <div className="mt-4 border-t border-wire pt-3">
+        <p className="display text-[18px] uppercase leading-snug text-cream">Most time: {name(mostTime.key)} · {time(mostTime.min)}</p>
+        <p className="mt-1 text-[12px] text-text-dim">{mostTime.shots} shots · {mostTime.goals} goals conceded there.</p>
+        {highest && highest.shots > 0 && <p className="mt-2 text-[12px] text-text-dim">Highest shot rate: {name(highest.key)} · {rate(highest).toFixed(3)}/min{small(highest) ? ` · only ${time(highest.min)}, ${highest.shots} ${highest.shots === 1 ? "shot" : "shots"}.` : "."}</p>}
+      </div>}
     </Card>
   );
 }
@@ -3361,6 +3423,7 @@ export function StatsVisuals(props: Props) {
   if (props.tab === "passes")
     cards = [
       <LanesTable key="lanes" passes={passes} colour={colour} identity={identity} />,
+      <IndividualPassMap key={`individual-${props.team}-${props.period}`} passes={passes} colour={colour} identity={identity} opponentPasses={opponentPasses} />,
       <BetterOption key="better" {...p} colour={colour} />,
       <PassNetwork
         key="network"
@@ -3381,14 +3444,16 @@ export function StatsVisuals(props: Props) {
     ];
   const shown = cards.filter(Boolean);
   return (
-    <StatsCardContext.Provider value={{ identity, other, both: props.scopeBoth }}>
-      {shown.length ? (
-        <div className="gap-4 min-[1100px]:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
-          {shown}
-        </div>
-      ) : (
-        <EmptyTab />
-      )}
-    </StatsCardContext.Provider>
+    <FramesLoading.Provider value={Boolean(props.framesLoading)}>
+      <StatsCardContext.Provider value={{ identity, other, both: props.scopeBoth }}>
+        {shown.length ? (
+          <div className="gap-4 min-[1100px]:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
+            {shown}
+          </div>
+        ) : (
+          <EmptyTab />
+        )}
+      </StatsCardContext.Provider>
+    </FramesLoading.Provider>
   );
 }

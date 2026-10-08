@@ -49,6 +49,7 @@ function Stats() {
     sections,
     players,
     loading,
+    framesLoading,
     events,
     stats,
     file,
@@ -191,6 +192,7 @@ function Stats() {
               teamA={teamA}
               teamB={teamB}
               ballGrade={null}
+              framesLoading={framesLoading}
             />
           )}
         </>
