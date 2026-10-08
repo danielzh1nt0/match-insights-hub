@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Individual pass maps use the existing Stats card, pitch and pass-data helpers; this preserves team identity, coordinate normalization and period filtering without duplicating the data contract.
+- Defensive-height maps derive durations and shot rates from the selected line timeline and outcomes; small samples remain visible in raw-rate rankings to avoid misleading conclusions.
