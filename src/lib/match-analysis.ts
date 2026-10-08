@@ -744,7 +744,13 @@ export function buildFindings(
     );
   }
 
-  const highWon = num(stats?.metrics?.["high_turnover_counts"]?.[team], 0);
+  // An absent bucket is not a zero. Defaulting it to 0 fired this finding --
+  // "all 23 balls won came in your own half" -- on any export that simply does
+  // not carry high_turnover_counts, and attached all 23 regains as evidence
+  // for a claim nothing had measured. Every neighbouring finding defaults the
+  // other way for exactly this reason.
+  const highRaw = stats?.metrics?.["high_turnover_counts"]?.[team];
+  const highWon = typeof highRaw === "number" && Number.isFinite(highRaw) ? highRaw : null;
   if (highWon === 0 && won.length >= 5) {
     out.push(
       finding({
@@ -765,6 +771,18 @@ export function buildFindings(
   return out;
 }
 
+/**
+ * A figure the file actually carries, or null.
+ *
+ * The summary used to read "had the ball 0% of the time … from 0 spells of 0
+ * passes each … 0 m long from back to front" whenever the export was missing
+ * those fields, which is a paragraph of confident nonsense about the team. A
+ * sentence that cannot be written truthfully is not written.
+ */
+function possess(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
+}
+
 export function buildSummary(
   data: MatchDataFile | undefined,
   stats: StatsFile | undefined,
@@ -780,19 +798,23 @@ export function buildSummary(
   const lost = eventsFor(data, team, "turnover_lost").length;
   const won = eventsFor(data, team, "turnover_won").length;
   const lines = [
-    `${names.own} had the ball ${num(row.possession_pct, 0)}% of the time against ${
-      names.other
-    }'s ${num(otherRow?.possession_pct, 0)}%, from ${num(row.sequences, 0)} spells of ${num(
-      row.passes_per_sequence,
-      0,
-    )} passes each.`,
-    `The ball was given away ${lost} times and won back ${won} times, with first pressure arriving inside two seconds ${num(
-      row.pressed_within_2s_pct,
-      0,
-    )}% of the time.`,
+    possess(row.possession_pct) === null
+      ? `How much of the ball ${names.own} had is not in this match file.`
+      : `${names.own} had the ball ${possess(row.possession_pct)}% of the time against ${
+          names.other
+        }'s ${possess(otherRow?.possession_pct) ?? "an unrecorded share"}%.`,
+    `The ball was given away ${lost} times and won back ${won} times${
+      possess(row.pressed_within_2s_pct) === null
+        ? ", and no loss in this file carries a time to first pressure."
+        : `, with first pressure arriving inside two seconds ${possess(row.pressed_within_2s_pct)}% of the time.`
+    }`,
     `${shots} shot${shots === 1 ? "" : "s"} came from ${
-      finalThirdEntries(stats, team) ?? 0
-    } entries into the final third, with the team typically ${Math.round(num(row.block_length_median_m, 0))} m long from back to front.`,
+      finalThirdEntries(stats, team) ?? "an unrecorded number of"
+    } entries into the final third${
+      possess(row.block_length_median_m) === null
+        ? "."
+        : `, with the team typically ${possess(row.block_length_median_m)} m long from back to front.`
+    }`,
   ];
   if (findings.length === 0) {
     lines.push("Every target you set was met in this match, so there is nothing flagged to train.");

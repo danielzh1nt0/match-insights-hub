@@ -97,3 +97,32 @@ test("saved targets fall back to the defaults one field at a time", () => {
   expect(targets.shots).toBe(14);
   expect(targets.possessionPct).toBe(KPI_DEFAULTS.possessionPct);
 });
+
+test("a measured zero is scored, a missing record is not", () => {
+  // `shotCount(...) || null` read a real 0 as "not measured", dropped the
+  // target out of the denominator, and so scored a side that took no shots
+  // HIGHER than one that took a single shot against a target of ten.
+  const tookNone = {
+    metrics: { shots: [{ team: "B", t: 100, outcome: "wide" }] },
+  } as never;
+  const kpi = buildKpi({
+    stats: tookNone,
+    file,
+    team: "A",
+    timeline: undefined,
+    targets: { ...KPI_DEFAULTS, shots: 10 },
+  });
+  const shots = kpi.attack.measures.find((m) => m.key === "shots");
+  expect(shots?.value).toBe(0);
+  expect(shots?.met).toBe(false);
+
+  // No shot record at all is still withheld.
+  const noRecord = buildKpi({
+    stats: { metrics: {} } as never,
+    file,
+    team: "A",
+    timeline: undefined,
+    targets: KPI_DEFAULTS,
+  });
+  expect(noRecord.attack.measures.find((m) => m.key === "shots")?.met).toBeNull();
+});

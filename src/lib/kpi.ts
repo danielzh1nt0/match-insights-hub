@@ -150,6 +150,10 @@ export function buildKpi({
   const them: TeamKey = team === "A" ? "B" : "A";
   const periods = file?.periods;
   const goals = goalsFrom(stats, periods);
+  // Whether the file carries a shot record at all. A zero drawn from a real
+  // record is a measured zero and must be scored; a zero because the key is
+  // missing is not an answer. Conflating them let an empty file look perfect.
+  const hasShots = Array.isArray(stats?.metrics?.["shots"]);
 
   const attack = group("Attack", [
     measure(
@@ -160,7 +164,14 @@ export function buildKpi({
       "up",
       "%",
     ),
-    measure("shots", "Shots", shotCount(stats, team, periods) || null, targets.shots, "up", ""),
+    measure(
+      "shots",
+      "Shots",
+      hasShots ? shotCount(stats, team, periods) : null,
+      targets.shots,
+      "up",
+      "",
+    ),
     measure(
       "entries",
       "Final-third entries",
@@ -183,7 +194,7 @@ export function buildKpi({
     measure(
       "shots_conceded",
       "Shots conceded",
-      shotCount(stats, them, periods) || null,
+      hasShots ? shotCount(stats, them, periods) : null,
       targets.shotsConceded,
       "down",
       "",
@@ -193,11 +204,7 @@ export function buildKpi({
     measure(
       "goals_conceded",
       "Goals conceded",
-      shotCount(stats, them, periods) === 0 && shotCount(stats, team, periods) === 0
-        ? null
-        : team === "A"
-          ? goals.b
-          : goals.a,
+      hasShots ? (team === "A" ? goals.b : goals.a) : null,
       targets.goalsConceded,
       "down",
       "",

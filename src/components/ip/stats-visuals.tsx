@@ -117,8 +117,32 @@ const periodRange = (file: MatchDataFile | undefined, period: Period) => {
   const end = Math.max(file?.frames.at(-1)?.t ?? 0, file?.events.at(-1)?.t ?? 0, 1);
   return periodWindow(file, period, end);
 };
-const inRange = (time: number | null, range: number[]) =>
-  time === null || (time >= (range[0] ?? 0) && time <= (range[1] ?? Infinity));
+/**
+ * Whether a moment belongs to the selected period of the match.
+ *
+ * Two holes, both of which inflated every count on this page. "Full" is the
+ * whole recording rather than the match, so warm-up and half-time moments were
+ * counted -- a rondo in the warm-up is a pass, a throw-in before kick-off is a
+ * restart, and a team standing around at the interval is maximally stretched.
+ * And a null time used to pass, so a moment with no clock landed in every
+ * period at once. passSet below was fixed for exactly this; the frames and
+ * events path was not.
+ */
+const inMatch = (time: number | null, range: number[], periods: Periods) =>
+  time !== null &&
+  time >= (range[0] ?? 0) &&
+  time <= (range[1] ?? Infinity) &&
+  insidePeriods(time, periods);
+/**
+ * A measured figure, or a dash.
+ *
+ * Reading an absent field as 0 is the most expensive mistake on these screens:
+ * "0% pressed within 2 s" is a damning number about the team, and it was being
+ * printed about the export. A dash says the one true thing instead.
+ */
+const withheld = (value: number | null | undefined, unit = "") =>
+  value === null || value === undefined ? "—" : `${Math.round(value)}${unit}`;
+
 const fmt = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}`;
 
@@ -870,7 +894,9 @@ function PressMap({ events, team, matchId, colour, file }: Props & { colour: str
   // same moment on the pitch twice. High ones only count when there is no
   // plain record of the balls won.
   const hasWon = events.some((event) => event.team === team && event.type === "turnover_won");
-  const types = hasWon ? ["pressure", "press", "turnover_won"] : ["pressure", "press", "high_turnover"];
+  const types = hasWon
+    ? ["pressure", "press", "turnover_won"]
+    : ["pressure", "press", "high_turnover"];
   const press = events
     .filter((event) => event.team === team && types.includes(event.type))
     .map((event) => ({ event, point: eventPoint(event, file) }))
@@ -972,14 +998,8 @@ function CounterPress({ events, team, stats, matchId, teamA, teamB }: Props) {
         </div>
       </div>
       <div className="grid grid-cols-3 rule-x border border-wire">
-        <Metric
-          value={`${Math.round(value(row, "pressed_within_2s_pct") ?? 0)}%`}
-          label="within 2 s"
-        />
-        <Metric
-          value={`${Math.round(value(row, "regained_within_5s_pct") ?? 0)}%`}
-          label="back in 5 s"
-        />
+        <Metric value={withheld(value(row, "pressed_within_2s_pct"), "%")} label="within 2 s" />
+        <Metric value={withheld(value(row, "regained_within_5s_pct"), "%")} label="back in 5 s" />
         <Metric value={`${Math.round(median * 10) / 10}s`} label="median" />
       </div>
     </Card>
@@ -1434,8 +1454,10 @@ function ShotTimeline({
   );
 }
 
-function ShotSummary({ stats, team, events }: Props) {
-  const metricShots = contractShots(stats, team);
+function ShotSummary({ stats, team, events, file }: Props) {
+  const metricShots = contractShots(stats, team).filter((shot) =>
+    insidePeriods(shot.t, file?.periods),
+  );
   const shots: Shot[] = metricShots.length
     ? metricShots
     : events
@@ -1468,7 +1490,17 @@ function ShotSummary({ stats, team, events }: Props) {
   // reported out of the placed ones, not out of every shot. Out of every shot it
   // read as though the unplaced ones had been shown to be outside the area.
   const placed = shots.filter((shot) => shot.x !== null);
-  const box = placed.filter((shot) => shot.x! < 18 || shot.x! > 82).length;
+  // The penalty area is 16.5 m deep and 40.3 m wide: on a 105 x 68 pitch that
+  // is the outer 15.7% of the length and the middle 59% of the width. The old
+  // test was x-only, so a shot from the touchline level with the box counted
+  // as one taken inside it.
+  const inBox = (shot: Shot) =>
+    shot.x !== null &&
+    shot.y !== null &&
+    (shot.x < 15.7 || shot.x > 84.3) &&
+    shot.y > 20.5 &&
+    shot.y < 79.5;
+  const box = placed.filter(inBox).length;
   return (
     <Card
       question="What did our shooting produce?"
@@ -1664,9 +1696,7 @@ function PlayerCards({ players, stats, matchId, colours }: Props) {
 function passSet(stats: StatsFile | undefined, team: TeamKey, range: number[], periods: Periods) {
   return (stats?.passes ?? []).filter((pass: any) => {
     if (passTeam(pass) !== team) return false;
-    const t = passTime(pass);
-    if (t === null) return false;
-    return insidePeriods(t, periods) && inRange(t, range);
+    return inMatch(passTime(pass), range, periods);
   }) as Pass[];
 }
 
@@ -1682,6 +1712,8 @@ type PairCount = {
   total: number;
   complete: number;
   gain: number;
+  /** How many of these passes carried a position, for the averages below. */
+  located: number;
   start: Point | null;
   end: Point | null;
 };
@@ -1694,7 +1726,16 @@ function pairCounts(passes: Pass[]) {
     const key = `${from}-${to}`,
       start = passPoint(pass, "start"),
       end = passPoint(pass, "end"),
-      item = map.get(key) ?? { from, to, total: 0, complete: 0, gain: 0, start: null, end: null };
+      item = map.get(key) ?? {
+        from,
+        to,
+        total: 0,
+        complete: 0,
+        gain: 0,
+        located: 0,
+        start: null,
+        end: null,
+      };
     // A pass the file never judged belongs in neither column: counting it as
     // complete flattered every lane in the table.
     const completed = passCompleted(pass);
@@ -1703,6 +1744,7 @@ function pairCounts(passes: Pass[]) {
       if (completed) item.complete += 1;
     }
     if (start && end) {
+      item.located += 1;
       item.gain += end.x - start.x;
       item.start = { x: (item.start?.x ?? 0) + start.x, y: (item.start?.y ?? 0) + start.y };
       item.end = { x: (item.end?.x ?? 0) + end.x, y: (item.end?.y ?? 0) + end.y };
@@ -1712,8 +1754,18 @@ function pairCounts(passes: Pass[]) {
   return [...map.values()]
     .map((item) => ({
       ...item,
-      start: item.start ? { x: item.start.x / item.total, y: item.start.y / item.total } : null,
-      end: item.end ? { x: item.end.x / item.total, y: item.end.y / item.total } : null,
+      // Divided by the number of passes that contributed a position, not by
+      // the number the file judged. Those are different counts, and dividing
+      // by the judged one put a node at a multiple of its real spot -- or at
+      // Infinity, which silently dropped it from the drawing.
+      start:
+        item.start && item.located > 0
+          ? { x: item.start.x / item.located, y: item.start.y / item.located }
+          : null,
+      end:
+        item.end && item.located > 0
+          ? { x: item.end.x / item.located, y: item.end.y / item.located }
+          : null,
     }))
     .sort((a, b) => b.total - a.total);
 }
@@ -2274,18 +2326,35 @@ function IndividualPassMap({
   const located = passes.flatMap((pass, index) => {
     const start = passPoint(pass, "start");
     const end = passPoint(pass, "end");
-    return start && end ? [{ pass, index, start, end, completed: passCompleted(pass), from: passPlayer(pass, "from") }] : [];
+    return start && end
+      ? [
+          {
+            pass,
+            index,
+            start,
+            end,
+            completed: passCompleted(pass),
+            from: passPlayer(pass, "from"),
+          },
+        ]
+      : [];
   });
-  const playerIds = [...new Set(located.flatMap((p) => p.from === null ? [] : [p.from]))].sort((a, b) => a - b);
-  const shown = located.filter((p) =>
-    (player === "all" || String(p.from) === player) &&
-    (outcome === "all" || (outcome === "completed" && p.completed === true) ||
-      (outcome === "incomplete" && p.completed === false) || (outcome === "unknown" && p.completed === null)),
+  const playerIds = [...new Set(located.flatMap((p) => (p.from === null ? [] : [p.from])))].sort(
+    (a, b) => a - b,
+  );
+  const shown = located.filter(
+    (p) =>
+      (player === "all" || String(p.from) === player) &&
+      (outcome === "all" ||
+        (outcome === "completed" && p.completed === true) ||
+        (outcome === "incomplete" && p.completed === false) ||
+        (outcome === "unknown" && p.completed === null)),
   );
   const completed = shown.filter((p) => p.completed === true).length;
   const incomplete = shown.filter((p) => p.completed === false).length;
   const unknown = shown.length - completed - incomplete;
-  const tone = (result: boolean | null) => result === true ? colour : result === false ? "var(--pitch-chalk)" : "var(--text-faint)";
+  const tone = (result: boolean | null) =>
+    result === true ? colour : result === false ? "var(--pitch-chalk)" : "var(--text-faint)";
   return (
     <Card
       question="Where did our passes go?"
@@ -2293,46 +2362,127 @@ function IndividualPassMap({
       icon={RouteIcon}
       comparison={{ target: "—", opponent: `${opponentPasses} passes`, last5: "—" }}
       honesty={`${shown.length} detected passes · ${completed + incomplete} with an outcome`}
-      footer={passes.length > located.length ? `${passes.length - located.length} without coordinates` : "Selected period"}
+      footer={
+        passes.length > located.length
+          ? `${passes.length - located.length} without coordinates`
+          : "Selected period"
+      }
     >
       <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Pass outcomes">
-        {([['all', 'All'], ['completed', 'Completed'], ['incomplete', 'Incomplete'], ['unknown', 'Unrated']] as const).map(([key, label]) => (
-          <Button key={key} variant={outcome === key ? "primary" : "ghost"} aria-pressed={outcome === key} onClick={() => setOutcome(key)} className="min-h-11 px-3">{label}</Button>
+        {(
+          [
+            ["all", "All"],
+            ["completed", "Completed"],
+            ["incomplete", "Incomplete"],
+            ["unknown", "Unrated"],
+          ] as const
+        ).map(([key, label]) => (
+          <Button
+            key={key}
+            variant={outcome === key ? "primary" : "ghost"}
+            aria-pressed={outcome === key}
+            onClick={() => setOutcome(key)}
+            className="min-h-11 px-3"
+          >
+            {label}
+          </Button>
         ))}
       </div>
       <label className="mb-4 flex items-center gap-3 text-[12.5px] text-text-dim">
         Player
-        <select aria-label="Pass map player" value={player} onChange={(e) => setPlayer(e.target.value)} className="min-h-11 min-w-0 flex-1 border border-wire bg-surface-2 px-3 text-text focus-visible:outline-2 focus-visible:outline-cream">
+        <select
+          aria-label="Pass map player"
+          value={player}
+          onChange={(e) => setPlayer(e.target.value)}
+          className="min-h-11 min-w-0 flex-1 border border-wire bg-surface-2 px-3 text-text focus-visible:outline-2 focus-visible:outline-cream"
+        >
           <option value="all">All players</option>
-          {playerIds.map((id) => <option key={id} value={id}>Player {id}</option>)}
+          {playerIds.map((id) => (
+            <option key={id} value={id}>
+              Player {id}
+            </option>
+          ))}
         </select>
       </label>
-      <StatsPitch chalk="var(--pitch-chalk)" attackLabel={identity.shortCode} ariaLabel={`${identity.name} individual pass map: ${completed} completed, ${incomplete} incomplete, ${unknown} unrated`}>
+      <StatsPitch
+        chalk="var(--pitch-chalk)"
+        attackLabel={identity.shortCode}
+        ariaLabel={`${identity.name} individual pass map: ${completed} completed, ${incomplete} incomplete, ${unknown} unrated`}
+      >
         <defs>
           {([true, false, null] as const).map((result, i) => (
-            <marker key={i} id={`${markerId}-${i}`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3.5" markerHeight="3.5" orient="auto-start-reverse" markerUnits="strokeWidth">
+            <marker
+              key={i}
+              id={`${markerId}-${i}`}
+              viewBox="0 0 6 6"
+              refX="5"
+              refY="3"
+              markerWidth="3.5"
+              markerHeight="3.5"
+              orient="auto-start-reverse"
+              markerUnits="strokeWidth"
+            >
               <path d="M0 0 L6 3 L0 6 Z" fill={tone(result)} />
             </marker>
           ))}
         </defs>
-        {shown.filter((p) => p.completed === true).map((p) => (
-          <line key={`outline-${p.index}`} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
-            stroke="var(--pitch-chalk)" strokeWidth=".65" strokeOpacity=".3" />
-        ))}
-        {[...shown].sort((a, b) => Number(a.completed === true) - Number(b.completed === true)).map((p) => (
-          <line key={p.index} x1={3 + p.start.x * .94} y1={1.5 + p.start.y * .609} x2={3 + p.end.x * .94} y2={1.5 + p.end.y * .609}
-            stroke={tone(p.completed)} strokeWidth=".35" strokeOpacity={p.completed === null ? .35 : .7}
-            strokeDasharray={p.completed === false ? "1.5 1" : undefined}
-            markerEnd={`url(#${markerId}-${p.completed === true ? 0 : p.completed === false ? 1 : 2})`}>
-            <title>{`${p.completed === true ? "Completed" : p.completed === false ? "Incomplete" : "Unrated"} pass${p.from === null ? "" : ` · Player ${p.from}`}${passTime(p.pass) === null ? "" : ` · ${fmt(passTime(p.pass) ?? 0)}`}`}</title>
-          </line>
-        ))}
+        {shown
+          .filter((p) => p.completed === true)
+          .map((p) => (
+            <line
+              key={`outline-${p.index}`}
+              x1={3 + p.start.x * 0.94}
+              y1={1.5 + p.start.y * 0.609}
+              x2={3 + p.end.x * 0.94}
+              y2={1.5 + p.end.y * 0.609}
+              stroke="var(--pitch-chalk)"
+              strokeWidth=".65"
+              strokeOpacity=".3"
+            />
+          ))}
+        {[...shown]
+          .sort((a, b) => Number(a.completed === true) - Number(b.completed === true))
+          .map((p) => (
+            <line
+              key={p.index}
+              x1={3 + p.start.x * 0.94}
+              y1={1.5 + p.start.y * 0.609}
+              x2={3 + p.end.x * 0.94}
+              y2={1.5 + p.end.y * 0.609}
+              stroke={tone(p.completed)}
+              strokeWidth=".35"
+              strokeOpacity={p.completed === null ? 0.35 : 0.7}
+              strokeDasharray={p.completed === false ? "1.5 1" : undefined}
+              markerEnd={`url(#${markerId}-${p.completed === true ? 0 : p.completed === false ? 1 : 2})`}
+            >
+              <title>{`${p.completed === true ? "Completed" : p.completed === false ? "Incomplete" : "Unrated"} pass${p.from === null ? "" : ` · Player ${p.from}`}${passTime(p.pass) === null ? "" : ` · ${fmt(passTime(p.pass) ?? 0)}`}`}</title>
+            </line>
+          ))}
       </StatsPitch>
-      {shown.length === 0 && <p className="mt-3 text-[12.5px] text-text-faint">No passes match this selection.</p>}
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-text-dim" aria-label="Pass map legend">
-        {([[true, 'Completed', completed], [false, 'Incomplete', incomplete], [null, 'Unrated', unknown]] as const).map(([result, label, count]) => (
+      {shown.length === 0 && (
+        <p className="mt-3 text-[12.5px] text-text-faint">No passes match this selection.</p>
+      )}
+      <div
+        className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-text-dim"
+        aria-label="Pass map legend"
+      >
+        {(
+          [
+            [true, "Completed", completed],
+            [false, "Incomplete", incomplete],
+            [null, "Unrated", unknown],
+          ] as const
+        ).map(([result, label, count]) => (
           <span key={label} className="inline-flex items-center gap-1.5">
-            <svg width="24" height="12" viewBox="0 0 24 12" aria-hidden="true"><path d="M0 6 H20 M16 2 L20 6 L16 10" fill="none" stroke={tone(result)} strokeWidth="1.5" strokeDasharray={result === false ? "3 2" : undefined} /></svg>
+            <svg width="24" height="12" viewBox="0 0 24 12" aria-hidden="true">
+              <path
+                d="M0 6 H20 M16 2 L20 6 L16 10"
+                fill="none"
+                stroke={tone(result)}
+                strokeWidth="1.5"
+                strokeDasharray={result === false ? "3 2" : undefined}
+              />
+            </svg>
             {label} · {count}
           </span>
         ))}
@@ -2431,7 +2581,7 @@ function PassMap({
         icon={RouteIcon}
         caption={
           view === "routes"
-            ? "Top routes between zones · arrow width = number of passes"
+            ? "Top routes between zones · arrow width = passes that arrived"
             : `${entries.length} ${entries.length === 1 ? "pass" : "passes"} · ${entriesDone} completed${
                 entriesUngraded > 0 ? ` · ${entriesUngraded} not graded` : ""
               }`
@@ -2768,7 +2918,11 @@ function PassLog({ passes, matchId }: { passes: Pass[]; matchId: string }) {
                   passCompleted(pass) ? "text-positive" : "text-reaction-bad",
                 )}
               >
-                {passCompleted(pass) ? "Complete" : "Lost"}
+                {passCompleted(pass) === null
+                  ? "Not graded"
+                  : passCompleted(pass)
+                    ? "Complete"
+                    : "Lost"}
               </span>
             </Link>
           );
@@ -2866,7 +3020,7 @@ function ShapeByPhase({
   const oppLengths: number[] = [];
   let lastSecond = -1;
   for (const frame of file?.frames ?? []) {
-    if (!inRange(frame.t, range)) continue;
+    if (!inMatch(frame.t, range, file?.periods)) continue;
     const sec = Math.floor(frame.t);
     if (sec === lastSecond) continue;
     lastSecond = sec;
@@ -3019,10 +3173,16 @@ function ShapeByPhase({
 function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) {
   const tl = lineDefending.timeline;
   if (!lineDefending.states.length || tl.length < 2) return null;
-  const dt = median(tl.slice(1).map((p, i) => p.t - (tl[i]?.t ?? p.t)).filter((d) => d > 0)) || 1;
+  const dt =
+    median(
+      tl
+        .slice(1)
+        .map((p, i) => p.t - (tl[i]?.t ?? p.t))
+        .filter((d) => d > 0),
+    ) || 1;
   const stateOf = (h: number) => (h < 30 ? "low" : h <= 38 ? "mid" : "high");
   const rows = lineDefending.states
-    .map((s) => ({ ...s, min: tl.filter((p) => stateOf(p.height) === s.key).length * dt / 60 }))
+    .map((s) => ({ ...s, min: (tl.filter((p) => stateOf(p.height) === s.key).length * dt) / 60 }))
     .filter((r) => r.min > 0)
     .sort((a, b) => b.height - a.height);
   const rate = (r: { shots: number; min: number }) => r.shots / r.min;
@@ -3031,7 +3191,7 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
   const maxMin = Math.max(...rows.map((r) => r.min), 1);
   const small = (r: { shots: number; min: number }) => r.min < 8 || r.shots < 3;
   const name = (key: string) => `${key.charAt(0).toUpperCase()}${key.slice(1)} line`;
-  const time = (min: number) => min < 1 ? `${Math.round(min * 60)} s` : `${Math.round(min)} min`;
+  const time = (min: number) => (min < 1 ? `${Math.round(min * 60)} s` : `${Math.round(min)} min`);
 
   return (
     <Card
@@ -3040,13 +3200,26 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
       caption="Defensive height · time spent · shots conceded per minute."
       honesty={`${lineDefending.shotConfirmed} confirmed · ${lineDefending.shots.length} detected shots · ${tl.length} line samples`}
     >
-      <div className="defensive-height-map" role="img" aria-label="Defensive heights on a vertical 0 to 100 metre pitch axis, with time spent and shots conceded">
+      <div
+        className="defensive-height-map"
+        role="img"
+        aria-label="Defensive heights on a vertical 0 to 100 metre pitch axis, with time spent and shots conceded"
+      >
         <div className="defensive-height-goal text-text-faint">Opponent goal ↑</div>
         <div className="defensive-height-axis text-text-faint" aria-hidden="true">
-          {[100, 80, 60, 40, 20, 0].map((m) => <span key={m} style={{ top: `${100 - m}%` }}>{m} m</span>)}
+          {[100, 80, 60, 40, 20, 0].map((m) => (
+            <span key={m} style={{ top: `${100 - m}%` }}>
+              {m} m
+            </span>
+          ))}
         </div>
         <div className="defensive-height-field">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" className="defensive-height-pitch">
+          <svg
+            viewBox="0 0 100 100"
+            preserveAspectRatio="none"
+            aria-hidden="true"
+            className="defensive-height-pitch"
+          >
             <g fill="none" stroke="var(--pitch-chalk)" strokeWidth=".35" opacity=".25">
               <rect x="1" y="1" width="98" height="98" />
               <rect x="44" y="0" width="12" height="1" />
@@ -3061,25 +3234,51 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
           {rows.map((r) => {
             const peak = highest?.key === r.key && r.shots > 0;
             return (
-              <div key={r.key} className="defensive-height-zone" style={{ top: `${100 - Math.min(90, Math.max(10, r.height))}%` }}>
+              <div
+                key={r.key}
+                className="defensive-height-zone"
+                style={{ top: `${100 - Math.min(90, Math.max(10, r.height))}%` }}
+              >
                 <div className="flex items-end justify-between gap-2">
                   <div>
-                    <span className="display text-[12px] uppercase text-text-dim">{name(r.key)}</span>
-                    <div className="display-i text-[34px] leading-none text-cream">{Math.round(r.height)}<span className="ml-1 text-[16px]">m</span></div>
+                    <span className="display text-[12px] uppercase text-text-dim">
+                      {name(r.key)}
+                    </span>
+                    <div className="display-i text-[34px] leading-none text-cream">
+                      {Math.round(r.height)}
+                      <span className="ml-1 text-[16px]">m</span>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className={cn("num-flat text-[22px] leading-none", peak ? "text-reaction-warn" : "text-cream")}>{rate(r).toFixed(3)}</div>
+                    <div
+                      className={cn(
+                        "num-flat text-[22px] leading-none",
+                        peak ? "text-reaction-warn" : "text-cream",
+                      )}
+                    >
+                      {rate(r).toFixed(3)}
+                    </div>
                     <div className="text-[10px] text-text-faint">shots / min</div>
                   </div>
                 </div>
                 <div className="relative mt-2 h-1 bg-surface-2">
-                  <span className="absolute inset-y-0 left-0 bg-cream/40" style={{ width: `${r.min / maxMin * 100}%` }} />
+                  <span
+                    className="absolute inset-y-0 left-0 bg-cream/40"
+                    style={{ width: `${(r.min / maxMin) * 100}%` }}
+                  />
                 </div>
                 <div className="mt-1.5 flex flex-wrap justify-between gap-x-2 text-[11.5px] text-text-dim">
                   <span>{time(r.min)}</span>
-                  <span>{r.shots} {r.shots === 1 ? "shot" : "shots"} · {r.goals} {r.goals === 1 ? "goal" : "goals"}</span>
+                  <span>
+                    {r.shots} {r.shots === 1 ? "shot" : "shots"} · {r.goals}{" "}
+                    {r.goals === 1 ? "goal" : "goals"}
+                  </span>
                 </div>
-                {peak && <div className="mt-1 text-[10px] uppercase text-reaction-warn">Highest rate{small(r) ? " · Small sample" : ""}</div>}
+                {peak && (
+                  <div className="mt-1 text-[10px] uppercase text-reaction-warn">
+                    Highest rate{small(r) ? " · Small sample" : ""}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -3089,11 +3288,24 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-text-faint">
         <span className="h-1 w-6 bg-cream/40" aria-hidden="true" /> Width = time spent
       </div>
-      {mostTime && <div className="mt-4 border-t border-wire pt-3">
-        <p className="display text-[18px] uppercase leading-snug text-cream">Most time: {name(mostTime.key)} · {time(mostTime.min)}</p>
-        <p className="mt-1 text-[12px] text-text-dim">{mostTime.shots} shots · {mostTime.goals} goals conceded there.</p>
-        {highest && highest.shots > 0 && <p className="mt-2 text-[12px] text-text-dim">Highest shot rate: {name(highest.key)} · {rate(highest).toFixed(3)}/min{small(highest) ? ` · only ${time(highest.min)}, ${highest.shots} ${highest.shots === 1 ? "shot" : "shots"}.` : "."}</p>}
-      </div>}
+      {mostTime && (
+        <div className="mt-4 border-t border-wire pt-3">
+          <p className="display text-[18px] uppercase leading-snug text-cream">
+            Most time: {name(mostTime.key)} · {time(mostTime.min)}
+          </p>
+          <p className="mt-1 text-[12px] text-text-dim">
+            {mostTime.shots} shots · {mostTime.goals} goals conceded there.
+          </p>
+          {highest && highest.shots > 0 && (
+            <p className="mt-2 text-[12px] text-text-dim">
+              Highest shot rate: {name(highest.key)} · {rate(highest).toFixed(3)}/min
+              {small(highest)
+                ? ` · only ${time(highest.min)}, ${highest.shots} ${highest.shots === 1 ? "shot" : "shots"}.`
+                : "."}
+            </p>
+          )}
+        </div>
+      )}
     </Card>
   );
 }
@@ -3141,8 +3353,11 @@ function LanesTable({
       end: null,
       ns: 0,
     };
-    item.total += 1;
-    if (passCompleted(pass)) item.complete += 1;
+    const judged = passCompleted(pass);
+    if (judged !== null) {
+      item.total += 1;
+      if (judged) item.complete += 1;
+    }
     const gain = finite(pass["gain_m"]);
     if (gain !== null && gain > 0) item.prog += gain;
     const a = passPoint(pass, "start"),
@@ -3307,8 +3522,9 @@ export function NotVerifiedYet({ what }: { what: string }) {
 export function StatsVisuals(props: Props) {
   setPitchContext(props.file);
   const range = periodRange(props.file, props.period);
-  const frames = (props.file?.frames ?? []).filter((frame) => inRange(frame.t, range));
-  const events = props.events.filter((event) => inRange(event.t, range));
+  const periods = props.file?.periods;
+  const frames = (props.file?.frames ?? []).filter((frame) => inMatch(frame.t, range, periods));
+  const events = props.events.filter((event) => inMatch(event.t, range, periods));
   const passes = passSet(props.stats, props.team, range, props.file?.periods);
   const p = { ...props, events };
   const colour = props.colours[props.team];
@@ -3423,7 +3639,13 @@ export function StatsVisuals(props: Props) {
   if (props.tab === "passes")
     cards = [
       <LanesTable key="lanes" passes={passes} colour={colour} identity={identity} />,
-      <IndividualPassMap key={`individual-${props.team}-${props.period}`} passes={passes} colour={colour} identity={identity} opponentPasses={opponentPasses} />,
+      <IndividualPassMap
+        key={`individual-${props.team}-${props.period}`}
+        passes={passes}
+        colour={colour}
+        identity={identity}
+        opponentPasses={opponentPasses}
+      />,
       <BetterOption key="better" {...p} colour={colour} />,
       <PassNetwork
         key="network"
