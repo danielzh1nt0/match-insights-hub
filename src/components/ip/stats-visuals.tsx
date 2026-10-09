@@ -709,11 +709,19 @@ function Runs({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour
   );
 }
 
+/** Below this, a per-minute rate describes a camera angle, not a player. */
+const RATE_MIN_MINUTES = 10;
+
 function Distance({ players, colour }: { players: PlayerStat[]; colour: string }) {
-  const ranked = [...players]
-    .filter((p) => p.minutes > 0 && p.distanceM > 0)
+  const seen = players.filter((p) => p.minutes > 0 && p.distanceM > 0);
+  // A player tracked for 40 seconds gets a denominator of one minute and tops
+  // the table at several times a real rate -- and the bar scale comes from
+  // that same top rate, so every genuine 90-minute player is squashed.
+  const ranked = [...seen]
+    .filter((p) => p.minutes >= RATE_MIN_MINUTES)
     .sort((a, b) => b.distanceM / b.minutes - a.distanceM / a.minutes)
     .slice(0, 10);
+  const brief = seen.length - ranked.length;
   if (!ranked.length) return null;
   const max = Math.max(...ranked.map((p) => p.distanceM / p.minutes));
   return (
@@ -721,7 +729,9 @@ function Distance({ players, colour }: { players: PlayerStat[]; colour: string }
       question="Distance covered (while in camera view)"
       icon={Footprints}
       caption="The camera follows the ball, so a player out of shot is not counted. Sorted by distance per visible minute."
-      honesty={`${ranked.length} observed players`}
+      honesty={`${ranked.length} observed players${
+        brief > 0 ? ` · ${brief} seen under ${RATE_MIN_MINUTES} min, not ranked` : ""
+      }`}
     >
       <div className="rule-y">
         {ranked.map((player) => {
@@ -1076,6 +1086,13 @@ function SetPieceCounts({ events, team, teamA, teamB }: Props) {
   ] as const;
   const any = rows.some(([, kind]) => count(team, kind) + count(other, kind) > 0);
   if (!any) return null;
+  // A set piece whose kind the file does not name was counted in the honesty
+  // line but in none of the three rows, so the card could read "Corners 0,
+  // Free kicks 0, Throw-ins 0" under "88 set pieces detected".
+  const setPieces = events.filter((event) => event.type === "set_piece");
+  const unnamed = setPieces.filter(
+    (event) => !rows.some(([, kind]) => setPieceKind(event).includes(kind)),
+  ).length;
   const mine = team === "A" ? teamA : teamB;
   const theirs = team === "A" ? teamB : teamA;
   return (
@@ -1083,7 +1100,9 @@ function SetPieceCounts({ events, team, teamA, teamB }: Props) {
       question="How many restarts did each side get?"
       icon={Repeat}
       caption="Counted from the set pieces in this match file."
-      honesty={`${events.filter((event) => event.type === "set_piece").length} set pieces detected`}
+      honesty={`${setPieces.length} set pieces detected${
+        unnamed > 0 ? ` · ${unnamed} with no kind recorded, in none of the rows` : ""
+      }`}
     >
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 text-[9px] font-bold uppercase text-text-faint">
         <span>{mine.shortCode}</span>
@@ -1119,139 +1138,6 @@ function Metric({ value, label }: { value: string; label: string }) {
       <strong className="num block text-[26px] leading-none text-text-bright">{value}</strong>
       <span className="label-xs mt-1.5 block text-text-faint">{label}</span>
     </div>
-  );
-}
-
-function ShapeMultiples({
-  territory,
-  colour,
-  identity,
-}: {
-  territory: Territory;
-  colour: string;
-  identity: StatsTeamIdentity;
-}) {
-  const snapshots = territory.snapshots.filter((snapshot) => snapshot.players.length >= 4);
-  if (!snapshots.length) return null;
-  const observed = snapshots.map((snapshot) => {
-    const players = snapshot.players.filter((player) => !player.isGK);
-    const xs = players.map((player) => player.x),
-      ys = players.map((player) => player.y);
-    return {
-      cx: xs.reduce((sum, x) => sum + x, 0) / xs.length,
-      cy: ys.reduce((sum, y) => sum + y, 0) / ys.length,
-      minX: Math.min(...xs),
-      maxX: Math.max(...xs),
-      minY: Math.min(...ys),
-      maxY: Math.max(...ys),
-    };
-  });
-  const average = (key: keyof (typeof observed)[number]) =>
-    observed.reduce((sum, item) => sum + item[key], 0) / observed.length;
-  const cx = average("cx"),
-    cy = average("cy"),
-    halfLength = (average("maxX") - average("minX")) / 2,
-    halfWidth = (average("maxY") - average("minY")) / 2;
-  const shape = [
-    { x: cx - halfLength, y: cy - halfWidth * 0.55 },
-    { x: cx - halfLength * 0.55, y: cy - halfWidth },
-    { x: cx + halfLength * 0.55, y: cy - halfWidth },
-    { x: cx + halfLength, y: cy - halfWidth * 0.55 },
-    { x: cx + halfLength, y: cy + halfWidth * 0.55 },
-    { x: cx + halfLength * 0.55, y: cy + halfWidth },
-    { x: cx - halfLength * 0.55, y: cy + halfWidth },
-    { x: cx - halfLength, y: cy + halfWidth * 0.55 },
-  ];
-  const polygon = shape
-    .map((point) => `${(clamp(point.y) / 100) * 64},${100 - clamp(point.x)}`)
-    .join(" ");
-  const length =
-    Math.round((snapshots.reduce((sum, s) => sum + s.lengthM, 0) / snapshots.length) * 10) / 10;
-  const width =
-    Math.round((snapshots.reduce((sum, s) => sum + s.widthM, 0) / snapshots.length) * 10) / 10;
-  return (
-    <Card
-      question="How did our shape change?"
-      icon={Grid3x3}
-      caption={`Average shape · ${identity.name}`}
-      comparison={{ target: "—", opponent: "—", last5: "—" }}
-      honesty={`${territory.frameCount} tracked frames`}
-    >
-      <StatsPitch
-        portrait
-        attackLabel={identity.shortCode}
-        ariaLabel={`${identity.name} average shape on the pitch`}
-      >
-        <polygon
-          points={polygon}
-          fill={colour}
-          fillOpacity=".25"
-          stroke={colour}
-          strokeWidth=".8"
-        />
-        <path
-          d={`M${(cy / 100) * 64 - 2},${100 - cx}h4M${(cy / 100) * 64},${98 - cx}v4`}
-          stroke={colour}
-          strokeWidth="1.2"
-        />
-      </StatsPitch>
-      <div className="mt-3 grid grid-cols-3 rule-x border border-wire">
-        <Metric value={`${length} m`} label="Length" />
-        <Metric value={`${width} m`} label="Width" />
-        <Metric
-          value={`${territory.lineHeightM || "—"}${territory.lineHeightM ? " m" : ""}`}
-          label="Line height"
-        />
-      </div>
-    </Card>
-  );
-}
-
-function ShapeOutcome({ lineDefending, colour }: { lineDefending: LineDefending; colour: string }) {
-  const states = lineDefending.states;
-  if (!states.length) return null;
-  const worst = [...states].sort((a, b) => b.shots - a.shots)[0]?.key;
-  return (
-    <Card
-      question="In which shape did we suffer?"
-      icon={Shield}
-      caption="Defensive states compared by opponent shots and goals."
-      honesty={`${lineDefending.timeline.length} shape samples`}
-    >
-      <div className="grid grid-cols-3 gap-2" role="img" aria-label="Defensive shape outcomes">
-        {states.map((state) => (
-          <div
-            key={state.key}
-            className={cn(
-              "border bg-surface-2 p-2",
-              state.key === worst ? "border-quality-bad" : "border-wire",
-            )}
-          >
-            <div className="flex justify-between">
-              <strong className="display text-[12px] uppercase">{state.key}</strong>
-              <span className="num text-[11px] text-text-faint">{state.height}m</span>
-            </div>
-            <svg viewBox="0 0 70 46" className="my-2 w-full">
-              <rect x="1" y="1" width="68" height="44" fill="none" stroke="var(--wire)" />
-              <rect
-                x={state.key === "low" ? 18 : state.key === "mid" ? 14 : 10}
-                y={state.key === "high" ? 7 : 12}
-                width={state.key === "low" ? 34 : state.key === "mid" ? 42 : 50}
-                height={state.key === "low" ? 22 : state.key === "mid" ? 28 : 32}
-                fill={colour}
-                fillOpacity=".16"
-                stroke={colour}
-                strokeDasharray="2 2"
-              />
-            </svg>
-            <div className="grid grid-cols-2 gap-1 text-center">
-              <Metric value={`${state.shots}`} label="shots" />
-              <Metric value={`${state.goals}`} label="goals" />
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
   );
 }
 
@@ -1768,151 +1654,6 @@ function pairCounts(passes: Pass[]) {
           : null,
     }))
     .sort((a, b) => b.total - a.total);
-}
-
-function LaneEffectiveness({
-  passes,
-  colour,
-  identity,
-}: {
-  passes: Pass[];
-  colour: string;
-  identity: StatsTeamIdentity;
-}) {
-  const [minN, setMinN] = useState(2);
-  const pairs = pairCounts(passes).filter((pair) => pair.total >= minN);
-  const best = [...pairs]
-    .filter((pair) => pair.total > 0)
-    .sort((a, b) => b.complete / b.total - a.complete / a.total || b.total - a.total)
-    .slice(0, 3);
-  const worst = [...pairs]
-    .filter((pair) => pair.total > 0 && !best.includes(pair))
-    .sort((a, b) => a.complete / a.total - b.complete / b.total || b.total - a.total)
-    .slice(0, 3);
-  const rows = [...best, ...worst];
-  const [selected, setSelected] = useState(0);
-  const lane = rows[selected] ?? rows[0];
-  if (!lane && minN === 2)
-    return (
-      <EvidenceUnavailable
-        question="Which lanes worked?"
-        icon={RouteIcon}
-        caption="Lane use and completion quality."
-      />
-    );
-  const renderRow = (pair: PairCount, index: number) => (
-    <Button
-      key={`${pair.from}-${pair.to}`}
-      variant="ghost"
-      onClick={() => setSelected(index)}
-      aria-pressed={selected === index}
-      className={cn(
-        "grid h-11 w-full grid-cols-[28px_1fr_auto] gap-3 rounded-none px-2 text-left",
-        index % 2 === 0 ? "bg-surface" : "bg-surface-2",
-        selected === index && "border-l-2 border-cream",
-      )}
-    >
-      <span className="text-[18px]" style={{ color: colour }}>
-        →
-      </span>
-      <span className="num text-[14px] text-text">
-        #{playerLabel(pair.from)} → #{playerLabel(pair.to)}
-      </span>
-      <span className="text-right">
-        <strong
-          className={cn(
-            "num block text-[12px]",
-            pair.complete / pair.total >= 0.7
-              ? "text-positive"
-              : pair.complete / pair.total >= 0.5
-                ? "text-reaction-warn"
-                : "text-reaction-bad",
-          )}
-        >
-          {pair.complete}/{pair.total}
-        </strong>
-        <small className="text-[10px] text-text-faint">
-          {Math.round(pair.gain / Math.max(pair.total, 1))} m avg
-        </small>
-      </span>
-    </Button>
-  );
-  return (
-    <Card
-      question="Which lanes worked?"
-      icon={RouteIcon}
-      caption="Tap a lane to isolate the real pass route."
-      comparison={{ target: "—", opponent: "—", last5: "—" }}
-      honesty={`${passes.length} passes`}
-    >
-      <StatsPitch
-        portrait
-        attackLabel={identity.shortCode}
-        ariaLabel={`${identity.name} selected passing lane`}
-      >
-        {lane && lane.start && lane.end && (
-          <>
-            <line
-              x1={(lane.start.y / 100) * 64}
-              y1={100 - lane.start.x}
-              x2={(lane.end.y / 100) * 64}
-              y2={100 - lane.end.x}
-              stroke={colour}
-              strokeWidth="1.8"
-            />
-            <circle cx={(lane.start.y / 100) * 64} cy={100 - lane.start.x} r="3" fill={colour} />
-            <circle cx={(lane.end.y / 100) * 64} cy={100 - lane.end.x} r="3" fill={colour} />
-            <text
-              x={(lane.start.y / 100) * 64}
-              y={100 - lane.start.x + 1}
-              textAnchor="middle"
-              fontSize="3"
-              fill="var(--ink)"
-              fontWeight="700"
-            >
-              {playerLabel(lane.from)}
-            </text>
-            <text
-              x={(lane.end.y / 100) * 64}
-              y={100 - lane.end.x + 1}
-              textAnchor="middle"
-              fontSize="3"
-              fill="var(--ink)"
-              fontWeight="700"
-            >
-              {playerLabel(lane.to)}
-            </text>
-          </>
-        )}
-      </StatsPitch>
-      <div
-        className="mt-3 flex items-center gap-2"
-        role="group"
-        aria-label="Minimum passes per lane"
-      >
-        <span className="text-[11px] text-text-faint">At least</span>
-        {[2, 3, 5, 10].map((n) => (
-          <Button
-            key={n}
-            variant="ghost"
-            onClick={() => setMinN(n)}
-            aria-pressed={minN === n}
-            className={cn(
-              "h-11 min-w-11 border px-2 text-[12px]",
-              minN === n ? "border-cream bg-cream text-ink" : "border-wire text-text",
-            )}
-          >
-            {n}
-          </Button>
-        ))}
-        <span className="text-[11px] text-text-faint">passes</span>
-      </div>
-      <h3 className="section-kicker mt-3">Best lanes</h3>
-      <div className="mt-1">{best.map((pair, index) => renderRow(pair, index))}</div>
-      <h3 className="section-kicker mt-3 border-t border-wire pt-3">Worst lanes</h3>
-      <div className="mt-1">{worst.map((pair, index) => renderRow(pair, best.length + index))}</div>
-    </Card>
-  );
 }
 
 function BetterOption({
@@ -3183,13 +2924,17 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
   const stateOf = (h: number) => (h < 30 ? "low" : h <= 38 ? "mid" : "high");
   const rows = lineDefending.states
     .map((s) => ({ ...s, min: (tl.filter((p) => stateOf(p.height) === s.key).length * dt) / 60 }))
-    .filter((r) => r.min > 0)
+    // A band with no measured height is not drawn at a made-up one.
+    .filter((r): r is typeof r & { height: number } => r.min > 0 && r.height !== null)
     .sort((a, b) => b.height - a.height);
   const rate = (r: { shots: number; min: number }) => r.shots / r.min;
-  const highest = [...rows].sort((a, b) => rate(b) - rate(a))[0];
+  const small = (r: { shots: number; min: number }) => r.min < 8 || r.shots < 3;
+  // Ranked only among bands held long enough for a rate to mean anything. A
+  // 20-second band with one shot reads 3.000/min against a 40-minute band's
+  // 0.075 and was winning the "highest shot rate" line on that.
+  const highest = [...rows].filter((r) => !small(r)).sort((a, b) => rate(b) - rate(a))[0];
   const mostTime = [...rows].sort((a, b) => b.min - a.min)[0];
   const maxMin = Math.max(...rows.map((r) => r.min), 1);
-  const small = (r: { shots: number; min: number }) => r.min < 8 || r.shots < 3;
   const name = (key: string) => `${key.charAt(0).toUpperCase()}${key.slice(1)} line`;
   const time = (min: number) => (min < 1 ? `${Math.round(min * 60)} s` : `${Math.round(min)} min`);
 
@@ -3256,7 +3001,7 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
                         peak ? "text-reaction-warn" : "text-cream",
                       )}
                     >
-                      {rate(r).toFixed(3)}
+                      {rate(r).toFixed(2)}
                     </div>
                     <div className="text-[10px] text-text-faint">shots / min</div>
                   </div>
@@ -3298,10 +3043,8 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
           </p>
           {highest && highest.shots > 0 && (
             <p className="mt-2 text-[12px] text-text-dim">
-              Highest shot rate: {name(highest.key)} · {rate(highest).toFixed(3)}/min
-              {small(highest)
-                ? ` · only ${time(highest.min)}, ${highest.shots} ${highest.shots === 1 ? "shot" : "shots"}.`
-                : "."}
+              Highest shot rate: {name(highest.key)} · {rate(highest).toFixed(2)}/min, over{" "}
+              {time(highest.min)}.
             </p>
           )}
         </div>
@@ -3320,7 +3063,7 @@ function LanesTable({
   colour: string;
   identity: StatsTeamIdentity;
 }) {
-  const [minN, setMinN] = useState(3);
+  const [minN, setMinN] = useState(LANE_MIN_PASSES);
   const [showMap, setShowMap] = useState(false);
   const [sel, setSel] = useState<string | null>(null);
   const map = new Map<
@@ -3445,7 +3188,7 @@ function LanesTable({
         </span>
         <input
           type="range"
-          min={1}
+          min={3}
           max={15}
           value={minN}
           onChange={(e) => setMinN(Number(e.target.value))}

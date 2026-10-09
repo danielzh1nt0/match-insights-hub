@@ -60,6 +60,8 @@ export type MatchTimeline = {
   passes: Bar[];
   /** Said plainly when there is nothing to draw. */
   empty: boolean;
+  /** Whose side of every figure above this is. */
+  team: TeamKey;
 };
 
 const BAR_S = 5 * 60;
@@ -93,18 +95,6 @@ function bars(spans: Span[], startS: number, endS: number) {
     if (spans.some((s) => toS > s.fromS && from < s.toS)) out.push({ fromS: from, toS });
   }
   return out;
-}
-
-function countPer(
-  items: { t: number }[],
-  slots: { fromS: number; toS: number }[],
-  pick: (item: never) => boolean,
-) {
-  return slots.map((slot) => ({
-    ...slot,
-    n: items.filter((item) => item.t >= slot.fromS && item.t < slot.toS && pick(item as never))
-      .length,
-  }));
 }
 
 export function buildTimeline({
@@ -160,7 +150,9 @@ export function buildTimeline({
     .map((goal) => {
       if (goal.team === "A") a += 1;
       else b += 1;
-      return { ...goal, score: `${a}-${b}` };
+      // Us first, whoever "us" is on this screen.
+      const [ours, theirs] = team === "A" ? [a, b] : [b, a];
+      return { ...goal, score: `${ours}-${theirs}` };
     });
 
   /* ---- five-minute blocks ---- */
@@ -264,6 +256,7 @@ export function buildTimeline({
     .filter((seq) => seq.toS > seq.fromS && inSpans(seq.fromS, spans));
 
   return {
+    team,
     spans,
     startS,
     endS,
@@ -537,7 +530,7 @@ export function keyMoments(timeline: MatchTimeline, story: Spell[]): KeyMoment[]
   if (decisive)
     out.push({
       t: decisive.t,
-      tone: decisive.team === "A" ? "strong" : "lost",
+      tone: decisive.team === timeline.team ? "strong" : "lost",
       label: "Goal",
       note: decisive.score,
     });

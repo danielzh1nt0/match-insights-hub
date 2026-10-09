@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { buildFindings } from "./match-analysis";
+import { buildFindings, severity } from "./match-analysis";
 
 /**
  * A finding is a claim about a subset.
@@ -52,7 +52,9 @@ test("carries only the losses that were actually slow", () => {
   expect(finding.evidenceNote).toBeUndefined();
 
   const slow = new Set(
-    events.filter((e) => (e.payload as { time_to_press?: number }).time_to_press! > 2).map((e) => e.id),
+    events
+      .filter((e) => (e.payload as { time_to_press?: number }).time_to_press! > 2)
+      .map((e) => e.id),
   );
   expect(finding.eventIds.every((id) => slow.has(id))).toBe(true);
 });
@@ -61,7 +63,10 @@ test("opens on the worst evidence, not the weakest", () => {
   const events = losses(116, (i) => (i < 41 ? 1 : 2.4 + (i % 20) * 0.3));
   const finding = pressFinding(events, 35);
   const seconds = new Map(
-    events.map((e) => [Math.round(e.t * 10) / 10, (e.payload as { time_to_press?: number }).time_to_press]),
+    events.map((e) => [
+      Math.round(e.t * 10) / 10,
+      (e.payload as { time_to_press?: number }).time_to_press,
+    ]),
   );
   const shown = finding.timestamps.map((t) => seconds.get(t)!);
 
@@ -70,12 +75,18 @@ test("opens on the worst evidence, not the weakest", () => {
 });
 
 test("carries enough clips for the strip to expand into", () => {
-  const finding = pressFinding(losses(116, () => 4), 35);
+  const finding = pressFinding(
+    losses(116, () => 4),
+    35,
+  );
   expect(finding.timestamps.length).toBeGreaterThan(6);
 });
 
 test("admits when the export cannot say which losses were slow", () => {
-  const finding = pressFinding(losses(116, () => null), 35);
+  const finding = pressFinding(
+    losses(116, () => null),
+    35,
+  );
   expect(finding.events).toBe(116);
   expect(finding.population).toBe(116);
   expect(finding.evidence).toBe("unfiltered");
@@ -90,4 +101,33 @@ test("judges only the losses it can measure", () => {
   );
   expect(finding.events).toBe(30);
   expect(finding.evidence).toBe("exact");
+});
+
+test("severity compares misses in different units", () => {
+  // The finding order used to be the order these were written in the source,
+  // so a press at 59% against a 60% target outranked a 55 m block against a
+  // 38 m ceiling -- and findings[0] is the verdict, the flagged chapter and
+  // the session the squad trains on Tuesday.
+  const near = severity({
+    value: 59,
+    target: 60,
+    higherIsWorse: false,
+  } as Parameters<typeof severity>[0]);
+  const bad = severity({
+    value: 55,
+    target: 38,
+    higherIsWorse: true,
+  } as Parameters<typeof severity>[0]);
+
+  expect(near).toBeCloseTo(1 / 60, 5);
+  expect(bad).toBeCloseTo(17 / 38, 5);
+  expect(bad).toBeGreaterThan(near);
+
+  // A target that was met is not a miss.
+  const met = severity({
+    value: 70,
+    target: 60,
+    higherIsWorse: false,
+  } as Parameters<typeof severity>[0]);
+  expect(met).toBeLessThan(0);
 });

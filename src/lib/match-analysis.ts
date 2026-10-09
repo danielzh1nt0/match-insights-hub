@@ -156,7 +156,12 @@ export type LineDefending = {
   medianM: number | null;
   usualM: number | null;
   belowUsualPct: number | null;
-  states: { key: LineState; height: number; shots: number; goals: number }[];
+  states: {
+    key: LineState;
+    /** Null when the team never held this band. */ height: number | null;
+    shots: number;
+    goals: number;
+  }[];
 };
 
 const HEAT_COLS = 12;
@@ -329,13 +334,19 @@ export function buildLineDefending(
         .sort((a, b) => a.t - b.t)
     : [];
 
+  /** How far from a shot a line sample can be and still describe it. */
+  const HEIGHT_WINDOW_S = 30;
   const nearestHeight = (time: number) => {
     if (timeline.length === 0) return null;
     let nearest = timeline[0] ?? null;
     for (const sample of timeline) {
       if (!nearest || Math.abs(sample.t - time) < Math.abs(nearest.t - time)) nearest = sample;
     }
-    return nearest?.height ?? null;
+    // A sparse or half-covered series used to classify every later shot by a
+    // stale height, so shots from the second half were filed under where the
+    // line stood in the first.
+    if (!nearest || Math.abs(nearest.t - time) > HEIGHT_WINDOW_S) return null;
+    return nearest.height;
   };
 
   const lineBreakEvents = (data.events ?? []).filter((event) => {
@@ -343,7 +354,10 @@ export function buildLineDefending(
     const against = event.payload?.["team"] ?? event.payload?.["against"];
     if (against === ownTeam || against === ownTeam.toLowerCase()) return true;
     if (against === opponent || against === opponent.toLowerCase()) return false;
-    return event.team === opponent || event.team === ownTeam;
+    // With no team on the payload, the only thing left to go on is who the
+    // event belongs to. Accepting either side made "balls played through our
+    // line" count the ones we played through theirs.
+    return event.team === opponent;
   });
   const lineBreaks = lineBreakEvents.map((event) => {
     const px = optionalNum(event.payload?.["px"]);
@@ -387,12 +401,13 @@ export function buildLineDefending(
           (timeline.filter((sample) => sample.height < usualM).length / timeline.length) * 100,
         )
       : null;
-  const typicalHeight: Record<LineState, number> = { high: 42, mid: 34, low: 26 };
   const states = (["high", "mid", "low"] as const).map((key) => {
     const inState = timeline.filter((sample) => lineState(sample.height) === key);
+    // A band the team never held has no height. It used to fall back to an
+    // invented 42 / 34 / 26 m and present that as a measured average.
     const average = inState.length
       ? Math.round(inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length)
-      : typicalHeight[key];
+      : null;
     const moments = conceded.filter((item) => lineState(item.height) === key);
     return {
       key,
@@ -768,7 +783,31 @@ export function buildFindings(
     );
   }
 
-  return out;
+  // Worst first, which three screens already promised and none delivered.
+  //
+  // The order used to be the order these were written in the source, so a
+  // press at 59% against a 60% target outranked a 55 m block against a 38 m
+  // ceiling, every time -- and findings[0] is the Insights verdict, the
+  // flagged chapter, "The one thing", and the session the squad trains on
+  // Tuesday. It has to be the worst thing that happened, not the first thing
+  // anyone thought to check.
+  //
+  // Severity is the miss as a share of the target, so figures in different
+  // units compare: 35% against 60% misses by 0.42, 55 m against 38 m by 0.45.
+  // A finding whose clips are the faulty moments outranks one whose clips are
+  // only the population, because the coach can act on the first immediately.
+  return [...out].sort((a, b) => {
+    const exactness = Number(b.evidence === "exact") - Number(a.evidence === "exact");
+    if (exactness !== 0) return exactness;
+    return severity(b) - severity(a);
+  });
+}
+
+/** How badly a finding misses its target, as a share of the target. */
+export function severity(f: Finding): number {
+  if (f.target === 0) return f.higherIsWorse ? f.value : 0;
+  const miss = f.higherIsWorse ? f.value - f.target : f.target - f.value;
+  return miss / Math.abs(f.target);
 }
 
 /**
@@ -1026,7 +1065,10 @@ export function attacksRight(
   team: TeamKey,
 ) {
   const value = override?.[team] ?? attackRight?.[team];
-  return value === true;
+  // Neither the label nor the file saying so is not "attacks left" -- it is
+  // "nobody said", and the contract's default is A right, B left. Treating an
+  // absent value as false put both teams attacking the same way.
+  return typeof value === "boolean" ? value : team === "A";
 }
 
 /** Positions from the frame at a moment's time, for the recap illustration. */
