@@ -369,8 +369,11 @@ function TurnedChapter({
           window={pressureWindow}
           teamA={identities.A}
           teamB={identities.B}
-          confirmed={model.confirmed}
-          detected={Math.max(model.moments.length - model.confirmed, 0)}
+          confirmed={lossEvents.filter((event) => event.status === "confirmed").length}
+          detected={lossEvents.filter((event) => event.status !== "confirmed").length}
+          confirmedTurnovers={lossEvents
+            .filter((event) => event.status === "confirmed")
+            .map((event) => event.t)}
         />
       </div>
     </div>

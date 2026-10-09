@@ -261,7 +261,10 @@ export function buildTerritory(
       .map((e) => {
         const position = positionAt(e.t);
         if (!position) return null;
-        const attackingX = e.team === "B" ? 100 - position.x : position.x;
+        // Towards the goal this team attacks, from the file, not assumed.
+        const right =
+          e.team === "B" || e.team === "A" ? (data.attack_right?.[e.team] ?? e.team === "A") : true;
+        const attackingX = right ? position.x : 100 - position.x;
         return { ...position, t: e.t, ...(attackingX >= 66.67 ? { high: true } : {}) };
       })
       .filter((p): p is { x: number; y: number; t: number; high?: boolean } => p !== null);

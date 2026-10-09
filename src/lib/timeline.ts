@@ -88,25 +88,21 @@ function smooth(points: Point[], windowS: number): Point[] {
   });
 }
 
+/**
+ * Five-minute blocks, cut inside each period from its own kick-off, so no
+ * block straddles half-time. Cut from the start of the recording, the block
+ * across the second kick-off belonged to neither half and first + second
+ * never equalled the total. The last block of a period is shorter.
+ */
 function bars(spans: Span[], startS: number, endS: number) {
   const out: { fromS: number; toS: number }[] = [];
-  for (let from = startS; from < endS; from += BAR_S) {
-    const toS = Math.min(from + BAR_S, endS);
-    if (spans.some((s) => toS > s.fromS && from < s.toS)) out.push({ fromS: from, toS });
+  const cuts = spans.length ? spans : [{ fromS: startS, toS: endS }];
+  for (const span of cuts) {
+    for (let from = span.fromS; from < span.toS; from += BAR_S) {
+      out.push({ fromS: from, toS: Math.min(from + BAR_S, span.toS) });
+    }
   }
   return out;
-}
-
-function countPer(
-  items: { t: number }[],
-  slots: { fromS: number; toS: number }[],
-  pick: (item: never) => boolean,
-) {
-  return slots.map((slot) => ({
-    ...slot,
-    n: items.filter((item) => item.t >= slot.fromS && item.t < slot.toS && pick(item as never))
-      .length,
-  }));
 }
 
 export function buildTimeline({
@@ -127,7 +123,6 @@ export function buildTimeline({
 
   const metrics = (stats?.metrics ?? {}) as Record<string, unknown>;
   const other: TeamKey = team === "A" ? "B" : "A";
-  const ours = (value: unknown) => (team === "A" ? value : 1 - (finite(value) ?? 0));
 
   /* ---- possession and tilt, from the 15 s windows ---- */
   const windows = Array.isArray(metrics["tilt_windows"])

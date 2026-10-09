@@ -35,6 +35,7 @@ export function MatchFlow({
   confirmed,
   detected,
   halfTimeS,
+  confirmedTurnovers,
 }: {
   /** −1…1 per slice of the match, ours positive. */
   momentum: number[];
@@ -44,6 +45,8 @@ export function MatchFlow({
   goals: FlowGoal[];
   /** Seconds at which we lost the ball — the dots along the axis. */
   turnovers: number[];
+  /** Which of those are confirmed, so they can be drawn in the confirmed colour. */
+  confirmedTurnovers?: number[];
   /** The stretch the analysis singled out, if there is one. */
   window?: FlowWindow | undefined;
   teamA: TeamIdentity;
@@ -51,6 +54,7 @@ export function MatchFlow({
   confirmed: number;
   detected: number;
 }) {
+  const confirmedSet = new Set(confirmedTurnovers ?? []);
   const W = 1000;
   const H = 150;
   const mid = H / 2;
@@ -80,11 +84,15 @@ export function MatchFlow({
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <Key swatch={<Crest team={teamA} size={16} />}>{teamA.shortCode} on the ball</Key>
           <Key swatch={<Crest team={teamB} size={16} />}>{teamB.shortCode} on the ball</Key>
-          <Key swatch={<span className="h-2 w-2 rounded-full bg-positive" />}>
-            Confirmed turnover ({confirmed})
-          </Key>
+          {/* The dots are the balls we lost, and their counts: not every
+              moment of every kind, which the legend used to say. */}
+          {confirmed > 0 && (
+            <Key swatch={<span className="h-2 w-2 rounded-full bg-positive" />}>
+              Ball lost, confirmed ({confirmed})
+            </Key>
+          )}
           <Key swatch={<span className="h-2 w-2 rounded-full bg-text-faint" />}>
-            Detected ({detected})
+            Ball lost, detected ({detected})
           </Key>
         </ul>
       </header>
@@ -170,7 +178,7 @@ export function MatchFlow({
               cx={xOf(t)}
               cy={mid}
               r="3"
-              fill="var(--text-faint)"
+              fill={confirmedSet.has(t) ? "var(--positive)" : "var(--text-faint)"}
               stroke="var(--kit-outline)"
               strokeWidth="1"
             />
