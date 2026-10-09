@@ -147,23 +147,43 @@ export function useMatchModel({
    * the match and the busiest position wins. Too few losses to cluster and
    * there is no window at all, rather than one drawn around nothing.
    */
+  /** Video second between the halves, from the periods; null without two periods. */
+  const halfTimeS = useMemo(() => {
+    const periods = ((stats as Record<string, unknown> | undefined)?.["periods"] ?? []) as {
+      t_start?: number;
+      t_end?: number;
+    }[];
+    const first = periods[0];
+    const second = periods[1];
+    if (typeof first?.t_end !== "number" || typeof second?.t_start !== "number") return null;
+    return (first.t_end + second.t_start) / 2;
+  }, [stats]);
+
   const pressureWindow = useMemo(() => {
     if (lossEvents.length < 6) return undefined;
     const span = 14 * 60;
+    // A stretch only counts as "when it turned" if it is clearly busier than
+    // the match as a whole: at least one and a half times the average rate
+    // for fourteen minutes. Four losses in fourteen minutes was the base rate
+    // of every match, so the window fired on all of them. It also may not
+    // straddle half-time, which is not a stretch of play.
+    const played = duration;
+    const expected = (lossEvents.length / Math.max(played, span)) * span;
     let best = { from: 0, count: 0 };
     for (const event of lossEvents) {
+      if (halfTimeS != null && event.t < halfTimeS && event.t + span > halfTimeS) continue;
       const count = lossEvents.filter(
         (other) => other.t >= event.t && other.t < event.t + span,
       ).length;
       if (count > best.count) best = { from: event.t, count };
     }
-    if (best.count < 4) return undefined;
+    if (best.count < Math.max(6, 1.5 * expected)) return undefined;
     return {
       fromS: best.from,
       toS: Math.min(best.from + span, duration),
       label: `${best.count} losses in 14 minutes`,
     };
-  }, [lossEvents, duration]);
+  }, [lossEvents, duration, halfTimeS]);
 
   /** Our own shirts, busiest first. Numbers only — the file does not know names. */
   const players = useMemo(() => {
@@ -300,6 +320,7 @@ export function useMatchModel({
     model,
     headline,
     momentum,
+    halfTimeS,
     goals,
     pressureWindow,
     players,

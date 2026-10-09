@@ -334,7 +334,17 @@ function StatsPitch({
             </g>
           </g>
         )}
-        {children}
+        {/* Children draw in 0-100 x 0-64 (portrait: 0-64 x 0-100) pitch
+            units, 0 and 100 being the goal lines; this maps them onto the
+            chalk rectangle, which sits inside a margin. Drawn straight into
+            the viewBox, every dot sat about three units off the pitch. */}
+        <g
+          transform={
+            portrait ? "translate(2 3) scale(0.9375 0.94)" : "translate(3 1.5) scale(0.94 0.9516)"
+          }
+        >
+          {children}
+        </g>
       </svg>
       {attackLabel && (
         <span className="label-xs mt-2 block text-right text-text-faint">
@@ -519,10 +529,10 @@ function HeatMap({
             count === 0 ? null : (
               <rect
                 key={`h-${r}-${c}`}
-                x={3 + (94 / COLS) * c}
-                y={1.5 + (60.9 / ROWS) * r}
-                width={94 / COLS}
-                height={60.9 / ROWS}
+                x={(100 / COLS) * c}
+                y={(64 / ROWS) * r}
+                width={100 / COLS}
+                height={64 / ROWS}
                 fill={colour}
                 fillOpacity={Math.min(0.8, (count / max) ** 0.65 * 0.8)}
               />
@@ -713,9 +723,12 @@ function Runs({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour
   );
 }
 
+/** A rate per minute needs this many visible minutes behind it to mean anything. */
+const RATE_MIN_MINUTES = 5;
+
 function Distance({ players, colour }: { players: PlayerStat[]; colour: string }) {
   const ranked = [...players]
-    .filter((p) => p.minutes > 0 && p.distanceM > 0)
+    .filter((p) => p.minutes >= RATE_MIN_MINUTES && p.distanceM > 0)
     .sort((a, b) => b.distanceM / b.minutes - a.distanceM / a.minutes)
     .slice(0, 10);
   if (!ranked.length) return null;
@@ -724,8 +737,8 @@ function Distance({ players, colour }: { players: PlayerStat[]; colour: string }
     <Card
       question="Distance covered (while in camera view)"
       icon={Footprints}
-      caption="The camera follows the ball, so a player out of shot is not counted. Sorted by distance per visible minute."
-      honesty={`${ranked.length} observed players`}
+      caption={`The camera follows the ball, so a player out of shot is not counted. Sorted by distance per visible minute; players seen under ${RATE_MIN_MINUTES} minutes are left out.`}
+      honesty={`${ranked.length} players seen ${RATE_MIN_MINUTES}+ minutes`}
     >
       <div className="rule-y">
         {ranked.map((player) => {
@@ -850,10 +863,10 @@ function PressureMap({
             count === 0 ? null : (
               <rect
                 key={`p-${r}-${c}`}
-                x={3 + (94 / COLS) * c}
-                y={1.5 + (60.9 / ROWS) * r}
-                width={94 / COLS}
-                height={60.9 / ROWS}
+                x={(100 / COLS) * c}
+                y={(64 / ROWS) * r}
+                width={100 / COLS}
+                height={64 / ROWS}
                 fill={colour}
                 fillOpacity={Math.min(0.82, (count / built.max) ** 0.65 * 0.82)}
               />
@@ -1073,10 +1086,15 @@ function SetPieceCounts({ events, team, teamA, teamB }: Props) {
       (event) =>
         event.type === "set_piece" && event.team === side && setPieceKind(event).includes(kind),
     ).length;
+  // "stoppage" is the export's word for a restart it could not name (most of
+  // them). Hidden, they made corners + free kicks + throw-ins read as a
+  // fraction of the total the card said it covered.
   const rows = [
     ["Corners", "corner"],
     ["Free kicks", "free"],
     ["Throw-ins", "throw"],
+    ["Goal kicks", "goal kick"],
+    ["Other stoppages", "stoppage"],
   ] as const;
   const any = rows.some(([, kind]) => count(team, kind) + count(other, kind) > 0);
   if (!any) return null;
@@ -1655,11 +1673,16 @@ function PlayerCards({ players, stats, matchId, colours }: Props) {
             </div>
             <div className="mt-4 grid grid-cols-5 gap-1">
               {[
-                [Math.round(player.distanceM / Math.max(player.minutes, 1)), "m/min"],
+                [
+                  player.minutes >= RATE_MIN_MINUTES
+                    ? Math.round(player.distanceM / player.minutes)
+                    : "\u2014",
+                  "m/min",
+                ],
                 [player.touches, "touches"],
                 [`${player.passesCompleted}/${player.passes}`, "passes"],
                 [player.betterOptions, "options"],
-                [completion, "quality"],
+                [player.passes ? `${completion}%` : "\u2014", "completed"],
               ].map(([v, l]) => (
                 <div key={l} className="bg-surface-2 p-2 text-center">
                   <strong className="num block text-[14px] text-cream">{v}</strong>
@@ -1671,10 +1694,21 @@ function PlayerCards({ players, stats, matchId, colours }: Props) {
               className="mt-3 flex h-2 overflow-hidden bg-surface-3"
               aria-label={`${completion}% completed, ${risky} risky, ${lost} lost`}
             >
-              <span className="bg-quality-good" style={{ width: `${completion}%` }} />
+              {/* Three shares of the same pass count: completed and safe,
+                  completed but risky, lost. The risky COUNT used to be drawn
+                  as a percentage width beside a real percentage. */}
+              <span
+                className="bg-quality-good"
+                style={{
+                  flex: Math.max(
+                    0,
+                    player.passesCompleted - Math.min(risky, player.passesCompleted),
+                  ),
+                }}
+              />
               <span
                 className="bg-quality-risky"
-                style={{ width: `${Math.min(100 - completion, risky)}%` }}
+                style={{ flex: Math.min(risky, player.passesCompleted) }}
               />
               <span className="bg-quality-bad" style={{ flex: lost }} />
             </div>

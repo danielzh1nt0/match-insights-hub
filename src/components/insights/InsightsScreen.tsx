@@ -67,6 +67,7 @@ export function InsightsScreen({
     model,
     headline,
     momentum,
+    halfTimeS,
     goals,
     pressureWindow,
     players,
@@ -128,6 +129,7 @@ export function InsightsScreen({
       >
         <MatchFlow
           momentum={momentum}
+          halfTimeS={halfTimeS}
           durationS={duration}
           goals={goals}
           turnovers={lossEvents.map((event) => event.t)}

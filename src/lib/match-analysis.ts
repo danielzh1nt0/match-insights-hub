@@ -335,7 +335,9 @@ export function buildLineDefending(
     for (const sample of timeline) {
       if (!nearest || Math.abs(sample.t - time) < Math.abs(nearest.t - time)) nearest = sample;
     }
-    return nearest?.height ?? null;
+    // A sample from more than ten seconds away says nothing about this shot.
+    if (!nearest || Math.abs(nearest.t - time) > 10) return null;
+    return nearest.height;
   };
 
   const lineBreakEvents = (data.events ?? []).filter((event) => {
@@ -387,19 +389,22 @@ export function buildLineDefending(
           (timeline.filter((sample) => sample.height < usualM).length / timeline.length) * 100,
         )
       : null;
-  const typicalHeight: Record<LineState, number> = { high: 42, mid: 34, low: 26 };
-  const states = (["high", "mid", "low"] as const).map((key) => {
+  // A state the line never sat in has no measured height; it is left out
+  // rather than given a typical figure (42 / 34 / 26 m) and shown as measured.
+  const states = (["high", "mid", "low"] as const).flatMap((key) => {
     const inState = timeline.filter((sample) => lineState(sample.height) === key);
-    const average = inState.length
-      ? Math.round(inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length)
-      : typicalHeight[key];
+    if (inState.length === 0) return [];
+    const average = Math.round(
+      inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length,
+    );
     const moments = conceded.filter((item) => lineState(item.height) === key);
-    return {
+    const state = {
       key,
       height: average,
       shots: moments.length,
       goals: moments.filter((item) => item.event.type === "goal").length,
     };
+    return [state];
   });
 
   return {
@@ -851,7 +856,19 @@ function fmt(v: unknown, suffix = "") {
 /** The pipeline records the kind of set piece in the payload, under one of several keys. */
 export function setPieceKind(event: { payload?: Record<string, unknown> | null | undefined }) {
   const payload = event.payload ?? {};
-  return String(payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "").toLowerCase();
+  const raw = String(
+    payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "",
+  ).toLowerCase();
+  // Normalised so "goal kick", "goal_kick" and "goalkick" all count once; an
+  // unrecognised kind stays as written rather than vanishing into "".
+  const kind = raw.replace(/[\s_-]+/g, " ").trim();
+  if (kind.includes("corner")) return "corner";
+  if (kind.includes("throw")) return "throw-in";
+  if (kind.includes("goal")) return "goal kick";
+  if (kind.includes("free") || kind.includes("foul")) return "free kick";
+  if (kind.includes("penalty")) return "penalty";
+  if (kind.includes("kick") && kind.includes("off")) return "kick-off";
+  return kind || "other";
 }
 
 function setPieceCount(data: MatchDataFile | undefined, team: TeamKey, kind: string) {
@@ -1029,7 +1046,9 @@ export function buildPlayerStats(stats: StatsFile | undefined, team: TeamKey | n
       passesCompleted: num(p.passes_completed, 0),
       betterOptions: num(p.better_option_count, 0),
       distanceM: Math.round(num(p.distance_m, 0)),
-      minutes: Math.round(num(p.time_visible_s, 0) / 60),
+      // One decimal: rounding to whole minutes made a 40-second cameo a
+      // one-minute player and let it top the distance-per-minute table.
+      minutes: Math.round(num(p.time_visible_s, 0) / 6) / 10,
     }))
     .sort((x, y) => y.touches - x.touches);
 }
@@ -1041,7 +1060,8 @@ export function attacksRight(
   team: TeamKey,
 ) {
   const value = override?.[team] ?? attackRight?.[team];
-  return value === true;
+  // The export contract: A attacks right, B left, unless the file says otherwise.
+  return typeof value === "boolean" ? value : team === "A";
 }
 
 /** Positions from the frame at a moment's time, for the recap illustration. */

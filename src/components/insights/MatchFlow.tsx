@@ -34,10 +34,13 @@ export function MatchFlow({
   teamB,
   confirmed,
   detected,
+  halfTimeS,
 }: {
   /** −1…1 per slice of the match, ours positive. */
   momentum: number[];
   durationS: number;
+  /** Video second of the interval between the halves, from the periods; null when unknown. */
+  halfTimeS?: number | null;
   goals: FlowGoal[];
   /** Seconds at which we lost the ball — the dots along the axis. */
   turnovers: number[];
@@ -147,17 +150,19 @@ export function MatchFlow({
             vectorEffect="non-scaling-stroke"
           />
 
-          {/* Half-time. */}
-          <line
-            x1={W / 2}
-            y1="0"
-            x2={W / 2}
-            y2={H}
-            stroke="var(--text-faint)"
-            strokeWidth="1"
-            strokeDasharray="4 4"
-            vectorEffect="non-scaling-stroke"
-          />
+          {/* Half-time, where the periods put it; the halves are never equal. */}
+          {halfTimeS != null && (
+            <line
+              x1={xOf(halfTimeS)}
+              y1="0"
+              x2={xOf(halfTimeS)}
+              y2={H}
+              stroke="var(--text-faint)"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
 
           {turnovers.map((t, i) => (
             <circle
@@ -202,18 +207,21 @@ export function MatchFlow({
           ))}
         </div>
 
-        <div className="mt-1 flex justify-between border-t border-wire pt-2">
-          {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-            <span key={f} className="num-flat text-[10.5px] text-text-faint">
-              {f === 0
-                ? "0' Kick-off"
-                : f === 0.5
-                  ? "Half-time"
-                  : f === 1
-                    ? `${minuteOf(duration)}' Full time`
-                    : `${minuteOf(duration * f)}'`}
+        {/* Video minutes, like every clip time in the app; half-time sits
+            where the periods put it rather than at the middle of the clock. */}
+        <div className="relative mt-1 h-5 border-t border-wire pt-2">
+          <span className="num-flat absolute left-0 text-[10.5px] text-text-faint">0'</span>
+          {halfTimeS != null && (
+            <span
+              className="num-flat absolute -translate-x-1/2 text-[10.5px] text-text-faint"
+              style={{ left: `${Math.max(0, Math.min(1, halfTimeS / duration)) * 100}%` }}
+            >
+              Half-time
             </span>
-          ))}
+          )}
+          <span className="num-flat absolute right-0 text-[10.5px] text-text-faint">
+            {minuteOf(duration)}' Full time
+          </span>
         </div>
 
         {window && (

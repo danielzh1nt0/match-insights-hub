@@ -362,6 +362,7 @@ function TurnedChapter({
       <div className="mt-6">
         <MatchFlow
           momentum={model.momentum}
+          halfTimeS={model.halfTimeS}
           durationS={model.duration}
           goals={model.goals}
           turnovers={lossEvents.map((event) => event.t)}
