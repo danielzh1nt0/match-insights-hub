@@ -18,7 +18,7 @@ export type FlowWindow = {
 /**
  * The match as one line.
  *
- * Above the axis is our territory, below it is theirs, and the line is drawn
+ * Above the axis we had the ball, below it they did, and the line is drawn
  * from the same tracked moments as every number on the page. A coach reads two
  * things off it in a second: when the game turned, and whether the goals came
  * from the run of play or against it. That is the whole purpose — the figures
@@ -34,13 +34,19 @@ export function MatchFlow({
   teamB,
   confirmed,
   detected,
+  halfTimeS,
+  confirmedTurnovers,
 }: {
   /** −1…1 per slice of the match, ours positive. */
   momentum: number[];
   durationS: number;
+  /** Video second of the interval between the halves, from the periods; null when unknown. */
+  halfTimeS?: number | null;
   goals: FlowGoal[];
   /** Seconds at which we lost the ball — the dots along the axis. */
   turnovers: number[];
+  /** Which of those are confirmed, so they can be drawn in the confirmed colour. */
+  confirmedTurnovers?: number[];
   /** The stretch the analysis singled out, if there is one. */
   window?: FlowWindow | undefined;
   teamA: TeamIdentity;
@@ -48,6 +54,7 @@ export function MatchFlow({
   confirmed: number;
   detected: number;
 }) {
+  const confirmedSet = new Set(confirmedTurnovers ?? []);
   const W = 1000;
   const H = 150;
   const mid = H / 2;
@@ -75,13 +82,17 @@ export function MatchFlow({
           </h2>
         </div>
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <Key swatch={<Crest team={teamA} size={16} />}>{teamA.shortCode} territory</Key>
-          <Key swatch={<Crest team={teamB} size={16} />}>{teamB.shortCode} territory</Key>
-          <Key swatch={<span className="h-2 w-2 rounded-full bg-positive" />}>
-            Confirmed turnover ({confirmed})
-          </Key>
+          <Key swatch={<Crest team={teamA} size={16} />}>{teamA.shortCode} on the ball</Key>
+          <Key swatch={<Crest team={teamB} size={16} />}>{teamB.shortCode} on the ball</Key>
+          {/* The dots are the balls we lost, and their counts: not every
+              moment of every kind, which the legend used to say. */}
+          {confirmed > 0 && (
+            <Key swatch={<span className="h-2 w-2 rounded-full bg-positive" />}>
+              Ball lost, confirmed ({confirmed})
+            </Key>
+          )}
           <Key swatch={<span className="h-2 w-2 rounded-full bg-text-faint" />}>
-            Detected ({detected})
+            Ball lost, detected ({detected})
           </Key>
         </ul>
       </header>
@@ -92,7 +103,7 @@ export function MatchFlow({
           preserveAspectRatio="none"
           className="h-[150px] w-full sm:h-[190px]"
           role="img"
-          aria-label={`Territory through the match. ${goals.length} goals.`}
+          aria-label={`Who had the ball through the match. ${goals.length} goals.`}
         >
           {/* Their half of the chart, filled; ours is drawn as a line, because
               the two kits must not both become blocks of colour. */}
@@ -117,38 +128,49 @@ export function MatchFlow({
           )}
 
           <line x1="0" y1={mid} x2={W} y2={mid} stroke="var(--wire)" strokeWidth="1" />
+          {momentum.length === 0 && (
+            <text x={W / 2} y={mid - 14} textAnchor="middle" fontSize="22" fill="var(--text-faint)">
+              Who had the ball was not tracked reliably enough in this match to draw.
+            </text>
+          )}
 
+          {momentum.length > 0 && (
+            <path
+              d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
+              fill={teamA.kitColour}
+              opacity="0.14"
+              clipPath="url(#flow-above)"
+            />
+          )}
+          {momentum.length > 0 && (
+            <path
+              d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
+              fill={teamB.kitColour}
+              opacity="0.5"
+              clipPath="url(#flow-below)"
+            />
+          )}
           <path
-            d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
-            fill={teamA.kitColour}
-            opacity="0.14"
-            clipPath="url(#flow-above)"
-          />
-          <path
-            d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
-            fill={teamB.kitColour}
-            opacity="0.5"
-            clipPath="url(#flow-below)"
-          />
-          <path
-            d={curve}
+            d={momentum.length > 0 ? curve : `M 0 ${mid}`}
             fill="none"
             stroke="var(--cream)"
             strokeWidth="2"
             vectorEffect="non-scaling-stroke"
           />
 
-          {/* Half-time. */}
-          <line
-            x1={W / 2}
-            y1="0"
-            x2={W / 2}
-            y2={H}
-            stroke="var(--text-faint)"
-            strokeWidth="1"
-            strokeDasharray="4 4"
-            vectorEffect="non-scaling-stroke"
-          />
+          {/* Half-time, where the periods put it; the halves are never equal. */}
+          {halfTimeS != null && (
+            <line
+              x1={xOf(halfTimeS)}
+              y1="0"
+              x2={xOf(halfTimeS)}
+              y2={H}
+              stroke="var(--text-faint)"
+              strokeWidth="1"
+              strokeDasharray="4 4"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
 
           {turnovers.map((t, i) => (
             <circle
@@ -156,7 +178,7 @@ export function MatchFlow({
               cx={xOf(t)}
               cy={mid}
               r="3"
-              fill="var(--text-faint)"
+              fill={confirmedSet.has(t) ? "var(--positive)" : "var(--text-faint)"}
               stroke="var(--kit-outline)"
               strokeWidth="1"
             />
@@ -193,18 +215,21 @@ export function MatchFlow({
           ))}
         </div>
 
-        <div className="mt-1 flex justify-between border-t border-wire pt-2">
-          {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-            <span key={f} className="num-flat text-[10.5px] text-text-faint">
-              {f === 0
-                ? "0' Kick-off"
-                : f === 0.5
-                  ? "Half-time"
-                  : f === 1
-                    ? `${minuteOf(duration)}' Full time`
-                    : `${minuteOf(duration * f)}'`}
+        {/* Video minutes, like every clip time in the app; half-time sits
+            where the periods put it rather than at the middle of the clock. */}
+        <div className="relative mt-1 h-5 border-t border-wire pt-2">
+          <span className="num-flat absolute left-0 text-[10.5px] text-text-faint">0'</span>
+          {halfTimeS != null && (
+            <span
+              className="num-flat absolute -translate-x-1/2 text-[10.5px] text-text-faint"
+              style={{ left: `${Math.max(0, Math.min(1, halfTimeS / duration)) * 100}%` }}
+            >
+              Half-time
             </span>
-          ))}
+          )}
+          <span className="num-flat absolute right-0 text-[10.5px] text-text-faint">
+            {minuteOf(duration)}' Full time
+          </span>
         </div>
 
         {window && (

@@ -40,6 +40,8 @@ export type MatchTimeline = {
   spans: Span[];
   startS: number;
   endS: number;
+  /** The side every "ours" series belongs to. */
+  team: TeamKey;
   goals: GoalMark[];
   /** SFK's share of the ball, 0–1, smoothed. */
   possession: Point[];
@@ -60,8 +62,6 @@ export type MatchTimeline = {
   passes: Bar[];
   /** Said plainly when there is nothing to draw. */
   empty: boolean;
-  /** Whose side of every figure above this is. */
-  team: TeamKey;
 };
 
 const BAR_S = 5 * 60;
@@ -88,11 +88,19 @@ function smooth(points: Point[], windowS: number): Point[] {
   });
 }
 
+/**
+ * Five-minute blocks, cut inside each period from its own kick-off, so no
+ * block straddles half-time. Cut from the start of the recording, the block
+ * across the second kick-off belonged to neither half and first + second
+ * never equalled the total. The last block of a period is shorter.
+ */
 function bars(spans: Span[], startS: number, endS: number) {
   const out: { fromS: number; toS: number }[] = [];
-  for (let from = startS; from < endS; from += BAR_S) {
-    const toS = Math.min(from + BAR_S, endS);
-    if (spans.some((s) => toS > s.fromS && from < s.toS)) out.push({ fromS: from, toS });
+  const cuts = spans.length ? spans : [{ fromS: startS, toS: endS }];
+  for (const span of cuts) {
+    for (let from = span.fromS; from < span.toS; from += BAR_S) {
+      out.push({ fromS: from, toS: Math.min(from + BAR_S, span.toS) });
+    }
   }
   return out;
 }
@@ -115,7 +123,6 @@ export function buildTimeline({
 
   const metrics = (stats?.metrics ?? {}) as Record<string, unknown>;
   const other: TeamKey = team === "A" ? "B" : "A";
-  const ours = (value: unknown) => (team === "A" ? value : 1 - (finite(value) ?? 0));
 
   /* ---- possession and tilt, from the 15 s windows ---- */
   const windows = Array.isArray(metrics["tilt_windows"])
@@ -256,7 +263,6 @@ export function buildTimeline({
     .filter((seq) => seq.toS > seq.fromS && inSpans(seq.fromS, spans));
 
   return {
-    team,
     spans,
     startS,
     endS,
@@ -270,6 +276,7 @@ export function buildTimeline({
     lineHeight: { a: shapeOf(team, "line_height"), b: shapeOf(other, "line_height") },
     sequences,
     passes,
+    team,
     empty:
       possession.length === 0 &&
       tilt.length === 0 &&

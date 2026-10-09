@@ -159,6 +159,7 @@ export function buildStrengths({
   otherShots,
   goals,
   highTurnovers,
+  completion,
 }: {
   row: Record<string, unknown> | null;
   thresholds: { pressWithin2s: number; regainWithin5s: number; blockCeilingM: number };
@@ -166,6 +167,8 @@ export function buildStrengths({
   otherShots: number;
   goals: number;
   highTurnovers: number;
+  /** Pass completion over the judged passes in the match, the KPI's figure. */
+  completion: number | null;
 }): Strength[] {
   const num = (key: string) => {
     const value = row?.[key];
@@ -200,10 +203,12 @@ export function buildStrengths({
       basis: `back to front, under your ${thresholds.blockCeilingM} m ceiling`,
     });
 
-  if (shots > otherShots)
+  // "Better chances" needs a margin, not 1-0 on shots: at least three more
+  // than them and half as many again.
+  if (shots >= otherShots + 3 && shots >= otherShots * 1.5)
     out.push({
       id: "shots_won",
-      label: "We made the better chances",
+      label: "We had more of the chances",
       value: `${shots}–${otherShots}`,
       basis: "shots, us against them",
     });
@@ -224,7 +229,8 @@ export function buildStrengths({
       basis: "balls won in their half",
     });
 
-  const completion = num("pass_completion_pct");
+  // The same completion the KPI card scores, not the team row's, so one
+  // match does not print two completion figures.
   if (completion !== null && completion >= 75)
     out.push({
       id: "passing",

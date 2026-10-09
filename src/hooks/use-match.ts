@@ -47,9 +47,6 @@ export function useMatch(matchId: string) {
   };
 }
 
-/** Findings switch to confirmed events once this many are confirmed. */
-const CONFIRMED_BASIS_MIN = 5;
-
 /**
  * The open match's own files, plus everything derived from them for the
  * selected team. Team is always the literal "A" or "B" from the data.
@@ -118,15 +115,16 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
     [raw?.events, review.reviews],
   );
   const confirmed = useMemo(() => confirmedOnly(events), [events]);
-  const basis: "confirmed" | "detected" =
-    confirmed.length >= CONFIRMED_BASIS_MIN ? "confirmed" : "detected";
+  // The findings' percentages come from the whole match (the stats row), so
+  // their moments must too. Shrinking the moments to the confirmed handful once
+  // five were ticked produced "Of 6 balls lost, only 34% got pressure": a
+  // whole-match figure over a six-moment population. Confirmations still
+  // remove deleted moments and correct times; they no longer change the basis.
+  const basis: "confirmed" | "detected" = "detected";
 
   /** Deleted moments are gone from every derived view. */
   const file = useMemo(() => fileWithReviews(raw, events), [raw, events]);
-  const findingFile = useMemo(
-    () => (basis === "confirmed" ? fileWithReviews(raw, confirmed) : file),
-    [basis, raw, confirmed, file],
-  );
+  const findingFile = file;
 
   const territory = useMemo(() => buildTerritory(file, stats, team), [file, stats, team]);
   const lineDefending = useMemo(

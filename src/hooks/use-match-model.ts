@@ -5,6 +5,7 @@ import type { NumberCell } from "@/components/insights/MatchNumbersGrid";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import type { Finding } from "@/lib/match-data";
 import { buildInsightsModel, buildStrengths, verdict } from "@/lib/insights-model";
+import { completionFor } from "@/lib/kpi";
 import { teamRow, type StatsFile, type TeamKey, type Thresholds } from "@/lib/match-analysis";
 import type { LibraryMatch } from "@/lib/sample-data";
 
@@ -60,7 +61,9 @@ export function useMatchModel({
   const possessionTrusted = ball ? ball.possession : true;
   const possession = possessionTrusted ? numeric(row, "possession_pct") : null;
   const otherPossession = numeric(otherRow, "possession_pct");
-  const completion = numeric(row, "pass_completion_pct");
+  // The KPI's figure (judged passes inside the match), not the team row's, so one match prints one completion.
+  const completionRaw = completionFor(stats, ownTeam, undefined);
+  const completion = completionRaw === null ? null : Math.round(completionRaw);
   const blockLength = numeric(row, "block_length_median_m");
   const pressPct = numeric(row, "pressed_within_2s_pct");
   const betterOption = numeric(row, "better_option_count");
@@ -70,27 +73,61 @@ export function useMatchModel({
     () => moments.filter((event) => event.team === ownTeam && event.type === "turnover_lost"),
     [moments, ownTeam],
   );
-  const shots = moments.filter((event) => event.team === ownTeam && event.type === "shot").length;
-  const otherShots = moments.filter(
-    (event) => event.team === otherTeam && event.type === "shot",
-  ).length;
+  // A goal is written as a "goal" event, not a "shot": attempts are both.
+  const isShot = (event: ReviewedEvent) => event.type === "shot" || event.type === "goal";
+  const shots = moments.filter((event) => event.team === ownTeam && isShot(event)).length;
+  const otherShots = moments.filter((event) => event.team === otherTeam && isShot(event)).length;
   const setPieces = moments.filter((event) => event.type === "set_piece").length;
   const confirmed = moments.filter((event) => event.status === "confirmed").length;
 
   const model = useMemo(() => buildInsightsModel(findings), [findings]);
   const { headline } = verdict(model);
 
-  /** One value per thirtieth of the match: our tracked moments against theirs. */
+  /**
+   * One value per thirtieth of the match, -1..1, ours positive: who had the
+   * ball, from the pipeline's 15-second possession windows inside the periods.
+   *
+   * It used to be the share of EVENTS by team, over every event type. The side
+   * whose mistakes were detected most read as dominant: SFK with 411 "better
+   * pass was open" moments against 232 was drawn as owning the whole match.
+   * A slice with no window in it is flat, not invented.
+   */
   const momentum = useMemo(() => {
     const SLICES = 30;
+    const metrics = (stats?.metrics ?? {}) as Record<string, unknown>;
+    const windows = Array.isArray(metrics["tilt_windows"])
+      ? (metrics["tilt_windows"] as Record<string, unknown>[])
+      : [];
+    const periods = ((stats as Record<string, unknown> | undefined)?.["periods"] ?? []) as {
+      t_start?: number;
+      t_end?: number;
+    }[];
+    const inPlay = (t: number) =>
+      periods.length === 0 ||
+      periods.some(
+        (p) =>
+          typeof p.t_start === "number" &&
+          typeof p.t_end === "number" &&
+          t >= p.t_start &&
+          t <= p.t_end,
+      );
+    const samples = windows
+      .map((w) => ({ t: numeric(w, "t"), share: numeric(w, "possession_A") }))
+      .filter(
+        (w): w is { t: number; share: number } => w.t !== null && w.share !== null && inPlay(w.t),
+      );
+    // Nothing measured (or possession withheld for this match): no line at all.
+    if (samples.length === 0) return [];
     return Array.from({ length: SLICES }, (_, i) => {
       const from = (duration / SLICES) * i;
       const to = (duration / SLICES) * (i + 1);
-      const inSlice = moments.filter((event) => event.t >= from && event.t < to);
+      const inSlice = samples.filter((w) => w.t >= from && w.t < to);
       if (inSlice.length === 0) return 0;
-      return (inSlice.filter((event) => event.team === ownTeam).length * 2) / inSlice.length - 1;
+      const shareA = inSlice.reduce((sum, w) => sum + w.share, 0) / inSlice.length;
+      const ours = ownTeam === "A" ? shareA : 1 - shareA;
+      return ours * 2 - 1;
     });
-  }, [moments, duration, ownTeam]);
+  }, [stats, duration, ownTeam]);
 
   /** The goals, each carrying the score as it stood immediately after it. */
   const goals = useMemo<FlowGoal[]>(() => {
@@ -113,23 +150,43 @@ export function useMatchModel({
    * the match and the busiest position wins. Too few losses to cluster and
    * there is no window at all, rather than one drawn around nothing.
    */
+  /** Video second between the halves, from the periods; null without two periods. */
+  const halfTimeS = useMemo(() => {
+    const periods = ((stats as Record<string, unknown> | undefined)?.["periods"] ?? []) as {
+      t_start?: number;
+      t_end?: number;
+    }[];
+    const first = periods[0];
+    const second = periods[1];
+    if (typeof first?.t_end !== "number" || typeof second?.t_start !== "number") return null;
+    return (first.t_end + second.t_start) / 2;
+  }, [stats]);
+
   const pressureWindow = useMemo(() => {
     if (lossEvents.length < 6) return undefined;
     const span = 14 * 60;
+    // A stretch only counts as "when it turned" if it is clearly busier than
+    // the match as a whole: at least one and a half times the average rate
+    // for fourteen minutes. Four losses in fourteen minutes was the base rate
+    // of every match, so the window fired on all of them. It also may not
+    // straddle half-time, which is not a stretch of play.
+    const played = duration;
+    const expected = (lossEvents.length / Math.max(played, span)) * span;
     let best = { from: 0, count: 0 };
     for (const event of lossEvents) {
+      if (halfTimeS != null && event.t < halfTimeS && event.t + span > halfTimeS) continue;
       const count = lossEvents.filter(
         (other) => other.t >= event.t && other.t < event.t + span,
       ).length;
       if (count > best.count) best = { from: event.t, count };
     }
-    if (best.count < 4) return undefined;
+    if (best.count < Math.max(6, 1.5 * expected)) return undefined;
     return {
       fromS: best.from,
       toS: Math.min(best.from + span, duration),
       label: `${best.count} losses in 14 minutes`,
     };
-  }, [lossEvents, duration]);
+  }, [lossEvents, duration, halfTimeS]);
 
   /** Our own shirts, busiest first. Numbers only — the file does not know names. */
   const players = useMemo(() => {
@@ -173,8 +230,9 @@ export function useMatchModel({
         highTurnovers: moments.filter(
           (event) => event.team === ownTeam && event.type === "high_turnover",
         ).length,
+        completion,
       }),
-    [row, thresholds, shots, otherShots, goals, moments, ownTeam],
+    [row, thresholds, shots, otherShots, goals, moments, ownTeam, completion],
   );
 
   /** How the match went, in one line, from the result and the shape of it. */
@@ -266,6 +324,7 @@ export function useMatchModel({
     model,
     headline,
     momentum,
+    halfTimeS,
     goals,
     pressureWindow,
     players,

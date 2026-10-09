@@ -55,8 +55,11 @@ export function HeadToHead({
 
   const goalsA = counted(events, "A", (e) => e.type === "goal");
   const goalsB = counted(events, "B", (e) => e.type === "goal");
-  const shotsA = counted(events, "A", (e) => e.type === "shot");
-  const shotsB = counted(events, "B", (e) => e.type === "shot");
+  // The export writes a goal as a "goal" event, not a "shot", so shots must
+  // count both or a 3-goal team reads as having had three fewer attempts.
+  const isShot = (e: ReviewedEvent) => e.type === "shot" || e.type === "goal";
+  const shotsA = counted(events, "A", isShot);
+  const shotsB = counted(events, "B", isShot);
   const cornersA = counted(events, "A", (e) => e.type === "set_piece" && kindIs(e, "corner"));
   const cornersB = counted(events, "B", (e) => e.type === "set_piece" && kindIs(e, "corner"));
   const freeA = counted(events, "A", (e) => e.type === "set_piece" && kindIs(e, "free"));
@@ -64,12 +67,12 @@ export function HeadToHead({
   const attemptsA = counted(
     events,
     "A",
-    (e) => e.type === "shot" || e.type === "shot_blocked" || kindIs(e, "blocked"),
+    (e) => isShot(e) || e.type === "shot_blocked" || kindIs(e, "blocked"),
   );
   const attemptsB = counted(
     events,
     "B",
-    (e) => e.type === "shot" || e.type === "shot_blocked" || kindIs(e, "blocked"),
+    (e) => isShot(e) || e.type === "shot_blocked" || kindIs(e, "blocked"),
   );
   const wonA = counted(events, "A", (e) => e.type === "turnover_won");
   const wonB = counted(events, "B", (e) => e.type === "turnover_won");

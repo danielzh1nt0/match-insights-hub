@@ -83,12 +83,3 @@ export function VerdictBlock({
     </section>
   );
 }
-
-function Panel({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="min-w-0 p-4 sm:p-5">
-      <p className="label-xs text-text-faint">{label}</p>
-      <div className="mt-3">{children}</div>
-    </div>
-  );
-}

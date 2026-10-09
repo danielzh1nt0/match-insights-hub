@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { buildFindings, severity } from "./match-analysis";
+import { buildFindings, findingMiss } from "./match-analysis";
+import type { Finding } from "./match-data";
 
 /**
  * A finding is a claim about a subset.
@@ -103,31 +104,34 @@ test("judges only the losses it can measure", () => {
   expect(finding.evidence).toBe("exact");
 });
 
-test("severity compares misses in different units", () => {
-  // The finding order used to be the order these were written in the source,
-  // so a press at 59% against a 60% target outranked a 55 m block against a
-  // 38 m ceiling -- and findings[0] is the verdict, the flagged chapter and
-  // the session the squad trains on Tuesday.
-  const near = severity({
+test("the finding order compares misses in different units", () => {
+  // The order used to be the order these were written in the source, so a
+  // press at 59% against a 60% target outranked a 55 m block against a 38 m
+  // ceiling -- and findings[0] is the Insights verdict, the flagged chapter
+  // and the session the squad trains on Tuesday.
+  const near = findingMiss({
     value: 59,
     target: 60,
+    unit: "%",
     higherIsWorse: false,
-  } as Parameters<typeof severity>[0]);
-  const bad = severity({
+  } as Finding);
+  const bad = findingMiss({
     value: 55,
     target: 38,
+    unit: "m",
     higherIsWorse: true,
-  } as Parameters<typeof severity>[0]);
+  } as Finding);
 
   expect(near).toBeCloseTo(1 / 60, 5);
   expect(bad).toBeCloseTo(17 / 38, 5);
-  expect(bad).toBeGreaterThan(near);
+  expect(bad!).toBeGreaterThan(near!);
 
   // A target that was met is not a miss.
-  const met = severity({
-    value: 70,
-    target: 60,
-    higherIsWorse: false,
-  } as Parameters<typeof severity>[0]);
-  expect(met).toBeLessThan(0);
+  expect(
+    findingMiss({ value: 70, target: 60, unit: "%", higherIsWorse: false } as Finding)!,
+  ).toBeLessThan(0);
+
+  // A bare count has no target to be a share of, so it cannot be ranked this
+  // way and sorts after everything that can.
+  expect(findingMiss({ value: 411, target: 1, unit: "times" } as Finding)).toBeNull();
 });

@@ -105,26 +105,44 @@ function group(label: string, measures: KpiMeasure[]): KpiGroup {
   };
 }
 
-/** Mean possession across the match windows, as a percentage for this team. */
-function possessionOf(timeline: MatchTimeline | undefined, team: TeamKey): number | null {
+/**
+ * This team's possession, the same figure every other screen prints: the
+ * pipeline's whole-match share on the team row. The mean of the smoothed
+ * windows differed from it by a point or two, so the scorecard and Insights
+ * printed two possessions for one match. The row is absent when the
+ * pipeline has disowned possession, and the measure is then unanswered.
+ */
+function possessionOf(
+  stats: StatsFile | undefined,
+  timeline: MatchTimeline | undefined,
+  team: TeamKey,
+): number | null {
+  const row = (stats?.teams ?? []).find((r: { team?: string }) => r?.team === team) as
+    { possession_pct?: unknown } | undefined;
+  const pct = row?.possession_pct;
+  if (typeof pct === "number" && Number.isFinite(pct)) return Math.round(pct);
+  if (row && !("possession_pct" in row)) return null; // withheld on purpose
   const points = (timeline?.possession ?? []).filter((p) => p.value !== null);
   if (points.length === 0) return null;
   const mean = points.reduce((sum, p) => sum + (p.value ?? 0), 0) / points.length;
-  // The windows record team A's share, whichever team is selected.
   return Math.round((team === "A" ? mean : 1 - mean) * 100);
 }
 
 /** Completion over this team's passes inside the match, judged ones only. */
-function completionFor(
+export function completionFor(
   stats: StatsFile | undefined,
   team: TeamKey,
   file: MatchDataFile | undefined,
 ): number | null {
+  // The stats file carries the periods too, for callers without the match file.
+  const periods =
+    file?.periods ??
+    ((stats as Record<string, unknown> | undefined)?.["periods"] as MatchDataFile["periods"]);
   const passes = ((stats?.passes ?? []) as Record<string, unknown>[]).filter((pass) => {
     if (pass["team"] !== team) return false;
     const t = pass["t"] ?? pass["time"] ?? pass["start_t"];
     if (typeof t !== "number" || !Number.isFinite(t)) return false;
-    return insidePeriods(t, file?.periods);
+    return insidePeriods(t, periods);
   });
   if (passes.length === 0) return null;
   // completionOf already excludes passes the file never judged, so a half
@@ -159,7 +177,7 @@ export function buildKpi({
     measure(
       "possession",
       "Possession",
-      possessionOf(timeline, team),
+      possessionOf(stats, timeline, team),
       targets.possessionPct,
       "up",
       "%",

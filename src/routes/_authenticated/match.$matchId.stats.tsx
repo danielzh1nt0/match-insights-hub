@@ -136,16 +136,12 @@ function Stats() {
           )}
 
           {teamA && teamB && (
-            // buildTimeline flips possession, tilt and length for whichever
-            // team is selected, but the card was always handed the literal A
-            // and B identities. Under the opponent scope the chart, the
-            // territory pitch and the sparkline colour were all inverted
-            // against their own legend. The card wants "us" and "them".
             <MatchTimelineCard
               timeline={timeline}
-              teamA={team === "B" ? teamB : teamA}
-              teamB={team === "B" ? teamA : teamB}
+              teamA={teamA}
+              teamB={teamB}
               matchId={matchId}
+              ours={team ?? "A"}
             />
           )}
 

@@ -12,6 +12,7 @@ import {
   completionOf,
   finalThirdEntries,
   passCompleted,
+  insidePeriods,
   shotsOf as contractShots,
 } from "@/lib/export-contract";
 import type {
@@ -174,7 +175,9 @@ export function buildTerritory(
 ): Territory | null {
   if (!data) return null;
   const { length, width } = pitchSize(data, stats);
-  const frames = data.frames ?? [];
+  // Only the match: warm-up and half-time frames fed the heat map and the
+  // shape snapshots before.
+  const frames = (data.frames ?? []).filter((frame) => insidePeriods(frame.t, data.periods));
   const cells = new Float64Array(HEAT_COLS * HEAT_ROWS);
   const perFrame: number[] = [];
   let frameCount = 0;
@@ -263,7 +266,10 @@ export function buildTerritory(
       .map((e) => {
         const position = positionAt(e.t);
         if (!position) return null;
-        const attackingX = e.team === "B" ? 100 - position.x : position.x;
+        // Towards the goal this team attacks, from the file, not assumed.
+        const right =
+          e.team === "B" || e.team === "A" ? (data.attack_right?.[e.team] ?? e.team === "A") : true;
+        const attackingX = right ? position.x : 100 - position.x;
         return { ...position, t: e.t, ...(attackingX >= 66.67 ? { high: true } : {}) };
       })
       .filter((p): p is { x: number; y: number; t: number; high?: boolean } => p !== null);
@@ -329,7 +335,7 @@ export function buildLineDefending(
         })
         .filter(
           (sample): sample is { t: number; height: number } =>
-            sample.t !== null && sample.height !== null,
+            sample.t !== null && sample.height !== null && insidePeriods(sample.t, data.periods),
         )
         .sort((a, b) => a.t - b.t)
     : [];
@@ -342,10 +348,8 @@ export function buildLineDefending(
     for (const sample of timeline) {
       if (!nearest || Math.abs(sample.t - time) < Math.abs(nearest.t - time)) nearest = sample;
     }
-    // A sparse or half-covered series used to classify every later shot by a
-    // stale height, so shots from the second half were filed under where the
-    // line stood in the first.
-    if (!nearest || Math.abs(nearest.t - time) > HEIGHT_WINDOW_S) return null;
+    // A sample from more than ten seconds away says nothing about this shot.
+    if (!nearest || Math.abs(nearest.t - time) > 10) return null;
     return nearest.height;
   };
 
@@ -401,20 +405,22 @@ export function buildLineDefending(
           (timeline.filter((sample) => sample.height < usualM).length / timeline.length) * 100,
         )
       : null;
-  const states = (["high", "mid", "low"] as const).map((key) => {
+  // A state the line never sat in has no measured height; it is left out
+  // rather than given a typical figure (42 / 34 / 26 m) and shown as measured.
+  const states = (["high", "mid", "low"] as const).flatMap((key) => {
     const inState = timeline.filter((sample) => lineState(sample.height) === key);
-    // A band the team never held has no height. It used to fall back to an
-    // invented 42 / 34 / 26 m and present that as a measured average.
-    const average = inState.length
-      ? Math.round(inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length)
-      : null;
+    if (inState.length === 0) return [];
+    const average = Math.round(
+      inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length,
+    );
     const moments = conceded.filter((item) => lineState(item.height) === key);
-    return {
+    const state = {
       key,
       height: average,
       shots: moments.length,
       goals: moments.filter((item) => item.event.type === "goal").length,
     };
+    return [state];
   });
 
   return {
@@ -783,31 +789,30 @@ export function buildFindings(
     );
   }
 
-  // Worst first, which three screens already promised and none delivered.
-  //
-  // The order used to be the order these were written in the source, so a
-  // press at 59% against a 60% target outranked a 55 m block against a 38 m
-  // ceiling, every time -- and findings[0] is the Insights verdict, the
-  // flagged chapter, "The one thing", and the session the squad trains on
-  // Tuesday. It has to be the worst thing that happened, not the first thing
-  // anyone thought to check.
-  //
-  // Severity is the miss as a share of the target, so figures in different
-  // units compare: 35% against 60% misses by 0.42, 55 m against 38 m by 0.45.
-  // A finding whose clips are the faulty moments outranks one whose clips are
-  // only the population, because the coach can act on the first immediately.
-  return [...out].sort((a, b) => {
-    const exactness = Number(b.evidence === "exact") - Number(a.evidence === "exact");
-    if (exactness !== 0) return exactness;
-    return severity(b) - severity(a);
+  // Worst first, as three screens promise. The miss is measured against the
+  // target in the target's own units, so a 34% press against a 60% target
+  // (missed by 43% of the target) outranks a 32% regain against 35% (9%).
+  // Counts with no real target ("411 times") cannot be ranked that way, so
+  // they come after the targeted findings, biggest count first.
+  return out.sort((a, b) => {
+    const ma = findingMiss(a);
+    const mb = findingMiss(b);
+    if (ma !== null && mb !== null) return mb - ma;
+    if (ma === null && mb === null) return b.value - a.value;
+    return ma === null ? 1 : -1;
   });
 }
 
-/** How badly a finding misses its target, as a share of the target. */
-export function severity(f: Finding): number {
-  if (f.target === 0) return f.higherIsWorse ? f.value : 0;
-  const miss = f.higherIsWorse ? f.value - f.target : f.target - f.value;
-  return miss / Math.abs(f.target);
+/**
+ * How far a finding misses its target, as a share of that target.
+ *
+ * Null for a bare count, which has no target to be a share of. Exported so the
+ * ordering the Insights verdict depends on is covered by a test rather than by
+ * reading the comparator.
+ */
+export function findingMiss(f: Finding): number | null {
+  if (f.unit === "times" || f.target <= 0) return null;
+  return (f.higherIsWorse ? f.value - f.target : f.target - f.value) / f.target;
 }
 
 /**
@@ -875,7 +880,19 @@ function fmt(v: unknown, suffix = "") {
 /** The pipeline records the kind of set piece in the payload, under one of several keys. */
 export function setPieceKind(event: { payload?: Record<string, unknown> | null | undefined }) {
   const payload = event.payload ?? {};
-  return String(payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "").toLowerCase();
+  const raw = String(
+    payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "",
+  ).toLowerCase();
+  // Normalised so "goal kick", "goal_kick" and "goalkick" all count once; an
+  // unrecognised kind stays as written rather than vanishing into "".
+  const kind = raw.replace(/[\s_-]+/g, " ").trim();
+  if (kind.includes("corner")) return "corner";
+  if (kind.includes("throw")) return "throw-in";
+  if (kind.includes("goal")) return "goal kick";
+  if (kind.includes("free") || kind.includes("foul")) return "free kick";
+  if (kind.includes("penalty")) return "penalty";
+  if (kind.includes("kick") && kind.includes("off")) return "kick-off";
+  return kind || "other";
 }
 
 function setPieceCount(data: MatchDataFile | undefined, team: TeamKey, kind: string) {
@@ -1053,7 +1070,9 @@ export function buildPlayerStats(stats: StatsFile | undefined, team: TeamKey | n
       passesCompleted: num(p.passes_completed, 0),
       betterOptions: num(p.better_option_count, 0),
       distanceM: Math.round(num(p.distance_m, 0)),
-      minutes: Math.round(num(p.time_visible_s, 0) / 60),
+      // One decimal: rounding to whole minutes made a 40-second cameo a
+      // one-minute player and let it top the distance-per-minute table.
+      minutes: Math.round(num(p.time_visible_s, 0) / 6) / 10,
     }))
     .sort((x, y) => y.touches - x.touches);
 }
@@ -1065,9 +1084,7 @@ export function attacksRight(
   team: TeamKey,
 ) {
   const value = override?.[team] ?? attackRight?.[team];
-  // Neither the label nor the file saying so is not "attacks left" -- it is
-  // "nobody said", and the contract's default is A right, B left. Treating an
-  // absent value as false put both teams attacking the same way.
+  // The export contract: A attacks right, B left, unless the file says otherwise.
   return typeof value === "boolean" ? value : team === "A";
 }
 

@@ -266,15 +266,45 @@ export async function fetchMatchStats(row: MatchRow): Promise<Record<string, any
     loadJson<MatchDataFile>(row.files.match_data, versionOf(row)).catch(() => null),
   ]);
   const shots = stats?.["metrics"]?.["shots"];
-  if (!Array.isArray(shots)) return stats;
+  const withShots = !Array.isArray(shots)
+    ? stats
+    : {
+        ...stats,
+        metrics: {
+          ...stats["metrics"],
+          shots: shots.filter((s: { t?: number }) =>
+            inVideo(s?.t as number, row.duration_s, file?.periods),
+          ),
+        },
+      };
+  return withholdDisownedPossession(withShots);
+}
+
+/**
+ * When the pipeline's own ball grade says possession is not trustworthy
+ * (`summary.ball_grade.possession_ok === false`), the possession figures are
+ * removed from the file before anything reads them, so every screen shows a
+ * dash instead of a number the exporter has disowned. On Vallentuna the dark
+ * SFK players near the ball are missed more often than the red ones, which
+ * pulled SFK's share from a by-eye 56% to a printed 36%.
+ */
+export function withholdDisownedPossession<T extends Record<string, any>>(stats: T): T {
+  const grade = stats?.["summary"]?.["ball_grade"];
+  if (!grade || grade.possession_ok !== false) return stats;
+  const teams = Array.isArray(stats["teams"])
+    ? stats["teams"].map((row: Record<string, unknown>) => {
+        const { possession_pct: _p, possession_s: _s, ...rest } = row;
+        return rest;
+      })
+    : stats["teams"];
+  const metrics = stats["metrics"];
+  const windows = Array.isArray(metrics?.["tilt_windows"])
+    ? metrics["tilt_windows"].map((w: Record<string, unknown>) => ({ ...w, possession_A: null }))
+    : metrics?.["tilt_windows"];
   return {
     ...stats,
-    metrics: {
-      ...stats["metrics"],
-      shots: shots.filter((s: { t?: number }) =>
-        inVideo(s?.t as number, row.duration_s, file?.periods),
-      ),
-    },
+    teams,
+    ...(metrics ? { metrics: { ...metrics, tilt_windows: windows } } : {}),
   };
 }
 

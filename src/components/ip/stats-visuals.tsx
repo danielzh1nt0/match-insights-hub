@@ -334,7 +334,17 @@ function StatsPitch({
             </g>
           </g>
         )}
-        {children}
+        {/* Children draw in 0-100 x 0-64 (portrait: 0-64 x 0-100) pitch
+            units, 0 and 100 being the goal lines; this maps them onto the
+            chalk rectangle, which sits inside a margin. Drawn straight into
+            the viewBox, every dot sat about three units off the pitch. */}
+        <g
+          transform={
+            portrait ? "translate(2 3) scale(0.9375 0.94)" : "translate(3 1.5) scale(0.94 0.9516)"
+          }
+        >
+          {children}
+        </g>
       </svg>
       {attackLabel && (
         <span className="label-xs mt-2 block text-right text-text-faint">
@@ -473,19 +483,18 @@ function HeatMap({
 }) {
   const COLS = 16;
   const ROWS = 10;
-  const length = Math.max(file?.pitch?.length ?? 105, 1);
-  const width = Math.max(file?.pitch?.width ?? 68, 1);
-
   const { grid, max, samples } = (() => {
     const g = Array.from({ length: ROWS }, () => Array<number>(COLS).fill(0));
     let n = 0;
     for (const frame of frames) {
       for (const player of frame.players) {
         if (player.team !== team || player.state === "stale") continue;
-        // The export already writes both halves the same way round, so
-        // nothing is flipped here.
-        const x = Math.min(0.999, Math.max(0, player.m[0] / length));
-        const y = Math.min(0.999, Math.max(0, player.m[1] / width));
+        // Oriented so this team attacks right (the export writes A attacking
+        // right in both halves; B is turned round here, as everywhere else).
+        const point = metresToPct(player.m, team);
+        if (!point) continue;
+        const x = Math.min(0.999, point.x / 100);
+        const y = Math.min(0.999, point.y / 100);
         const r = Math.floor(y * ROWS);
         const c = Math.floor(x * COLS);
         g[r]![c] = (g[r]![c] ?? 0) + 1;
@@ -519,10 +528,10 @@ function HeatMap({
             count === 0 ? null : (
               <rect
                 key={`h-${r}-${c}`}
-                x={3 + (94 / COLS) * c}
-                y={1.5 + (60.9 / ROWS) * r}
-                width={94 / COLS}
-                height={60.9 / ROWS}
+                x={(100 / COLS) * c}
+                y={(64 / ROWS) * r}
+                width={100 / COLS}
+                height={64 / ROWS}
                 fill={colour}
                 fillOpacity={Math.min(0.8, (count / max) ** 0.65 * 0.8)}
               />
@@ -549,7 +558,11 @@ function Thirds({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colo
     frame.players
       .filter((player) => player.team === team && player.state !== "stale")
       .forEach((player) => {
-        const index = Math.min(2, Math.floor(clamp(player.m[0], 0, 104.99) / 35));
+        // Oriented so the team attacks right, whichever way it really plays,
+        // and in thirds of this pitch's length rather than a fixed 35 m.
+        const point = metresToPct(player.m, team);
+        if (!point) return;
+        const index = Math.min(2, Math.floor((point.x / 100) * 3));
         counts[index] = (counts[index] ?? 0) + 1;
       }),
   );
@@ -597,9 +610,13 @@ function Thirds({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colo
   );
 }
 
-function SequenceLength({ stats, team }: Props) {
+function SequenceLength({ stats, team, file, period }: Props) {
+  // This team's spells inside the chosen period. A spell with no team is not
+  // ours just because we are the team being looked at.
+  const range = periodRange(file, period);
   const sequences = (stats?.sequences ?? []).filter(
-    (sequence: any) => !sequence?.team || sequence.team === team,
+    (sequence: any) =>
+      sequence?.team === team && inMatch(finite(sequence?.t_start), range, file?.periods),
   );
   const lengths = sequences
     .map((sequence: any) => finite(sequence?.passes ?? sequence?.pass_count ?? sequence?.length))
@@ -649,32 +666,46 @@ function SequenceLength({ stats, team }: Props) {
   );
 }
 
+/**
+ * Sprints: a tracked player covering ground at 5.5 m/s or more over about a
+ * second. Measured between frames roughly one second apart, every second of
+ * the match; one sprint per player per five seconds, the fastest. The old
+ * version sampled eighty points across the match, so on a full match the two
+ * frames compared were a minute apart and nothing ever counted as a run.
+ */
 function deriveRuns(frames: Frame[], team: TeamKey) {
   const runs: { id: number; start: Point; end: Point; speed: number; withBall: boolean }[] = [];
-  const step = Math.max(1, Math.round(frames.length / 80));
-  for (let i = step; i < frames.length; i += step) {
-    const before = frames[i - step];
-    const after = frames[i];
-    if (!before || !after) continue;
-    for (const player of after.players.filter((p) => p.team === team && p.state === "observed")) {
-      const previous = before.players.find(
-        (p) => p.team === team && p.id === player.id && p.state === "observed",
-      );
+  const lastKept = new Map<number, number>();
+  let j = 0;
+  for (let i = 0; i < frames.length; i += 1) {
+    const before = frames[i]!;
+    while (j < frames.length && frames[j]!.t < before.t + 1.0) j += 1;
+    const after = frames[j];
+    if (!after || after.t - before.t > 2.0) continue;
+    const dt = after.t - before.t;
+    for (const player of after.players) {
+      if (player.team !== team || player.state !== "observed") continue;
+      const previous = before.players.find((p) => p.id === player.id && p.state === "observed");
       if (!previous) continue;
       const distance = Math.hypot(player.m[0] - previous.m[0], player.m[1] - previous.m[1]);
-      const dt = Math.max(0.1, after.t - before.t);
       const speed = distance / dt;
-      if (speed < 5.5 || distance < 3) continue;
+      if (speed < 5.5 || speed > 11) continue; // above 11 m/s is a track jump, not a player
+      const kept = lastKept.get(player.id);
+      if (kept !== undefined && before.t - kept < 5) continue;
+      const start = metresToPct(previous.m, team);
+      const end = metresToPct(player.m, team);
+      if (!start || !end) continue;
+      lastKept.set(player.id, before.t);
       runs.push({
         id: player.id,
-        start: { x: clamp((previous.m[0] / 105) * 100), y: clamp((previous.m[1] / 68) * 100) },
-        end: { x: clamp((player.m[0] / 105) * 100), y: clamp((player.m[1] / 68) * 100) },
+        start,
+        end,
         speed,
         withBall: after.possession === team && after.carrier === player.id,
       });
     }
   }
-  return runs.slice(0, 40);
+  return runs;
 }
 
 function Runs({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour: string }) {
@@ -684,8 +715,8 @@ function Runs({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour
     <Card
       question="Where did our runs go?"
       icon={Move}
-      caption="Five fastest tracked runs. Solid had the ball; dashed were off it."
-      honesty={`${runs.length} tracked runs`}
+      caption="The five fastest sprints the tracking saw (5.5 m/s and up, over about a second). Solid had the ball; dashed were off it."
+      honesty={`${runs.length} sprints tracked`}
     >
       <PortraitPitch arrowLabel="attack">
         {[...runs]
@@ -709,29 +740,22 @@ function Runs({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colour
   );
 }
 
-/** Below this, a per-minute rate describes a camera angle, not a player. */
-const RATE_MIN_MINUTES = 10;
+/** A rate per minute needs this many visible minutes behind it to mean anything. */
+const RATE_MIN_MINUTES = 5;
 
 function Distance({ players, colour }: { players: PlayerStat[]; colour: string }) {
-  const seen = players.filter((p) => p.minutes > 0 && p.distanceM > 0);
-  // A player tracked for 40 seconds gets a denominator of one minute and tops
-  // the table at several times a real rate -- and the bar scale comes from
-  // that same top rate, so every genuine 90-minute player is squashed.
-  const ranked = [...seen]
-    .filter((p) => p.minutes >= RATE_MIN_MINUTES)
+  const ranked = [...players]
+    .filter((p) => p.minutes >= RATE_MIN_MINUTES && p.distanceM > 0)
     .sort((a, b) => b.distanceM / b.minutes - a.distanceM / a.minutes)
     .slice(0, 10);
-  const brief = seen.length - ranked.length;
   if (!ranked.length) return null;
   const max = Math.max(...ranked.map((p) => p.distanceM / p.minutes));
   return (
     <Card
       question="Distance covered (while in camera view)"
       icon={Footprints}
-      caption="The camera follows the ball, so a player out of shot is not counted. Sorted by distance per visible minute."
-      honesty={`${ranked.length} observed players${
-        brief > 0 ? ` · ${brief} seen under ${RATE_MIN_MINUTES} min, not ranked` : ""
-      }`}
+      caption={`The camera follows the ball, so a player out of shot is not counted. Sorted by distance per visible minute; players seen under ${RATE_MIN_MINUTES} minutes are left out.`}
+      honesty={`${ranked.length} players seen ${RATE_MIN_MINUTES}+ minutes`}
     >
       <div className="rule-y">
         {ranked.map((player) => {
@@ -856,10 +880,10 @@ function PressureMap({
             count === 0 ? null : (
               <rect
                 key={`p-${r}-${c}`}
-                x={3 + (94 / COLS) * c}
-                y={1.5 + (60.9 / ROWS) * r}
-                width={94 / COLS}
-                height={60.9 / ROWS}
+                x={(100 / COLS) * c}
+                y={(64 / ROWS) * r}
+                width={100 / COLS}
+                height={64 / ROWS}
                 fill={colour}
                 fillOpacity={Math.min(0.82, (count / built.max) ** 0.65 * 0.82)}
               />
@@ -1079,10 +1103,15 @@ function SetPieceCounts({ events, team, teamA, teamB }: Props) {
       (event) =>
         event.type === "set_piece" && event.team === side && setPieceKind(event).includes(kind),
     ).length;
+  // "stoppage" is the export's word for a restart it could not name (most of
+  // them). Hidden, they made corners + free kicks + throw-ins read as a
+  // fraction of the total the card said it covered.
   const rows = [
     ["Corners", "corner"],
     ["Free kicks", "free"],
     ["Throw-ins", "throw"],
+    ["Goal kicks", "goal kick"],
+    ["Other stoppages", "stoppage"],
   ] as const;
   const any = rows.some(([, kind]) => count(team, kind) + count(other, kind) > 0);
   if (!any) return null;
@@ -1423,14 +1452,27 @@ function ShotSummary({ stats, team, events, file }: Props) {
   );
 }
 
-function EntriesConceded({ events, team, matchId, file }: Props) {
-  const opponent = team === "A" ? "B" : "A";
-  const entries = events
+function EntriesConceded({ stats, team, matchId, file, period }: Props) {
+  const opponent: TeamKey = team === "A" ? "B" : "A";
+  // The pipeline records every entry into the final third (metrics.field),
+  // by pass or carry, with where across the pitch it crossed. The card used
+  // to plot the opponent's shots and call them entries, and drew five.
+  const range = periodRange(file, period);
+  const raw = (stats?.metrics?.["field"]?.[opponent]?.["final_third_entries"] ?? []) as Record<
+    string,
+    unknown
+  >[];
+  const edgeM = team === "A" ? PITCH.length / 3 : (2 * PITCH.length) / 3;
+  const entries = raw
+    .map((entry) => ({
+      t: finite(entry["t"]),
+      how: String(entry["how"] ?? ""),
+      point: metresToPct([edgeM, finite(entry["y_m"]) ?? PITCH.width / 2], team),
+    }))
     .filter(
-      (e) => e.team === opponent && ["final_third_entry", "entry", "shot", "goal"].includes(e.type),
-    )
-    .map((event) => ({ event, point: eventPoint(event, file) }))
-    .filter((x): x is { event: ReviewedEvent; point: Point } => x.point !== null);
+      (x): x is { t: number; how: string; point: Point } =>
+        x.t !== null && x.point !== null && inMatch(x.t, range, file?.periods),
+    );
   if (!entries.length)
     return (
       <EvidenceUnavailable
@@ -1444,39 +1486,38 @@ function EntriesConceded({ events, team, matchId, file }: Props) {
     const index = Math.min(4, Math.floor(point.y / 20));
     lanes[index] = (lanes[index] ?? 0) + 1;
   });
+  const byPass = entries.filter((e) => e.how === "pass").length;
   return (
     <Card
       question="Where did they get in?"
       icon={ArrowLeftRight}
-      caption="Opponent entries into our defensive third, grouped into five lanes."
-      honesty={`${entries.length} entries and shots`}
+      caption="Where the opponent crossed into our defensive third, by pass or carry, grouped into five lanes."
+      honesty={`${entries.length} entries · ${byPass} by pass, ${entries.length - byPass} by carry`}
     >
       <Pitch>
-        {entries.slice(0, 5).map(({ event, point }) => (
+        {entries.map(({ t, how, point }, index) => (
           <Link
-            key={event.id}
+            key={`${t}-${index}`}
             to="/match/$matchId/match"
             params={{ matchId }}
-            search={{ t: event.t }}
-            aria-label={`Watch entry at ${fmt(event.t)}`}
+            search={{ t: Math.max(0, t - 2) }}
+            aria-label={`Watch entry at ${fmt(t)}`}
           >
             <line
               x1={point.x}
               y1={(point.y / 100) * 64}
-              x2={Math.max(4, point.x - 10)}
+              x2={Math.max(4, point.x - 8)}
               y2={(point.y / 100) * 64}
               stroke="var(--graphite)"
-              strokeWidth="1.2"
+              strokeWidth="0.8"
+              opacity=".7"
             />
             <circle
-              cx={Math.max(4, point.x - 10)}
+              cx={Math.max(4, point.x - 8)}
               cy={(point.y / 100) * 64}
-              r="1.8"
-              fill={
-                event.type === "shot" || event.type === "goal"
-                  ? "var(--quality-bad)"
-                  : "var(--text-faint)"
-              }
+              r="1.4"
+              fill={how === "pass" ? "var(--quality-bad)" : "var(--text-faint)"}
+              opacity=".85"
             />
           </Link>
         ))}
@@ -1537,11 +1578,16 @@ function PlayerCards({ players, stats, matchId, colours }: Props) {
             </div>
             <div className="mt-4 grid grid-cols-5 gap-1">
               {[
-                [Math.round(player.distanceM / Math.max(player.minutes, 1)), "m/min"],
+                [
+                  player.minutes >= RATE_MIN_MINUTES
+                    ? Math.round(player.distanceM / player.minutes)
+                    : "\u2014",
+                  "m/min",
+                ],
                 [player.touches, "touches"],
                 [`${player.passesCompleted}/${player.passes}`, "passes"],
                 [player.betterOptions, "options"],
-                [completion, "quality"],
+                [player.passes ? `${completion}%` : "\u2014", "completed"],
               ].map(([v, l]) => (
                 <div key={l} className="bg-surface-2 p-2 text-center">
                   <strong className="num block text-[14px] text-cream">{v}</strong>
@@ -1553,10 +1599,21 @@ function PlayerCards({ players, stats, matchId, colours }: Props) {
               className="mt-3 flex h-2 overflow-hidden bg-surface-3"
               aria-label={`${completion}% completed, ${risky} risky, ${lost} lost`}
             >
-              <span className="bg-quality-good" style={{ width: `${completion}%` }} />
+              {/* Three shares of the same pass count: completed and safe,
+                  completed but risky, lost. The risky COUNT used to be drawn
+                  as a percentage width beside a real percentage. */}
+              <span
+                className="bg-quality-good"
+                style={{
+                  flex: Math.max(
+                    0,
+                    player.passesCompleted - Math.min(risky, player.passesCompleted),
+                  ),
+                }}
+              />
               <span
                 className="bg-quality-risky"
-                style={{ width: `${Math.min(100 - completion, risky)}%` }}
+                style={{ flex: Math.min(risky, player.passesCompleted) }}
               />
               <span className="bg-quality-bad" style={{ flex: lost }} />
             </div>
@@ -1806,21 +1863,25 @@ function PassNetwork({
   const ids = [...new Set(pairs.flatMap((p) => [p.from, p.to]))].slice(0, 11);
   const touches = new Map<number, number>(),
     sum = new Map<number, { x: number; y: number; n: number }>();
+  // A node sits at the average of every located pass it took part in, so a
+  // thirty-pass pair moves it fifteen times as much as a two-pass pair. The
+  // average of per-pair averages let the two count the same.
   pairs.forEach((p) => {
     touches.set(p.from, (touches.get(p.from) ?? 0) + p.total);
     touches.set(p.to, (touches.get(p.to) ?? 0) + p.total);
+    const weight = Math.max(1, p.located);
     if (p.start) {
       const s = sum.get(p.from) ?? { x: 0, y: 0, n: 0 };
-      s.x += p.start.x;
-      s.y += p.start.y;
-      s.n++;
+      s.x += p.start.x * weight;
+      s.y += p.start.y * weight;
+      s.n += weight;
       sum.set(p.from, s);
     }
     if (p.end) {
       const s = sum.get(p.to) ?? { x: 0, y: 0, n: 0 };
-      s.x += p.end.x;
-      s.y += p.end.y;
-      s.n++;
+      s.x += p.end.x * weight;
+      s.y += p.end.y * weight;
+      s.n += weight;
       sum.set(p.to, s);
     }
   });
@@ -2928,10 +2989,9 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
     .filter((r): r is typeof r & { height: number } => r.min > 0 && r.height !== null)
     .sort((a, b) => b.height - a.height);
   const rate = (r: { shots: number; min: number }) => r.shots / r.min;
-  const small = (r: { shots: number; min: number }) => r.min < 8 || r.shots < 3;
-  // Ranked only among bands held long enough for a rate to mean anything. A
-  // 20-second band with one shot reads 3.000/min against a 40-minute band's
-  // 0.075 and was winning the "highest shot rate" line on that.
+  // A rate over less than eight minutes is noise: a 20-second band with one
+  // shot read 3.000 shots a minute against a half's 0.075.
+  const small = (r: { shots: number; min: number }) => r.min < 8;
   const highest = [...rows].filter((r) => !small(r)).sort((a, b) => rate(b) - rate(a))[0];
   const mostTime = [...rows].sort((a, b) => b.min - a.min)[0];
   const maxMin = Math.max(...rows.map((r) => r.min), 1);
@@ -3001,9 +3061,11 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
                         peak ? "text-reaction-warn" : "text-cream",
                       )}
                     >
-                      {rate(r).toFixed(2)}
+                      {small(r) ? "\u2014" : (rate(r) * 10).toFixed(2)}
                     </div>
-                    <div className="text-[10px] text-text-faint">shots / min</div>
+                    <div className="text-[10px] text-text-faint">
+                      {small(r) ? "too little time to rate" : "shots / 10 min"}
+                    </div>
                   </div>
                 </div>
                 <div className="relative mt-2 h-1 bg-surface-2">
@@ -3043,8 +3105,10 @@ function ShapeOutcomeTable({ lineDefending }: { lineDefending: LineDefending }) 
           </p>
           {highest && highest.shots > 0 && (
             <p className="mt-2 text-[12px] text-text-dim">
-              Highest shot rate: {name(highest.key)} · {rate(highest).toFixed(2)}/min, over{" "}
-              {time(highest.min)}.
+              Highest shot rate: {name(highest.key)} · {(rate(highest) * 10).toFixed(2)} per 10 min
+              {small(highest)
+                ? ` · only ${time(highest.min)}, ${highest.shots} ${highest.shots === 1 ? "shot" : "shots"}.`
+                : "."}
             </p>
           )}
         </div>
@@ -3063,7 +3127,9 @@ function LanesTable({
   colour: string;
   identity: StatsTeamIdentity;
 }) {
-  const [minN, setMinN] = useState(LANE_MIN_PASSES);
+  // Same floor as the pass map: a lane with fewer than five passes cannot be
+  // ranked as best or worst.
+  const [minN, setMinN] = useState(5);
   const [showMap, setShowMap] = useState(false);
   const [sel, setSel] = useState<string | null>(null);
   const map = new Map<
