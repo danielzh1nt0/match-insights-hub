@@ -21,7 +21,8 @@ export type BlockSample = {
   t: number;
   /** Metres up the pitch from our own goal. */
   def: number;
-  mid: number;
+  /** Null when no outfield player sat between the back and the front groups. */
+  mid: number | null;
   att: number;
   /** Back to front. The figure the coach's ceiling is set against. */
   length: number;
@@ -90,7 +91,8 @@ function groupsIn(frame: Frame, team: TeamKey, attackRight: boolean, length: num
   return {
     def,
     att,
-    mid: middle.length > 0 ? mean(middle) : (def + att) / 2,
+    // Not invented: a midfield nobody was seen in is not halfway between.
+    mid: middle.length > 0 ? mean(middle) : null,
     length: att - def,
   };
 }

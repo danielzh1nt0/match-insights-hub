@@ -5,6 +5,7 @@ import type { NumberCell } from "@/components/insights/MatchNumbersGrid";
 import type { ReviewedEvent } from "@/lib/event-reviews";
 import type { Finding } from "@/lib/match-data";
 import { buildInsightsModel, buildStrengths, verdict } from "@/lib/insights-model";
+import { completionFor } from "@/lib/kpi";
 import { teamRow, type StatsFile, type TeamKey, type Thresholds } from "@/lib/match-analysis";
 import type { LibraryMatch } from "@/lib/sample-data";
 
@@ -60,7 +61,9 @@ export function useMatchModel({
   const possessionTrusted = ball ? ball.possession : true;
   const possession = possessionTrusted ? numeric(row, "possession_pct") : null;
   const otherPossession = numeric(otherRow, "possession_pct");
-  const completion = numeric(row, "pass_completion_pct");
+  // The KPI's figure (judged passes inside the match), not the team row's, so one match prints one completion.
+  const completionRaw = completionFor(stats, ownTeam, undefined);
+  const completion = completionRaw === null ? null : Math.round(completionRaw);
   const blockLength = numeric(row, "block_length_median_m");
   const pressPct = numeric(row, "pressed_within_2s_pct");
   const betterOption = numeric(row, "better_option_count");
@@ -227,8 +230,9 @@ export function useMatchModel({
         highTurnovers: moments.filter(
           (event) => event.team === ownTeam && event.type === "high_turnover",
         ).length,
+        completion,
       }),
-    [row, thresholds, shots, otherShots, goals, moments, ownTeam],
+    [row, thresholds, shots, otherShots, goals, moments, ownTeam, completion],
   );
 
   /** How the match went, in one line, from the result and the shape of it. */

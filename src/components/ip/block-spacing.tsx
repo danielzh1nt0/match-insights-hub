@@ -82,7 +82,10 @@ export function BlockSpacing({
           : {
               t: mid(group.map((g) => g.t)),
               def: mid(group.map((g) => g.def)),
-              mid: mid(group.map((g) => g.mid)),
+              mid: (() => {
+                const known = group.map((g) => g.mid).filter((v): v is number => v !== null);
+                return known.length ? mid(known) : null;
+              })(),
               att: mid(group.map((g) => g.att)),
               length: mid(group.map((g) => g.length)),
             },
@@ -93,10 +96,24 @@ export function BlockSpacing({
   const maxUp = Math.max(...drawn.map((s) => s.att), 60);
   const x = (t: number) => (t / durationS) * W;
   const y = (m: number) => H - (m / maxUp) * H;
-  const path = (pick: (s: BlockSample) => number) =>
-    drawn
-      .map((s, i) => `${i === 0 ? "M" : "L"}${x(s.t).toFixed(1)} ${y(pick(s)).toFixed(1)}`)
+  // A gap in a series lifts the pen, so an unmeasured midfield is a break
+  // in the dashed line rather than a line drawn through the middle.
+  const path = (pick: (s: BlockSample) => number | null) => {
+    let pen = false;
+    return drawn
+      .map((s) => {
+        const v = pick(s);
+        if (v === null) {
+          pen = false;
+          return "";
+        }
+        const cmd = pen ? "L" : "M";
+        pen = true;
+        return `${cmd}${x(s.t).toFixed(1)} ${y(v).toFixed(1)}`;
+      })
+      .filter(Boolean)
       .join(" ");
+  };
 
   const punished = stretches.filter((s) => s.punished);
 
