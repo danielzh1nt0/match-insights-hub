@@ -12,6 +12,7 @@ import {
   completionOf,
   finalThirdEntries,
   passCompleted,
+  insidePeriods,
   shotsOf as contractShots,
 } from "@/lib/export-contract";
 import type {
@@ -169,7 +170,9 @@ export function buildTerritory(
 ): Territory | null {
   if (!data) return null;
   const { length, width } = pitchSize(data, stats);
-  const frames = data.frames ?? [];
+  // Only the match: warm-up and half-time frames fed the heat map and the
+  // shape snapshots before.
+  const frames = (data.frames ?? []).filter((frame) => insidePeriods(frame.t, data.periods));
   const cells = new Float64Array(HEAT_COLS * HEAT_ROWS);
   const perFrame: number[] = [];
   let frameCount = 0;
@@ -324,7 +327,7 @@ export function buildLineDefending(
         })
         .filter(
           (sample): sample is { t: number; height: number } =>
-            sample.t !== null && sample.height !== null,
+            sample.t !== null && sample.height !== null && insidePeriods(sample.t, data.periods),
         )
         .sort((a, b) => a.t - b.t)
     : [];

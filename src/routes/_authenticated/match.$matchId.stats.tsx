@@ -136,7 +136,13 @@ function Stats() {
           )}
 
           {teamA && teamB && (
-            <MatchTimelineCard timeline={timeline} teamA={teamA} teamB={teamB} matchId={matchId} />
+            <MatchTimelineCard
+              timeline={timeline}
+              teamA={teamA}
+              teamB={teamB}
+              matchId={matchId}
+              ours={team ?? "A"}
+            />
           )}
 
           <div

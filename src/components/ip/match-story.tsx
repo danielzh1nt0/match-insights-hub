@@ -444,6 +444,9 @@ function ImproveChapter({
       </div>
 
       <Caption>{finding.interpretation}</Caption>
+      {finding.evidence !== "exact" && finding.evidenceNote && (
+        <p className="mt-2 text-[12.5px] leading-relaxed text-text-faint">{finding.evidenceNote}</p>
+      )}
 
       {/* The evidence, two ways: the moments as the frames they actually are,
           and every loss on one pitch so the shape of the problem is visible

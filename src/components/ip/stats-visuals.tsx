@@ -611,9 +611,13 @@ function Thirds({ frames, team, colour }: { frames: Frame[]; team: TeamKey; colo
   );
 }
 
-function SequenceLength({ stats, team }: Props) {
+function SequenceLength({ stats, team, file, period }: Props) {
+  // This team's spells inside the chosen period. A spell with no team is not
+  // ours just because we are the team being looked at.
+  const range = periodRange(file, period);
   const sequences = (stats?.sequences ?? []).filter(
-    (sequence: any) => !sequence?.team || sequence.team === team,
+    (sequence: any) =>
+      sequence?.team === team && inMatch(finite(sequence?.t_start), range, file?.periods),
   );
   const lengths = sequences
     .map((sequence: any) => finite(sequence?.passes ?? sequence?.pass_count ?? sequence?.length))
@@ -1559,14 +1563,27 @@ function ShotSummary({ stats, team, events, file }: Props) {
   );
 }
 
-function EntriesConceded({ events, team, matchId, file }: Props) {
-  const opponent = team === "A" ? "B" : "A";
-  const entries = events
+function EntriesConceded({ stats, team, matchId, file, period }: Props) {
+  const opponent: TeamKey = team === "A" ? "B" : "A";
+  // The pipeline records every entry into the final third (metrics.field),
+  // by pass or carry, with where across the pitch it crossed. The card used
+  // to plot the opponent's shots and call them entries, and drew five.
+  const range = periodRange(file, period);
+  const raw = (stats?.metrics?.["field"]?.[opponent]?.["final_third_entries"] ?? []) as Record<
+    string,
+    unknown
+  >[];
+  const edgeM = team === "A" ? PITCH.length / 3 : (2 * PITCH.length) / 3;
+  const entries = raw
+    .map((entry) => ({
+      t: finite(entry["t"]),
+      how: String(entry["how"] ?? ""),
+      point: metresToPct([edgeM, finite(entry["y_m"]) ?? PITCH.width / 2], team),
+    }))
     .filter(
-      (e) => e.team === opponent && ["final_third_entry", "entry", "shot", "goal"].includes(e.type),
-    )
-    .map((event) => ({ event, point: eventPoint(event, file) }))
-    .filter((x): x is { event: ReviewedEvent; point: Point } => x.point !== null);
+      (x): x is { t: number; how: string; point: Point } =>
+        x.t !== null && x.point !== null && inMatch(x.t, range, file?.periods),
+    );
   if (!entries.length)
     return (
       <EvidenceUnavailable
@@ -1580,39 +1597,38 @@ function EntriesConceded({ events, team, matchId, file }: Props) {
     const index = Math.min(4, Math.floor(point.y / 20));
     lanes[index] = (lanes[index] ?? 0) + 1;
   });
+  const byPass = entries.filter((e) => e.how === "pass").length;
   return (
     <Card
       question="Where did they get in?"
       icon={ArrowLeftRight}
-      caption="Opponent entries into our defensive third, grouped into five lanes."
-      honesty={`${entries.length} entries and shots`}
+      caption="Where the opponent crossed into our defensive third, by pass or carry, grouped into five lanes."
+      honesty={`${entries.length} entries · ${byPass} by pass, ${entries.length - byPass} by carry`}
     >
       <Pitch>
-        {entries.slice(0, 5).map(({ event, point }) => (
+        {entries.map(({ t, how, point }, index) => (
           <Link
-            key={event.id}
+            key={`${t}-${index}`}
             to="/match/$matchId/match"
             params={{ matchId }}
-            search={{ t: event.t }}
-            aria-label={`Watch entry at ${fmt(event.t)}`}
+            search={{ t: Math.max(0, t - 2) }}
+            aria-label={`Watch entry at ${fmt(t)}`}
           >
             <line
               x1={point.x}
               y1={(point.y / 100) * 64}
-              x2={Math.max(4, point.x - 10)}
+              x2={Math.max(4, point.x - 8)}
               y2={(point.y / 100) * 64}
               stroke="var(--graphite)"
-              strokeWidth="1.2"
+              strokeWidth="0.8"
+              opacity=".7"
             />
             <circle
-              cx={Math.max(4, point.x - 10)}
+              cx={Math.max(4, point.x - 8)}
               cy={(point.y / 100) * 64}
-              r="1.8"
-              fill={
-                event.type === "shot" || event.type === "goal"
-                  ? "var(--quality-bad)"
-                  : "var(--text-faint)"
-              }
+              r="1.4"
+              fill={how === "pass" ? "var(--quality-bad)" : "var(--text-faint)"}
+              opacity=".85"
             />
           </Link>
         ))}

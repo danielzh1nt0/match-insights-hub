@@ -40,6 +40,8 @@ export type MatchTimeline = {
   spans: Span[];
   startS: number;
   endS: number;
+  /** The side every "ours" series belongs to. */
+  team: TeamKey;
   goals: GoalMark[];
   /** SFK's share of the ball, 0–1, smoothed. */
   possession: Point[];
@@ -277,6 +279,7 @@ export function buildTimeline({
     lineHeight: { a: shapeOf(team, "line_height"), b: shapeOf(other, "line_height") },
     sequences,
     passes,
+    team,
     empty:
       possession.length === 0 &&
       tilt.length === 0 &&
@@ -537,7 +540,7 @@ export function keyMoments(timeline: MatchTimeline, story: Spell[]): KeyMoment[]
   if (decisive)
     out.push({
       t: decisive.t,
-      tone: decisive.team === "A" ? "strong" : "lost",
+      tone: decisive.team === timeline.team ? "strong" : "lost",
       label: "Goal",
       note: decisive.score,
     });
