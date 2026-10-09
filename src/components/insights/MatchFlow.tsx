@@ -117,21 +117,30 @@ export function MatchFlow({
           )}
 
           <line x1="0" y1={mid} x2={W} y2={mid} stroke="var(--wire)" strokeWidth="1" />
+          {momentum.length === 0 && (
+            <text x={W / 2} y={mid - 14} textAnchor="middle" fontSize="22" fill="var(--text-faint)">
+              Who had the ball was not tracked reliably enough in this match to draw.
+            </text>
+          )}
 
+          {momentum.length > 0 && (
+            <path
+              d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
+              fill={teamA.kitColour}
+              opacity="0.14"
+              clipPath="url(#flow-above)"
+            />
+          )}
+          {momentum.length > 0 && (
+            <path
+              d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
+              fill={teamB.kitColour}
+              opacity="0.5"
+              clipPath="url(#flow-below)"
+            />
+          )}
           <path
-            d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
-            fill={teamA.kitColour}
-            opacity="0.14"
-            clipPath="url(#flow-above)"
-          />
-          <path
-            d={`${curve} L ${W} ${mid} L 0 ${mid} Z`}
-            fill={teamB.kitColour}
-            opacity="0.5"
-            clipPath="url(#flow-below)"
-          />
-          <path
-            d={curve}
+            d={momentum.length > 0 ? curve : `M 0 ${mid}`}
             fill="none"
             stroke="var(--cream)"
             strokeWidth="2"

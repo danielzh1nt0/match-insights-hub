@@ -113,6 +113,8 @@ export function useMatchModel({
       .filter(
         (w): w is { t: number; share: number } => w.t !== null && w.share !== null && inPlay(w.t),
       );
+    // Nothing measured (or possession withheld for this match): no line at all.
+    if (samples.length === 0) return [];
     return Array.from({ length: SLICES }, (_, i) => {
       const from = (duration / SLICES) * i;
       const to = (duration / SLICES) * (i + 1);
