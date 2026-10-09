@@ -16,7 +16,7 @@ import {
 import { goalsFrom } from "@/lib/export-contract";
 import {
   fetchMatch,
-  fetchAllFrames,
+  fetchWholeMatchFrames,
   fetchMatchData,
   fetchMatchStats,
   isLabelled,
@@ -77,7 +77,7 @@ export function useAnalysis(matchId: string, scope: TeamScope) {
   const needsFrames = Boolean(row && chunks?.length && !dataQuery.data?.frames.length);
   const framesQuery = useQuery({
     queryKey: ["match-frames", matchId],
-    queryFn: () => fetchAllFrames(row!.files, chunks!),
+    queryFn: () => fetchWholeMatchFrames(row!.files, chunks!),
     enabled: needsFrames,
     staleTime: Infinity,
     gcTime: 10 * 60_000,

@@ -406,6 +406,29 @@ export async function fetchFrameChunk(files: MatchFiles, key: string): Promise<F
  * is 10 a second, so 3 keeps ~3 a second) and the per-frame pass lanes and
  * pitch lines are dropped: nothing outside the live video reads them.
  */
+/**
+ * The pipeline's own thinned whole-match file (frames_lite.json: ~3 frames a
+ * second, no lanes or pitch lines), one download instead of twenty. Falls
+ * back to the 5-minute files on matches exported before it existed.
+ */
+export async function fetchWholeMatchFrames(
+  files: MatchFiles,
+  chunks: { key: string; t_start: number }[],
+): Promise<Frame[]> {
+  if (files["frames_lite"]) {
+    try {
+      const res = await fetch(await signedUrl(files["frames_lite"]));
+      if (res.ok) {
+        const body = (await res.json()) as { frames?: Frame[] };
+        if (Array.isArray(body.frames) && body.frames.length) return body.frames;
+      }
+    } catch {
+      /* fall through to the chunk files */
+    }
+  }
+  return fetchAllFrames(files, chunks);
+}
+
 export async function fetchAllFrames(
   files: MatchFiles,
   chunks: { key: string; t_start: number }[],
