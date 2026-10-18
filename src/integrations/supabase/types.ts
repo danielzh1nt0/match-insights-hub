@@ -122,6 +122,126 @@ export type Database = {
         }
         Relationships: []
       }
+      match_corrections: {
+        Row: {
+          created_at: string
+          field: string
+          id: string
+          match_id: string
+          note: string | null
+          owner_id: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          field: string
+          id?: string
+          match_id: string
+          note?: string | null
+          owner_id: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          field?: string
+          id?: string
+          match_id?: string
+          note?: string | null
+          owner_id?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      match_lineups: {
+        Row: {
+          created_at: string
+          id: string
+          match_id: string
+          minute_off: number | null
+          minute_on: number
+          note: string | null
+          owner_id: string
+          player_id: string
+          shirt: number | null
+          started: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_id: string
+          minute_off?: number | null
+          minute_on?: number
+          note?: string | null
+          owner_id: string
+          player_id: string
+          shirt?: number | null
+          started?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_id?: string
+          minute_off?: number | null
+          minute_on?: number
+          note?: string | null
+          owner_id?: string
+          player_id?: string
+          shirt?: number | null
+          started?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      players: {
+        Row: {
+          active: boolean
+          birth_year: number | null
+          consent_at: string | null
+          consent_note: string | null
+          consent_status: string
+          created_at: string
+          full_name: string
+          id: string
+          owner_id: string
+          position: string
+          shirt: number | null
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          birth_year?: number | null
+          consent_at?: string | null
+          consent_note?: string | null
+          consent_status?: string
+          created_at?: string
+          full_name: string
+          id?: string
+          owner_id: string
+          position?: string
+          shirt?: number | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          birth_year?: number | null
+          consent_at?: string | null
+          consent_note?: string | null
+          consent_status?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          owner_id?: string
+          position?: string
+          shirt?: number | null
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       teams: {
         Row: {
           age_group: string

@@ -21,6 +21,7 @@ import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedProcessingRouteImport } from './routes/_authenticated/processing'
+import { Route as AuthenticatedSquadRouteImport } from './routes/_authenticated/squad'
 import { Route as AuthenticatedWelcomeRouteImport } from './routes/_authenticated/welcome'
 import { Route as SignupClubRouteImport } from './routes/signup_.club'
 import { Route as SignupReadyRouteImport } from './routes/signup_.ready'
@@ -30,6 +31,7 @@ import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsClubRouteImport } from './routes/_authenticated/settings.club'
 import { Route as AuthenticatedSettingsProfileRouteImport } from './routes/_authenticated/settings.profile'
 import { Route as AuthenticatedMatchMatchIdInsightsRouteImport } from './routes/_authenticated/match.$matchId.insights'
+import { Route as AuthenticatedMatchMatchIdLineupRouteImport } from './routes/_authenticated/match.$matchId.lineup'
 import { Route as AuthenticatedMatchMatchIdMatchRouteImport } from './routes/_authenticated/match.$matchId.match'
 import { Route as AuthenticatedMatchMatchIdReelRouteImport } from './routes/_authenticated/match.$matchId.reel'
 import { Route as AuthenticatedMatchMatchIdSessionRouteImport } from './routes/_authenticated/match.$matchId.session'
@@ -97,6 +99,11 @@ const AuthenticatedProcessingRoute = AuthenticatedProcessingRouteImport.update({
   path: '/processing',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSquadRoute = AuthenticatedSquadRouteImport.update({
+  id: '/squad',
+  path: '/squad',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedWelcomeRoute = AuthenticatedWelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
@@ -144,6 +151,12 @@ const AuthenticatedMatchMatchIdInsightsRoute =
   AuthenticatedMatchMatchIdInsightsRouteImport.update({
     id: '/match/$matchId/insights',
     path: '/match/$matchId/insights',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMatchMatchIdLineupRoute =
+  AuthenticatedMatchMatchIdLineupRouteImport.update({
+    id: '/match/$matchId/lineup',
+    path: '/match/$matchId/lineup',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedMatchMatchIdMatchRoute =
@@ -201,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/squad': typeof AuthenticatedSquadRoute
   '/welcome': typeof AuthenticatedWelcomeRoute
   '/signup/club': typeof SignupClubRoute
   '/signup/ready': typeof SignupReadyRoute
@@ -210,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
+  '/match/$matchId/lineup': typeof AuthenticatedMatchMatchIdLineupRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
   '/match/$matchId/session': typeof AuthenticatedMatchMatchIdSessionRoute
@@ -230,6 +245,7 @@ export interface FileRoutesByTo {
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/processing': typeof AuthenticatedProcessingRoute
+  '/squad': typeof AuthenticatedSquadRoute
   '/welcome': typeof AuthenticatedWelcomeRoute
   '/signup/club': typeof SignupClubRoute
   '/signup/ready': typeof SignupReadyRoute
@@ -239,6 +255,7 @@ export interface FileRoutesByTo {
   '/settings/club': typeof AuthenticatedSettingsClubRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
+  '/match/$matchId/lineup': typeof AuthenticatedMatchMatchIdLineupRoute
   '/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
   '/match/$matchId/session': typeof AuthenticatedMatchMatchIdSessionRoute
@@ -261,6 +278,7 @@ export interface FileRoutesById {
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/processing': typeof AuthenticatedProcessingRoute
+  '/_authenticated/squad': typeof AuthenticatedSquadRoute
   '/_authenticated/welcome': typeof AuthenticatedWelcomeRoute
   '/signup_/club': typeof SignupClubRoute
   '/signup_/ready': typeof SignupReadyRoute
@@ -270,6 +288,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/club': typeof AuthenticatedSettingsClubRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileRoute
   '/_authenticated/match/$matchId/insights': typeof AuthenticatedMatchMatchIdInsightsRoute
+  '/_authenticated/match/$matchId/lineup': typeof AuthenticatedMatchMatchIdLineupRoute
   '/_authenticated/match/$matchId/match': typeof AuthenticatedMatchMatchIdMatchRoute
   '/_authenticated/match/$matchId/reel': typeof AuthenticatedMatchMatchIdReelRoute
   '/_authenticated/match/$matchId/session': typeof AuthenticatedMatchMatchIdSessionRoute
@@ -292,6 +311,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/squad'
     | '/welcome'
     | '/signup/club'
     | '/signup/ready'
@@ -301,6 +321,7 @@ export interface FileRouteTypes {
     | '/settings/club'
     | '/settings/profile'
     | '/match/$matchId/insights'
+    | '/match/$matchId/lineup'
     | '/match/$matchId/match'
     | '/match/$matchId/reel'
     | '/match/$matchId/session'
@@ -321,6 +342,7 @@ export interface FileRouteTypes {
     | '/new'
     | '/onboarding'
     | '/processing'
+    | '/squad'
     | '/welcome'
     | '/signup/club'
     | '/signup/ready'
@@ -330,6 +352,7 @@ export interface FileRouteTypes {
     | '/settings/club'
     | '/settings/profile'
     | '/match/$matchId/insights'
+    | '/match/$matchId/lineup'
     | '/match/$matchId/match'
     | '/match/$matchId/reel'
     | '/match/$matchId/session'
@@ -351,6 +374,7 @@ export interface FileRouteTypes {
     | '/_authenticated/new'
     | '/_authenticated/onboarding'
     | '/_authenticated/processing'
+    | '/_authenticated/squad'
     | '/_authenticated/welcome'
     | '/signup_/club'
     | '/signup_/ready'
@@ -360,6 +384,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/club'
     | '/_authenticated/settings/profile'
     | '/_authenticated/match/$matchId/insights'
+    | '/_authenticated/match/$matchId/lineup'
     | '/_authenticated/match/$matchId/match'
     | '/_authenticated/match/$matchId/reel'
     | '/_authenticated/match/$matchId/session'
@@ -470,6 +495,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProcessingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/squad': {
+      id: '/_authenticated/squad'
+      path: '/squad'
+      fullPath: '/squad'
+      preLoaderRoute: typeof AuthenticatedSquadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/welcome': {
       id: '/_authenticated/welcome'
       path: '/welcome'
@@ -533,6 +565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMatchMatchIdInsightsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/match/$matchId/lineup': {
+      id: '/_authenticated/match/$matchId/lineup'
+      path: '/match/$matchId/lineup'
+      fullPath: '/match/$matchId/lineup'
+      preLoaderRoute: typeof AuthenticatedMatchMatchIdLineupRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/match/$matchId/match': {
       id: '/_authenticated/match/$matchId/match'
       path: '/match/$matchId/match'
@@ -590,11 +629,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
   AuthenticatedProcessingRoute: typeof AuthenticatedProcessingRoute
+  AuthenticatedSquadRoute: typeof AuthenticatedSquadRoute
   AuthenticatedWelcomeRoute: typeof AuthenticatedWelcomeRoute
   AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
   AuthenticatedSettingsClubRoute: typeof AuthenticatedSettingsClubRoute
   AuthenticatedSettingsProfileRoute: typeof AuthenticatedSettingsProfileRoute
   AuthenticatedMatchMatchIdInsightsRoute: typeof AuthenticatedMatchMatchIdInsightsRoute
+  AuthenticatedMatchMatchIdLineupRoute: typeof AuthenticatedMatchMatchIdLineupRoute
   AuthenticatedMatchMatchIdMatchRoute: typeof AuthenticatedMatchMatchIdMatchRoute
   AuthenticatedMatchMatchIdReelRoute: typeof AuthenticatedMatchMatchIdReelRoute
   AuthenticatedMatchMatchIdSessionRoute: typeof AuthenticatedMatchMatchIdSessionRoute
@@ -609,12 +650,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
   AuthenticatedProcessingRoute: AuthenticatedProcessingRoute,
+  AuthenticatedSquadRoute: AuthenticatedSquadRoute,
   AuthenticatedWelcomeRoute: AuthenticatedWelcomeRoute,
   AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
   AuthenticatedSettingsClubRoute: AuthenticatedSettingsClubRoute,
   AuthenticatedSettingsProfileRoute: AuthenticatedSettingsProfileRoute,
   AuthenticatedMatchMatchIdInsightsRoute:
     AuthenticatedMatchMatchIdInsightsRoute,
+  AuthenticatedMatchMatchIdLineupRoute: AuthenticatedMatchMatchIdLineupRoute,
   AuthenticatedMatchMatchIdMatchRoute: AuthenticatedMatchMatchIdMatchRoute,
   AuthenticatedMatchMatchIdReelRoute: AuthenticatedMatchMatchIdReelRoute,
   AuthenticatedMatchMatchIdSessionRoute: AuthenticatedMatchMatchIdSessionRoute,

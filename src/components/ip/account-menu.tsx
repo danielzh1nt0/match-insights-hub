@@ -112,6 +112,9 @@ export function AccountMenu() {
           <button type="button" role="menuitem" onClick={() => go("/upload")} className={itemClass}>
             Upload a match
           </button>
+          <button type="button" role="menuitem" onClick={() => go("/squad")} className={itemClass}>
+            Squad
+          </button>
 
           <div className="my-1 h-px bg-wire-2" />
 
