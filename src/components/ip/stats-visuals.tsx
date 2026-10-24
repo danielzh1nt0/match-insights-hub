@@ -3487,7 +3487,7 @@ export function StatsVisuals(props: Props) {
               const summaryIdentity = side === "A" ? props.teamA : props.teamB;
               const sideEvents = events.filter((event) => event.team === side && event.status !== "deleted" && insidePeriods(event.t, props.file?.periods));
               const sideShots = summaryShots.length
-                ? summaryShots.filter((shot) => shot.team === side && inRange(shot.t, range) && insidePeriods(shot.t, props.file?.periods))
+                ? summaryShots.filter((shot) => shot.team === side && inMatch(shot.t, range, props.file?.periods))
                 : sideEvents.filter((event) => event.type === "shot" || event.type === "goal").map((event) => ({
                     id: event.id, t: event.t, team: side, x: null, y: null,
                     goal: event.type === "goal",
@@ -3498,7 +3498,7 @@ export function StatsVisuals(props: Props) {
                 frames: frames.filter((frame) => insidePeriods(frame.t, props.file?.periods)).map((frame) => ({ ...frame, players: frame.players.filter((player) => player.team === side) })),
                 passes: passSet(props.stats, side, range, props.file?.periods),
                 events: sideEvents, shots: sideShots,
-                heights: side === props.team ? (props.lineDefending?.timeline ?? []).filter((sample) => inRange(sample.t, range) && insidePeriods(sample.t, props.file?.periods)).map((sample) => sample.height).filter(Number.isFinite) : [],
+                heights: side === props.team ? (props.lineDefending?.timeline ?? []).filter((sample) => inMatch(sample.t, range, props.file?.periods)).map((sample) => sample.height).filter(Number.isFinite) : [],
               });
               return (
                 <div key={side} className="min-w-0">
