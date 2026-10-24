@@ -10,7 +10,6 @@ import {
   Scissors,
   Settings,
   Sparkles,
-  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Crest } from "./touchline";
@@ -347,7 +346,6 @@ const navItems = [
     icon: CalendarCheck,
   },
   { label: "Reels & clips", short: "Clips", to: "/match/$matchId/reel", icon: Scissors },
-  { label: "Lineup", short: "Lineup", to: "/match/$matchId/lineup", icon: Users },
 ] as const;
 
 const PHONE_NAV = 4;

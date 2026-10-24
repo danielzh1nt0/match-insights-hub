@@ -67,7 +67,6 @@ export function InsightsScreen({
     model,
     headline,
     momentum,
-    halfTimeS,
     goals,
     pressureWindow,
     players,
@@ -129,18 +128,14 @@ export function InsightsScreen({
       >
         <MatchFlow
           momentum={momentum}
-          halfTimeS={halfTimeS}
           durationS={duration}
           goals={goals}
           turnovers={lossEvents.map((event) => event.t)}
           window={pressureWindow}
           teamA={identities.A}
           teamB={identities.B}
-          confirmed={lossEvents.filter((event) => event.status === "confirmed").length}
-          detected={lossEvents.filter((event) => event.status !== "confirmed").length}
-          confirmedTurnovers={lossEvents
-            .filter((event) => event.status === "confirmed")
-            .map((event) => event.t)}
+          confirmed={confirmed}
+          detected={Math.max(moments.length - confirmed, 0)}
         />
 
         <div className="mt-4">

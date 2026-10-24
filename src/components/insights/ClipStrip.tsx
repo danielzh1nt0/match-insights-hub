@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { recordFindingUse } from "@/lib/squad";
 import { useEffect, useId, useRef, useState } from "react";
 import { Scissors } from "lucide-react";
 import { ClipPlayer } from "@/components/insights/ClipPlayer";
@@ -209,7 +208,6 @@ export function ClipStrip({
         <Link
           to="/match/$matchId/reel"
           params={{ matchId }}
-          onClick={() => void recordFindingUse(matchId, label, "reel", label)}
           className={cn(actionLinkClass(), "inline-flex items-center gap-1.5")}
         >
           <Scissors size={13} aria-hidden="true" />

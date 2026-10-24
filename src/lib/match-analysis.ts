@@ -12,7 +12,6 @@ import {
   completionOf,
   finalThirdEntries,
   passCompleted,
-  insidePeriods,
   shotsOf as contractShots,
 } from "@/lib/export-contract";
 import type {
@@ -157,12 +156,7 @@ export type LineDefending = {
   medianM: number | null;
   usualM: number | null;
   belowUsualPct: number | null;
-  states: {
-    key: LineState;
-    /** Null when the team never held this band. */ height: number | null;
-    shots: number;
-    goals: number;
-  }[];
+  states: { key: LineState; height: number; shots: number; goals: number }[];
 };
 
 const HEAT_COLS = 12;
@@ -175,9 +169,7 @@ export function buildTerritory(
 ): Territory | null {
   if (!data) return null;
   const { length, width } = pitchSize(data, stats);
-  // Only the match: warm-up and half-time frames fed the heat map and the
-  // shape snapshots before.
-  const frames = (data.frames ?? []).filter((frame) => insidePeriods(frame.t, data.periods));
+  const frames = data.frames ?? [];
   const cells = new Float64Array(HEAT_COLS * HEAT_ROWS);
   const perFrame: number[] = [];
   let frameCount = 0;
@@ -266,10 +258,7 @@ export function buildTerritory(
       .map((e) => {
         const position = positionAt(e.t);
         if (!position) return null;
-        // Towards the goal this team attacks, from the file, not assumed.
-        const right =
-          e.team === "B" || e.team === "A" ? (data.attack_right?.[e.team] ?? e.team === "A") : true;
-        const attackingX = right ? position.x : 100 - position.x;
+        const attackingX = e.team === "B" ? 100 - position.x : position.x;
         return { ...position, t: e.t, ...(attackingX >= 66.67 ? { high: true } : {}) };
       })
       .filter((p): p is { x: number; y: number; t: number; high?: boolean } => p !== null);
@@ -335,22 +324,18 @@ export function buildLineDefending(
         })
         .filter(
           (sample): sample is { t: number; height: number } =>
-            sample.t !== null && sample.height !== null && insidePeriods(sample.t, data.periods),
+            sample.t !== null && sample.height !== null,
         )
         .sort((a, b) => a.t - b.t)
     : [];
 
-  /** How far from a shot a line sample can be and still describe it. */
-  const HEIGHT_WINDOW_S = 30;
   const nearestHeight = (time: number) => {
     if (timeline.length === 0) return null;
     let nearest = timeline[0] ?? null;
     for (const sample of timeline) {
       if (!nearest || Math.abs(sample.t - time) < Math.abs(nearest.t - time)) nearest = sample;
     }
-    // A sample from more than ten seconds away says nothing about this shot.
-    if (!nearest || Math.abs(nearest.t - time) > 10) return null;
-    return nearest.height;
+    return nearest?.height ?? null;
   };
 
   const lineBreakEvents = (data.events ?? []).filter((event) => {
@@ -358,10 +343,7 @@ export function buildLineDefending(
     const against = event.payload?.["team"] ?? event.payload?.["against"];
     if (against === ownTeam || against === ownTeam.toLowerCase()) return true;
     if (against === opponent || against === opponent.toLowerCase()) return false;
-    // With no team on the payload, the only thing left to go on is who the
-    // event belongs to. Accepting either side made "balls played through our
-    // line" count the ones we played through theirs.
-    return event.team === opponent;
+    return event.team === opponent || event.team === ownTeam;
   });
   const lineBreaks = lineBreakEvents.map((event) => {
     const px = optionalNum(event.payload?.["px"]);
@@ -405,22 +387,19 @@ export function buildLineDefending(
           (timeline.filter((sample) => sample.height < usualM).length / timeline.length) * 100,
         )
       : null;
-  // A state the line never sat in has no measured height; it is left out
-  // rather than given a typical figure (42 / 34 / 26 m) and shown as measured.
-  const states = (["high", "mid", "low"] as const).flatMap((key) => {
+  const typicalHeight: Record<LineState, number> = { high: 42, mid: 34, low: 26 };
+  const states = (["high", "mid", "low"] as const).map((key) => {
     const inState = timeline.filter((sample) => lineState(sample.height) === key);
-    if (inState.length === 0) return [];
-    const average = Math.round(
-      inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length,
-    );
+    const average = inState.length
+      ? Math.round(inState.reduce((sum, sample) => sum + sample.height, 0) / inState.length)
+      : typicalHeight[key];
     const moments = conceded.filter((item) => lineState(item.height) === key);
-    const state = {
+    return {
       key,
       height: average,
       shots: moments.length,
       goals: moments.filter((item) => item.event.type === "goal").length,
     };
-    return [state];
   });
 
   return {
@@ -573,7 +552,7 @@ export function buildFindings(
         target: thresholds.pressWithin2s,
         unit: "%",
         higherIsWorse: false,
-        interpretation: `Of ${optionalNum(row.losses) ?? lost.length} balls lost, only ${pressed}% got pressure inside two seconds. In the rest the nearest player waited instead of stepping in.`,
+        interpretation: `Of ${lost.length} balls lost, only ${pressed}% got pressure inside two seconds. In the rest the nearest player waited instead of stepping in.`,
         population: lost,
         // The claim is about the losses that were slow, so those are the clips.
         moments: faulty(lost, (event) => {
@@ -619,7 +598,7 @@ export function buildFindings(
         target: 2,
         unit: "players",
         higherIsWorse: false,
-        interpretation: `Two seconds after losing the ball there ${alone === 1 ? "was typically 1 team-mate" : `were typically ${alone} team-mates`} within five metres, so the press could be played around.`,
+        interpretation: `Two seconds after losing the ball there were typically ${alone} team-mates within five metres, so the press could be played around.`,
         population: lost,
         moments: faulty(lost, (event) => {
           const near = payloadNum(event, "near_at_2s");
@@ -679,19 +658,16 @@ export function buildFindings(
     );
   }
 
-  // The pass list is the record the stats card counts from; the events are
-  // the clips. Counting the finding from the events let the two disagree.
-  const betterCount = optionalNum(row.better_option_count) ?? better.length;
-  if (betterCount >= 3) {
+  if (better.length >= 3) {
     out.push(
       finding({
         id: "better_option",
         headline: "Look for the forward option.",
-        value: betterCount,
+        value: better.length,
         target: 1,
         unit: "times",
         higherIsWorse: true,
-        interpretation: `${betterCount} times a better pass was open than the one we played.`,
+        interpretation: `${better.length} times the ball went sideways or backwards while a better forward pass was open.`,
         // Every one of these events is itself an instance of the fault.
         population: better,
         moments: better,
@@ -765,13 +741,7 @@ export function buildFindings(
     );
   }
 
-  // An absent bucket is not a zero. Defaulting it to 0 fired this finding --
-  // "all 23 balls won came in your own half" -- on any export that simply does
-  // not carry high_turnover_counts, and attached all 23 regains as evidence
-  // for a claim nothing had measured. Every neighbouring finding defaults the
-  // other way for exactly this reason.
-  const highRaw = stats?.metrics?.["high_turnover_counts"]?.[team];
-  const highWon = typeof highRaw === "number" && Number.isFinite(highRaw) ? highRaw : null;
+  const highWon = num(stats?.metrics?.["high_turnover_counts"]?.[team], 0);
   if (highWon === 0 && won.length >= 5) {
     out.push(
       finding({
@@ -789,42 +759,7 @@ export function buildFindings(
     );
   }
 
-  // Worst first, as three screens promise. The miss is measured against the
-  // target in the target's own units, so a 34% press against a 60% target
-  // (missed by 43% of the target) outranks a 32% regain against 35% (9%).
-  // Counts with no real target ("411 times") cannot be ranked that way, so
-  // they come after the targeted findings, biggest count first.
-  return out.sort((a, b) => {
-    const ma = findingMiss(a);
-    const mb = findingMiss(b);
-    if (ma !== null && mb !== null) return mb - ma;
-    if (ma === null && mb === null) return b.value - a.value;
-    return ma === null ? 1 : -1;
-  });
-}
-
-/**
- * How far a finding misses its target, as a share of that target.
- *
- * Null for a bare count, which has no target to be a share of. Exported so the
- * ordering the Insights verdict depends on is covered by a test rather than by
- * reading the comparator.
- */
-export function findingMiss(f: Finding): number | null {
-  if (f.unit === "times" || f.target <= 0) return null;
-  return (f.higherIsWorse ? f.value - f.target : f.target - f.value) / f.target;
-}
-
-/**
- * A figure the file actually carries, or null.
- *
- * The summary used to read "had the ball 0% of the time … from 0 spells of 0
- * passes each … 0 m long from back to front" whenever the export was missing
- * those fields, which is a paragraph of confident nonsense about the team. A
- * sentence that cannot be written truthfully is not written.
- */
-function possess(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
+  return out;
 }
 
 export function buildSummary(
@@ -842,23 +777,19 @@ export function buildSummary(
   const lost = eventsFor(data, team, "turnover_lost").length;
   const won = eventsFor(data, team, "turnover_won").length;
   const lines = [
-    possess(row.possession_pct) === null
-      ? `How much of the ball ${names.own} had is not in this match file.`
-      : `${names.own} had the ball ${possess(row.possession_pct)}% of the time against ${
-          names.other
-        }'s ${possess(otherRow?.possession_pct) ?? "an unrecorded share"}%.`,
-    `The ball was given away ${lost} times and won back ${won} times${
-      possess(row.pressed_within_2s_pct) === null
-        ? ", and no loss in this file carries a time to first pressure."
-        : `, with first pressure arriving inside two seconds ${possess(row.pressed_within_2s_pct)}% of the time.`
-    }`,
+    `${names.own} had the ball ${num(row.possession_pct, 0)}% of the time against ${
+      names.other
+    }'s ${num(otherRow?.possession_pct, 0)}%, from ${num(row.sequences, 0)} spells of ${num(
+      row.passes_per_sequence,
+      0,
+    )} passes each.`,
+    `The ball was given away ${lost} times and won back ${won} times, with first pressure arriving inside two seconds ${num(
+      row.pressed_within_2s_pct,
+      0,
+    )}% of the time.`,
     `${shots} shot${shots === 1 ? "" : "s"} came from ${
-      finalThirdEntries(stats, team) ?? "an unrecorded number of"
-    } entries into the final third${
-      possess(row.block_length_median_m) === null
-        ? "."
-        : `, with the team typically ${possess(row.block_length_median_m)} m long from back to front.`
-    }`,
+      finalThirdEntries(stats, team) ?? 0
+    } entries into the final third, with the team typically ${Math.round(num(row.block_length_median_m, 0))} m long from back to front.`,
   ];
   if (findings.length === 0) {
     lines.push("Every target you set was met in this match, so there is nothing flagged to train.");
@@ -880,19 +811,7 @@ function fmt(v: unknown, suffix = "") {
 /** The pipeline records the kind of set piece in the payload, under one of several keys. */
 export function setPieceKind(event: { payload?: Record<string, unknown> | null | undefined }) {
   const payload = event.payload ?? {};
-  const raw = String(
-    payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "",
-  ).toLowerCase();
-  // Normalised so "goal kick", "goal_kick" and "goalkick" all count once; an
-  // unrecognised kind stays as written rather than vanishing into "".
-  const kind = raw.replace(/[\s_-]+/g, " ").trim();
-  if (kind.includes("corner")) return "corner";
-  if (kind.includes("throw")) return "throw-in";
-  if (kind.includes("goal")) return "goal kick";
-  if (kind.includes("free") || kind.includes("foul")) return "free kick";
-  if (kind.includes("penalty")) return "penalty";
-  if (kind.includes("kick") && kind.includes("off")) return "kick-off";
-  return kind || "other";
+  return String(payload["kind"] ?? payload["set_piece"] ?? payload["type"] ?? "").toLowerCase();
 }
 
 function setPieceCount(data: MatchDataFile | undefined, team: TeamKey, kind: string) {
@@ -1070,9 +989,7 @@ export function buildPlayerStats(stats: StatsFile | undefined, team: TeamKey | n
       passesCompleted: num(p.passes_completed, 0),
       betterOptions: num(p.better_option_count, 0),
       distanceM: Math.round(num(p.distance_m, 0)),
-      // One decimal: rounding to whole minutes made a 40-second cameo a
-      // one-minute player and let it top the distance-per-minute table.
-      minutes: Math.round(num(p.time_visible_s, 0) / 6) / 10,
+      minutes: Math.round(num(p.time_visible_s, 0) / 60),
     }))
     .sort((x, y) => y.touches - x.touches);
 }
@@ -1084,8 +1001,7 @@ export function attacksRight(
   team: TeamKey,
 ) {
   const value = override?.[team] ?? attackRight?.[team];
-  // The export contract: A attacks right, B left, unless the file says otherwise.
-  return typeof value === "boolean" ? value : team === "A";
+  return value === true;
 }
 
 /** Positions from the frame at a moment's time, for the recap illustration. */

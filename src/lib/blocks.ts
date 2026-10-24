@@ -1,4 +1,3 @@
-import { insidePeriods } from "@/lib/export-contract";
 import type { Frame, MatchDataFile } from "@/lib/match-source";
 import type { TeamKey } from "@/lib/match-analysis";
 
@@ -21,8 +20,7 @@ export type BlockSample = {
   t: number;
   /** Metres up the pitch from our own goal. */
   def: number;
-  /** Null when no outfield player sat between the back and the front groups. */
-  mid: number | null;
+  mid: number;
   att: number;
   /** Back to front. The figure the coach's ceiling is set against. */
   length: number;
@@ -91,8 +89,7 @@ function groupsIn(frame: Frame, team: TeamKey, attackRight: boolean, length: num
   return {
     def,
     att,
-    // Not invented: a midfield nobody was seen in is not halfway between.
-    mid: middle.length > 0 ? mean(middle) : null,
+    mid: middle.length > 0 ? mean(middle) : (def + att) / 2,
     length: att - def,
   };
 }
@@ -110,9 +107,7 @@ export function buildBlocks({
   /** Everything that happened, so a stretch can be tied to what it cost. */
   events: { t: number; type: string; team: string | null }[];
 }): Blocks {
-  // Inside the periods only: a block measured during the warm-up or at
-  // half-time is not a stretch of the match.
-  const frames = (file?.frames ?? []).filter((frame) => insidePeriods(frame.t, file?.periods));
+  const frames = file?.frames ?? [];
   const length = file?.pitch?.length ?? 105;
   const attackRight = file?.attack_right?.[team] ?? team === "A";
   const durationS = Math.max(frames.at(-1)?.t ?? 0, 1);
