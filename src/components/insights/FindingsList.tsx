@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { fetchFindingUses, recordFindingUse } from "@/lib/squad";
 import { ArrowRight } from "lucide-react";
 import { ClipStrip } from "@/components/insights/ClipStrip";
 import { actionLinkClass } from "@/components/ip/touchline";
@@ -80,11 +82,13 @@ export function FindingsList({
                     to="/match/$matchId/session"
                     params={{ matchId }}
                     search={{ finding: finding.id }}
+                    onClick={() => void recordFindingUse(matchId, finding.id, "session", finding.headline)}
                     className={cn(actionLinkClass(), "inline-flex items-center gap-1.5")}
                   >
                     Save into Tuesday session
                     <ArrowRight size={13} aria-hidden="true" />
                   </Link>
+                  <UseMarks matchId={matchId} findingId={finding.id} headline={finding.headline} />
                   {finding.timestamps?.[0] !== undefined && (
                     <Link
                       to="/match/$matchId/match"
@@ -138,4 +142,35 @@ function findingLine(finding: {
         ? ` · ${finding.events} of ${finding.population} moments show it`
         : ` · ${finding.events} ${finding.events === 1 ? "moment" : "moments"}`;
   return figure + target + moments;
+}
+
+/**
+ * "Showed this" / "Not relevant": the coach's verdict on a finding, recorded with one tap. It is a label for the
+ * analysis (which findings coaches act on, which they dismiss), not a filter - nothing is hidden by it.
+ */
+function UseMarks({ matchId, findingId, headline }: { matchId: string; findingId: string; headline: string }) {
+  const [marks, setMarks] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let live = true;
+    void fetchFindingUses(matchId).then((rows) => {
+      if (live) setMarks(new Set(rows.filter((r) => r.finding_id === findingId).map((r) => r.kind)));
+    });
+    return () => {
+      live = false;
+    };
+  }, [matchId, findingId]);
+  const mark = (kind: "shown" | "dismissed") => {
+    setMarks((m) => new Set([...m, kind]));
+    void recordFindingUse(matchId, findingId, kind, headline);
+  };
+  return (
+    <span className="flex items-center gap-3 text-[12px] text-text-faint">
+      <button type="button" onClick={() => mark("shown")} className={cn("hover:text-text", marks.has("shown") && "text-quality-good")} aria-pressed={marks.has("shown")}>
+        {marks.has("shown") ? "Shown to the players" : "Showed this"}
+      </button>
+      <button type="button" onClick={() => mark("dismissed")} className={cn("hover:text-text", marks.has("dismissed") && "text-text-dim")} aria-pressed={marks.has("dismissed")}>
+        {marks.has("dismissed") ? "Marked not relevant" : "Not relevant"}
+      </button>
+    </span>
+  );
 }

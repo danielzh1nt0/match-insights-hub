@@ -143,3 +143,22 @@ export function minutesPlayed(row: Pick<LineupRow, "minute_on" | "minute_off">, 
   const off = row.minute_off ?? matchMinutes;
   return Math.max(0, Math.min(off, matchMinutes) - Math.max(0, row.minute_on));
 }
+
+/** Coach intent (24 Oct): the coach acted on a finding - saved it into a session, put it in a reel, showed it, or dismissed it.
+ *  Recorded as a side effect of the action itself; never blocks the UI (errors are swallowed, it is a label not a feature). */
+export async function recordFindingUse(matchId: string, findingId: string, kind: "session" | "reel" | "shown" | "dismissed", headline?: string): Promise<void> {
+  try {
+    const { data } = await supabase.auth.getUser();
+    const owner_id = data.user?.id;
+    if (!owner_id) return;
+    await supabase.from("finding_uses").upsert({ owner_id, match_id: matchId, finding_id: findingId, kind, headline: headline ?? null }, { onConflict: "owner_id,match_id,finding_id,kind" });
+  } catch {
+    /* a missed label is not an error the coach should see */
+  }
+}
+
+export async function fetchFindingUses(matchId: string): Promise<{ finding_id: string; kind: string }[]> {
+  const { data, error } = await supabase.from("finding_uses").select("finding_id, kind").eq("match_id", matchId);
+  if (error) return [];
+  return (data ?? []) as { finding_id: string; kind: string }[];
+}

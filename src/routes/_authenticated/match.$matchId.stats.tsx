@@ -11,6 +11,7 @@ import { HeadToHeadBand } from "@/components/ip/head-to-head-band";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import { useAnalysis } from "@/hooks/use-match";
 import { TeamKpiCard } from "@/components/ip/team-kpi";
+import { CorrectionsCard } from "@/components/ip/corrections-card";
 import { MatchSetupSheet } from "@/components/ip/match-setup-sheet";
 import { buildKpi, kpiTargetsFrom } from "@/lib/kpi";
 import { crestForTeam } from "@/lib/team-crests";
@@ -132,6 +133,21 @@ function Stats() {
               kpi={kpi}
               teamName={(team === "B" ? teamB : teamA).name}
               onEditTargets={item ? () => setTargetsOpen(true) : undefined}
+            />
+          )}
+
+          {teamA && teamB && (
+            <CorrectionsCard
+              matchId={matchId}
+              ourPossession={(() => {
+                const rowOf = (t: string) => (stats?.teams ?? []).find((r: { team?: string }) => r?.team === t) as { possession_pct?: unknown } | undefined;
+                const a = rowOf("A")?.possession_pct;
+                const b = rowOf("B")?.possession_pct;
+                return typeof a === "number" && typeof b === "number" ? { A: Math.round(a), B: Math.round(b) } : null;
+              })()}
+              ourScore={match && typeof match.scoreA === "number" && typeof match.scoreB === "number" ? { A: match.scoreA, B: match.scoreB } : null}
+              teamAName={teamA.name}
+              teamBName={teamB.name}
             />
           )}
 

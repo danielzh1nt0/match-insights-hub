@@ -122,6 +122,36 @@ export type Database = {
         }
         Relationships: []
       }
+      finding_uses: {
+        Row: {
+          created_at: string
+          finding_id: string
+          headline: string | null
+          id: string
+          kind: string
+          match_id: string
+          owner_id: string
+        }
+        Insert: {
+          created_at?: string
+          finding_id: string
+          headline?: string | null
+          id?: string
+          kind: string
+          match_id: string
+          owner_id: string
+        }
+        Update: {
+          created_at?: string
+          finding_id?: string
+          headline?: string | null
+          id?: string
+          kind?: string
+          match_id?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
       match_corrections: {
         Row: {
           created_at: string
