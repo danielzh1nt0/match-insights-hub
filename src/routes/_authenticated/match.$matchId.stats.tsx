@@ -130,15 +130,6 @@ function Stats() {
 
           <p className="text-[12px] text-text-faint">{shownActive?.caption}</p>
 
-          {teamA && teamB && shownActive && shownActive.rows.length > 0 && (
-            <HeadToHeadBand
-              rows={shownActive.rows}
-              teamA={teamA}
-              teamB={teamB}
-              title={shownActive.label}
-            />
-          )}
-
           {teamA && teamB && (
             <StatsVisuals
               tab={shownActive?.key ?? "shooting"}
@@ -157,6 +148,14 @@ function Stats() {
               teamA={teamA}
               teamB={teamB}
               ballGrade={null}
+            />
+          )}
+          {teamA && teamB && shownActive && shownActive.rows.length > 0 && (
+            <HeadToHeadBand
+              rows={shownActive.rows}
+              teamA={teamA}
+              teamB={teamB}
+              title={shownActive.label}
             />
           )}
           {teamA && teamB && (
