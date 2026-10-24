@@ -162,3 +162,15 @@ export async function fetchFindingUses(matchId: string): Promise<{ finding_id: s
   if (error) return [];
   return (data ?? []) as { finding_id: string; kind: string }[];
 }
+
+export type FindingUseRow = { match_id: string; finding_id: string; kind: string; headline: string | null; created_at: string };
+
+/** Everything the coach acted on, across matches (24 Oct, "what coaches acted on" view). Newest first. */
+export async function fetchAllFindingUses(): Promise<FindingUseRow[]> {
+  const { data, error } = await supabase
+    .from("finding_uses")
+    .select("match_id, finding_id, kind, headline, created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as FindingUseRow[];
+}

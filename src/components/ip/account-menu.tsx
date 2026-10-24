@@ -115,6 +115,9 @@ export function AccountMenu() {
           <button type="button" role="menuitem" onClick={() => go("/squad")} className={itemClass}>
             Squad
           </button>
+          <button type="button" role="menuitem" onClick={() => go("/acted-on")} className={itemClass}>
+            Acted on
+          </button>
 
           <div className="my-1 h-px bg-wire-2" />
 

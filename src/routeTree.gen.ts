@@ -17,6 +17,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as AuthenticatedActedOnRouteImport } from './routes/_authenticated/acted-on'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedNewRouteImport } from './routes/_authenticated/new'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -78,6 +79,11 @@ const UploadRoute = UploadRouteImport.update({
   id: '/upload',
   path: '/upload',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedActedOnRoute = AuthenticatedActedOnRouteImport.update({
+  id: '/acted-on',
+  path: '/acted-on',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
   id: '/library',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
+  '/acted-on': typeof AuthenticatedActedOnRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
+  '/acted-on': typeof AuthenticatedActedOnRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/new': typeof AuthenticatedNewRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/signin': typeof SigninRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
+  '/_authenticated/acted-on': typeof AuthenticatedActedOnRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/new': typeof AuthenticatedNewRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/upload'
+    | '/acted-on'
     | '/library'
     | '/new'
     | '/onboarding'
@@ -338,6 +348,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/upload'
+    | '/acted-on'
     | '/library'
     | '/new'
     | '/onboarding'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/signup'
     | '/upload'
+    | '/_authenticated/acted-on'
     | '/_authenticated/library'
     | '/_authenticated/new'
     | '/_authenticated/onboarding'
@@ -466,6 +478,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/upload'
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/acted-on': {
+      id: '/_authenticated/acted-on'
+      path: '/acted-on'
+      fullPath: '/acted-on'
+      preLoaderRoute: typeof AuthenticatedActedOnRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/library': {
       id: '/_authenticated/library'
@@ -625,6 +644,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedActedOnRoute: typeof AuthenticatedActedOnRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedNewRoute: typeof AuthenticatedNewRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -646,6 +666,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedActedOnRoute: AuthenticatedActedOnRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedNewRoute: AuthenticatedNewRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
