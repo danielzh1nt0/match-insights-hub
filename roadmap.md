@@ -14,7 +14,8 @@
 - Rebuilt Insights as an expandable coaching summary and Match as a video-first numbers-and-events screen
 
 ## Open
-- [ ] Move Match Story below Stats and add evidence-based summaries for every Stats section; verify navigation and display.
+- [x] Move Match Story below Stats as a collapsed option and add evidence-based summaries for every Stats section; evidence tests passed and preview compiles.
+- [ ] Verify Stats summaries and Match Story expansion on a saved match: signed-in browser returned no available matches, so visual checks are blocked by match availability.
 - [x] Add individual pass-arrow map alongside lanes using the existing Stats design; use Sollentuna FK crest for P15/P15U.
 - [x] Redesign the defensive-height/cost card in Stats > Shape using the uploaded coaching reference, with accurate shot rates and real samples; desktop/mobile verified.
 - [ ] Add the isolated three-step club/team registration flow and animated upload experience, including requested screenshot QA
