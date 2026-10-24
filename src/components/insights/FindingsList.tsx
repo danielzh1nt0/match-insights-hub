@@ -1,4 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { fetchFindingUses, recordFindingUse } from "@/lib/squad";
 import { ArrowRight } from "lucide-react";
 import { ClipStrip } from "@/components/insights/ClipStrip";
 import { actionLinkClass } from "@/components/ip/touchline";
@@ -35,7 +37,6 @@ export function FindingsList({
       ) : (
         <div className="mt-4 flex flex-col gap-3">
           {findings.map((finding, index) => {
-            const unit = finding.unit === "%" ? "%" : ` ${finding.unit}`;
             return (
               <article
                 key={finding.id}
@@ -48,15 +49,7 @@ export function FindingsList({
                   {finding.headline}
                 </h3>
                 <p className="mt-1 text-[12.5px] text-text-faint">
-                  {finding.value}
-                  {unit} against a {finding.target}
-                  {unit} target ·{" "}
-                  {/* How many moments show the fault, out of how many were
-                      measured. "116 moments" against a 35% figure invited the
-                      reading that all 116 were bad. */}
-                  {finding.evidence === "exact" && finding.population > finding.events
-                    ? `${finding.events} of ${finding.population} moments`
-                    : `${finding.events} ${finding.events === 1 ? "moment" : "moments"}`}
+                  {findingLine(finding)}
                   {finding.basis
                     ? ` · ${finding.basis === "confirmed" ? "confirmed" : "detected"}`
                     : ""}
@@ -89,11 +82,13 @@ export function FindingsList({
                     to="/match/$matchId/session"
                     params={{ matchId }}
                     search={{ finding: finding.id }}
+                    onClick={() => void recordFindingUse(matchId, finding.id, "session", finding.headline)}
                     className={cn(actionLinkClass(), "inline-flex items-center gap-1.5")}
                   >
                     Save into Tuesday session
                     <ArrowRight size={13} aria-hidden="true" />
                   </Link>
+                  <UseMarks matchId={matchId} findingId={finding.id} headline={finding.headline} />
                   {finding.timestamps?.[0] !== undefined && (
                     <Link
                       to="/match/$matchId/match"
@@ -111,5 +106,71 @@ export function FindingsList({
         </div>
       )}
     </section>
+  );
+}
+
+/** "1 player", "411 times", "34%" — a figure with its unit, in plain words. */
+function withUnit(value: number, unit: string) {
+  if (unit === "%") return `${value}%`;
+  const one = unit.endsWith("s") ? unit.slice(0, -1) : unit;
+  return `${value} ${value === 1 ? one : unit}`;
+}
+
+/**
+ * The line under a finding's headline: the figure, the target, and how many
+ * moments show it. A count with a target of one ("411 times against a 1 times
+ * target") said nothing, so counts carry no target.
+ */
+function findingLine(finding: {
+  value: number;
+  target: number;
+  unit: string;
+  higherIsWorse: boolean;
+  events: number;
+  population: number;
+  evidence: string;
+}) {
+  const figure = withUnit(finding.value, finding.unit);
+  const target =
+    finding.unit === "times"
+      ? ""
+      : ` · target ${finding.higherIsWorse ? "at most" : "at least"} ${withUnit(finding.target, finding.unit)}`;
+  const moments =
+    finding.events === 0
+      ? ""
+      : finding.evidence === "exact" && finding.population > finding.events
+        ? ` · ${finding.events} of ${finding.population} moments show it`
+        : ` · ${finding.events} ${finding.events === 1 ? "moment" : "moments"}`;
+  return figure + target + moments;
+}
+
+/**
+ * "Showed this" / "Not relevant": the coach's verdict on a finding, recorded with one tap. It is a label for the
+ * analysis (which findings coaches act on, which they dismiss), not a filter - nothing is hidden by it.
+ */
+function UseMarks({ matchId, findingId, headline }: { matchId: string; findingId: string; headline: string }) {
+  const [marks, setMarks] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let live = true;
+    void fetchFindingUses(matchId).then((rows) => {
+      if (live) setMarks(new Set(rows.filter((r) => r.finding_id === findingId).map((r) => r.kind)));
+    });
+    return () => {
+      live = false;
+    };
+  }, [matchId, findingId]);
+  const mark = (kind: "shown" | "dismissed") => {
+    setMarks((m) => new Set([...m, kind]));
+    void recordFindingUse(matchId, findingId, kind, headline);
+  };
+  return (
+    <span className="flex items-center gap-3 text-[12px] text-text-faint">
+      <button type="button" onClick={() => mark("shown")} className={cn("hover:text-text", marks.has("shown") && "text-quality-good")} aria-pressed={marks.has("shown")}>
+        {marks.has("shown") ? "Shown to the players" : "Showed this"}
+      </button>
+      <button type="button" onClick={() => mark("dismissed")} className={cn("hover:text-text", marks.has("dismissed") && "text-text-dim")} aria-pressed={marks.has("dismissed")}>
+        {marks.has("dismissed") ? "Marked not relevant" : "Not relevant"}
+      </button>
+    </span>
   );
 }

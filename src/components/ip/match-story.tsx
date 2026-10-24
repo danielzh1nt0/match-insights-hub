@@ -362,14 +362,18 @@ function TurnedChapter({
       <div className="mt-6">
         <MatchFlow
           momentum={model.momentum}
+          halfTimeS={model.halfTimeS}
           durationS={model.duration}
           goals={model.goals}
           turnovers={lossEvents.map((event) => event.t)}
           window={pressureWindow}
           teamA={identities.A}
           teamB={identities.B}
-          confirmed={model.confirmed}
-          detected={Math.max(model.moments.length - model.confirmed, 0)}
+          confirmed={lossEvents.filter((event) => event.status === "confirmed").length}
+          detected={lossEvents.filter((event) => event.status !== "confirmed").length}
+          confirmedTurnovers={lossEvents
+            .filter((event) => event.status === "confirmed")
+            .map((event) => event.t)}
         />
       </div>
     </div>
@@ -443,6 +447,9 @@ function ImproveChapter({
       </div>
 
       <Caption>{finding.interpretation}</Caption>
+      {finding.evidence !== "exact" && finding.evidenceNote && (
+        <p className="mt-2 text-[12.5px] leading-relaxed text-text-faint">{finding.evidenceNote}</p>
+      )}
 
       {/* The evidence, two ways: the moments as the frames they actually are,
           and every loss on one pitch so the shape of the problem is visible

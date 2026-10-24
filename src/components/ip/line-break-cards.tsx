@@ -83,12 +83,17 @@ export function LineBreakHero({ data, matchId }: { data: LineDefending; matchId:
         ],
       }}
     >
-      <div className="text-center">
-        <strong className="display-i block text-[72px] leading-[.85] text-cream">
-          {count ?? "—"}
-        </strong>
-        <span className="text-[11px] font-semibold text-text-faint">times</span>
-      </div>
+      {count === null ? (
+        <p className="border-l-2 border-text-faint bg-surface-2 px-4 py-4 text-[12.5px] leading-relaxed text-text-dim">
+          Not measured yet. The analysis does not count balls played in behind our last defender for
+          this match, so there is no number to show rather than a guess.
+        </p>
+      ) : (
+        <div className="text-center">
+          <strong className="display-i block text-[72px] leading-[.85] text-cream">{count}</strong>
+          <span className="text-[11px] font-semibold text-text-faint">times</span>
+        </div>
+      )}
       {count === 0 ? (
         <div className="mt-4 flex flex-col items-center gap-2">
           <MiniPitch checked />
@@ -113,12 +118,14 @@ export function LineBreakHero({ data, matchId }: { data: LineDefending; matchId:
           ))}
         </div>
       ) : null}
-      <div className="mt-4 flex items-center justify-between border-t border-wire-2 pt-2 text-[11.5px] font-semibold">
-        <span className="text-text-faint">vs last 5 matches</span>
-        <span className={cn(delta !== null && delta > 0 ? "text-cream" : "text-text-faint")}>
-          {delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta}`}
-        </span>
-      </div>
+      {count !== null && (
+        <div className="mt-4 flex items-center justify-between border-t border-wire-2 pt-2 text-[11.5px] font-semibold">
+          <span className="text-text-faint">vs last 5 matches</span>
+          <span className={cn(delta !== null && delta > 0 ? "text-cream" : "text-text-faint")}>
+            {delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta}`}
+          </span>
+        </div>
+      )}
       <Honesty confirmed={data.lineBreakConfirmed} detected={data.lineBreaks.length} />
     </Visual>
   );

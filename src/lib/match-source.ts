@@ -266,15 +266,45 @@ export async function fetchMatchStats(row: MatchRow): Promise<Record<string, any
     loadJson<MatchDataFile>(row.files.match_data, versionOf(row)).catch(() => null),
   ]);
   const shots = stats?.["metrics"]?.["shots"];
-  if (!Array.isArray(shots)) return stats;
+  const withShots = !Array.isArray(shots)
+    ? stats
+    : {
+        ...stats,
+        metrics: {
+          ...stats["metrics"],
+          shots: shots.filter((s: { t?: number }) =>
+            inVideo(s?.t as number, row.duration_s, file?.periods),
+          ),
+        },
+      };
+  return withholdDisownedPossession(withShots);
+}
+
+/**
+ * When the pipeline's own ball grade says possession is not trustworthy
+ * (`summary.ball_grade.possession_ok === false`), the possession figures are
+ * removed from the file before anything reads them, so every screen shows a
+ * dash instead of a number the exporter has disowned. On Vallentuna the dark
+ * SFK players near the ball are missed more often than the red ones, which
+ * pulled SFK's share from a by-eye 56% to a printed 36%.
+ */
+export function withholdDisownedPossession<T extends Record<string, any>>(stats: T): T {
+  const grade = stats?.["summary"]?.["ball_grade"];
+  if (!grade || grade.possession_ok !== false) return stats;
+  const teams = Array.isArray(stats["teams"])
+    ? stats["teams"].map((row: Record<string, unknown>) => {
+        const { possession_pct: _p, possession_s: _s, ...rest } = row;
+        return rest;
+      })
+    : stats["teams"];
+  const metrics = stats["metrics"];
+  const windows = Array.isArray(metrics?.["tilt_windows"])
+    ? metrics["tilt_windows"].map((w: Record<string, unknown>) => ({ ...w, possession_A: null }))
+    : metrics?.["tilt_windows"];
   return {
     ...stats,
-    metrics: {
-      ...stats["metrics"],
-      shots: shots.filter((s: { t?: number }) =>
-        inVideo(s?.t as number, row.duration_s, file?.periods),
-      ),
-    },
+    teams,
+    ...(metrics ? { metrics: { ...metrics, tilt_windows: windows } } : {}),
   };
 }
 
@@ -310,7 +340,9 @@ export function toLibraryMatch({ row, label }: MatchListItem): LibraryMatch {
     teamB: label?.name_b || label?.opponent || "Team B",
     ...(label?.competition ? { label: label.competition } : {}),
     date: label?.date || row.created_at.slice(0, 10),
-    competition: label?.competition || "Setup needed",
+    // "Setup needed" only when the teams are not named yet; a named match with
+    // no competition filled in just leaves the field out.
+    competition: label?.competition || (isLabelled(label) ? "" : "Setup needed"),
     durationS: Math.round(row.duration_s ?? 0),
     status: row.status,
     scoreA: label?.score_a ?? 0,
@@ -364,4 +396,57 @@ export async function fetchFrameChunk(files: MatchFiles, key: string): Promise<F
   if (!res.ok) throw new Error(`Could not load ${key}`);
   const body = (await res.json()) as { frames?: Frame[] };
   return body.frames ?? [];
+}
+
+/**
+ * Every frame of a full match, thinned, for the views that read the whole game
+ * (stats, insights, territory, story). Full matches keep frames only in
+ * 5-minute files, so `match_data.frames` is empty and every frame-based card
+ * used to say "not enough evidence". Every `step`-th frame is kept (the export
+ * is 10 a second, so 3 keeps ~3 a second) and the per-frame pass lanes and
+ * pitch lines are dropped: nothing outside the live video reads them.
+ */
+/**
+ * The pipeline's own thinned whole-match file (frames_lite.json: ~3 frames a
+ * second, no lanes or pitch lines), one download instead of twenty. Falls
+ * back to the 5-minute files on matches exported before it existed.
+ */
+export async function fetchWholeMatchFrames(
+  files: MatchFiles,
+  chunks: { key: string; t_start: number }[],
+): Promise<Frame[]> {
+  if (files["frames_lite"]) {
+    try {
+      const res = await fetch(await signedUrl(files["frames_lite"]));
+      if (res.ok) {
+        const body = (await res.json()) as { frames?: Frame[] };
+        if (Array.isArray(body.frames) && body.frames.length) return body.frames;
+      }
+    } catch {
+      /* fall through to the chunk files */
+    }
+  }
+  return fetchAllFrames(files, chunks);
+}
+
+export async function fetchAllFrames(
+  files: MatchFiles,
+  chunks: { key: string; t_start: number }[],
+  step = 3,
+  parallel = 3,
+): Promise<Frame[]> {
+  const ordered = [...chunks].sort((a, b) => a.t_start - b.t_start);
+  const out: Frame[][] = new Array(ordered.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < ordered.length) {
+      const i = next++;
+      const frames = await fetchFrameChunk(files, ordered[i]!.key).catch(() => [] as Frame[]);
+      out[i] = frames
+        .filter((_, k) => k % step === 0)
+        .map((f) => ({ ...f, lanes: null, pitch_lines: null }));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(parallel, ordered.length) }, worker));
+  return out.flat();
 }

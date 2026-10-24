@@ -100,8 +100,58 @@ function shapeTimeline(stats: StatsFile | undefined, team: TeamKey) {
     const t = finite(sample["t"]);
     const length = finite(sample["length"]);
     const width = finite(sample["width"]);
-    return t === null ? [] : [{ t, length, width }];
+    const n = finite(sample["n"]);
+    return t === null ? [] : [{ t, length, width, n }];
   });
+}
+
+/**
+ * The block length at moments worth showing as best and worst.
+ *
+ * Raw extremes were tracking accidents: "compact at 1 m" was two players in
+ * view. Only samples with at least eight of our outfield players seen count,
+ * dead balls (a restart and the 15 s after it, the first 30 s of each half)
+ * are left out because a corner or a kick-off squeezes the team on purpose,
+ * and each sample is the median of the 5 s around it, so one bad frame cannot
+ * be the answer.
+ */
+export function steadyBlock(
+  shape: { t: number; length: number | null; n: number | null }[],
+  stats: StatsFile | undefined,
+): { t: number; length: number }[] {
+  const restarts = (
+    ((stats as Record<string, unknown> | undefined)?.["restarts"] as
+      { t?: unknown }[] | undefined) ?? []
+  )
+    .map((r) => finite(r?.t))
+    .filter((t): t is number => t !== null);
+  const periods = (
+    ((stats as Record<string, unknown> | undefined)?.["periods"] as
+      { t_start?: unknown; t_end?: unknown }[] | undefined) ?? []
+  )
+    .map((p) => ({ a: finite(p?.t_start), b: finite(p?.t_end) }))
+    .filter((p): p is { a: number; b: number } => p.a !== null && p.b !== null);
+  const dead = (t: number) =>
+    restarts.some((r) => t >= r - 3 && t <= r + 15) ||
+    periods.some((p) => t >= p.a && t <= p.a + 30) ||
+    (periods.length > 0 && !periods.some((p) => t >= p.a && t <= p.b));
+  const live = shape.filter(
+    (s): s is { t: number; length: number; n: number } =>
+      s.length !== null && s.n !== null && s.n >= 8 && !dead(s.t),
+  );
+  const out: { t: number; length: number }[] = [];
+  live.forEach((sample, i) => {
+    const near = live
+      .slice(Math.max(0, i - 6), i + 7)
+      .filter((other) => Math.abs(other.t - sample.t) <= 5)
+      .map((other) => other.length)
+      .sort((a, b) => a - b);
+    if (near.length < 7) return;
+    const mid = near.length >> 1;
+    const median = near.length % 2 ? near[mid]! : (near[mid - 1]! + near[mid]!) / 2;
+    out.push({ t: sample.t, length: median });
+  });
+  return out;
 }
 
 export function buildPhases({
@@ -278,21 +328,19 @@ export function buildPhases({
     wantsBall: false,
     eventTypes: ["line_break_against", "turnover_won", "high_turnover"],
   };
-  const withLength = shape.filter(
-    (s): s is { t: number; length: number; width: number | null } => s.length !== null,
-  );
+  const withLength = steadyBlock(shape, stats);
   if (withLength.length > 1) {
     const shortest = withLength.reduce((a, b) => (b.length < a.length ? b : a));
     const longest = withLength.reduce((a, b) => (b.length > a.length ? b : a));
     defend.best = {
       t: shortest.t,
       title: `Compact at ${round(shortest.length)} m`,
-      why: `${clock(shortest.t)} · the shortest the block got`,
+      why: `${clock(shortest.t)} · the tightest our block stayed in open play`,
     };
     defend.worst = {
       t: longest.t,
       title: `Block ${round(longest.length)} m long`,
-      why: `${clock(longest.t)} · the longest the block got`,
+      why: `${clock(longest.t)} · the most stretched our block stayed in open play`,
     };
   }
 

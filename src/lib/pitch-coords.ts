@@ -59,19 +59,41 @@ export const mirroredAt = (file: MatchDataFile | undefined, t: number): boolean 
     (period) => period.mirrored === true && t >= period.t_start && t <= period.t_end,
   );
 
-/** Where a moment happened, from its own coordinates or the ball at that time. */
+/**
+ * Where a moment happened, from its own coordinates or the ball at that time.
+ *
+ * The export writes metres: `x_m`/`y_m` on set pieces, shots, goals and high
+ * turnovers, `from_m` on pass moments. Those go through metresToPct so the
+ * team's attacking direction is respected. A pixel pair (`px`/`py`) is scaled
+ * by the video size. Anything else falls back to the tracked ball nearest in
+ * time. The old reading took a metres value under 105 as a percentage, which
+ * squeezed every marker into the top two-thirds of the pitch.
+ */
 export const eventPoint = (event: ReviewedEvent, file?: MatchDataFile): Point | null => {
   const p = event.payload ?? {};
-  const x = finite(p["x"] ?? p["px"] ?? p["start_x"]);
-  const y = finite(p["y"] ?? p["py"] ?? p["start_y"]);
-  if (x !== null && y !== null)
-    return { x: clamp(x > 105 ? x / 19.2 : x), y: clamp(y > 100 ? y / 10.8 : y) };
+  const team = event.team === "A" || event.team === "B" ? event.team : null;
+  const xm = finite(p["x_m"]);
+  const ym = finite(p["y_m"]);
+  if (xm !== null && ym !== null) return metresToPct([xm, ym], team);
+  const from = p["from_m"] ?? p["m"];
+  if (Array.isArray(from)) {
+    const fromPct = metresToPct(from, team);
+    if (fromPct) return fromPct;
+  }
+  const px = finite(p["px"]);
+  const py = finite(p["py"]);
+  if (px !== null && py !== null) {
+    const w = Math.max(file?.width ?? 1920, 1);
+    const h = Math.max(file?.height ?? 1080, 1);
+    return { x: clamp((px / w) * 100), y: clamp((py / h) * 100) };
+  }
+  const xp = finite(p["x"] ?? p["start_x"]);
+  const yp = finite(p["y"] ?? p["start_y"]);
+  if (xp !== null && yp !== null && xp <= 100 && yp <= 100) return { x: clamp(xp), y: clamp(yp) };
   let nearest: Frame | undefined;
   for (const frame of file?.frames ?? []) {
     if (!nearest || Math.abs(frame.t - event.t) < Math.abs(nearest.t - event.t)) nearest = frame;
   }
   const metres = nearest?.ball?.m;
-  return metres
-    ? metresToPct(metres, event.team === "A" || event.team === "B" ? event.team : null)
-    : null;
+  return metres ? metresToPct(metres, team) : null;
 };

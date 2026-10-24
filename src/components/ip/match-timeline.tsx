@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Activity, ArrowRight } from "lucide-react";
+import { Activity, ChevronDown, ArrowRight } from "lucide-react";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import {
   barHalves,
@@ -71,7 +71,7 @@ function TerritoryPitch({
         viewBox="0 0 100 62"
         className="block w-full"
         role="img"
-        aria-label={`${Math.round(theirs * 100)} per cent of the play was in their half`}
+        aria-label={`${Math.round(theirs * 100)} per cent of the final-third play was in their third`}
       >
         <rect x="0" y="0" width="100" height="62" fill="var(--pitch-top)" />
         {/* Territory as a length, not a tint. Two shades of the same colour at
@@ -174,18 +174,26 @@ export function MatchTimelineCard({
   teamB,
   matchId,
   clockS,
+  ours = "A",
 }: {
   timeline: MatchTimeline;
   teamA: StatsTeamIdentity;
   teamB: StatsTeamIdentity;
   matchId: string;
   clockS?: number | undefined;
+  /** The team the series belong to; teamA/teamB stay the literal sides. */
+  ours?: "A" | "B";
 }) {
   const navigate = useNavigate();
+  // The series are the selected team's, so "above the line" and the team
+  // colour must follow the selection, while a goal keeps its real side.
+  const own = ours === "B" ? teamB : teamA;
+  const other = ours === "B" ? teamA : teamB;
   const at = playedScale(timeline);
   // A coach opens this to know what happened. Everything an analyst would want
   // is still here, one tap away, rather than in front of the answer.
   const [detailed, setDetailed] = useState(false);
+  const [open, setOpen] = useState(false);
 
   if (timeline.empty)
     return (
@@ -202,6 +210,14 @@ export function MatchTimelineCard({
   const moments = keyMoments(timeline, story);
   const possession = halves(timeline.possession, timeline.spans);
   const tilt = halves(timeline.tilt, timeline.spans);
+  // The whole match, every window weighted the same, rather than the mean of
+  // two half figures (a 44-minute half and a 51-minute half are not equal).
+  const tiltKnown = timeline.tilt.filter(
+    (p): p is { t: number; value: number } => p.value !== null,
+  );
+  const tiltMatch = tiltKnown.length
+    ? tiltKnown.reduce((sum, p) => sum + p.value, 0) / tiltKnown.length
+    : null;
   const pressing = barHalves(timeline.pressure, timeline.spans, "a");
   const length = halves(timeline.length.a, timeline.spans);
 
@@ -278,7 +294,7 @@ export function MatchTimelineCard({
 
   return (
     <section className="border border-wire bg-surface" aria-labelledby="match-timeline">
-      <header className="p-4 sm:p-5">
+      <header className="p-4 pb-3 sm:px-5">
         <div className="flex items-start gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center border border-wire text-accent-sea">
             <Activity size={17} strokeWidth={1.75} aria-hidden="true" />
@@ -290,7 +306,7 @@ export function MatchTimelineCard({
             <p className="mt-1 text-[13.5px] leading-snug text-text">{headline}</p>
           </div>
           <div
-            className="ml-auto flex shrink-0 border border-wire"
+            className={cn("ml-auto shrink-0 border border-wire", open ? "flex" : "hidden")}
             role="group"
             aria-label="How much detail"
           >
@@ -319,8 +335,56 @@ export function MatchTimelineCard({
         </div>
       </header>
 
+      {/* The shape of the match as one ribbon. This is the part that stays on
+          screen when the card is shut: it is a glance, not a read, and the
+          spell list behind it is what a coach opens once he wants the minutes.
+          Each band jumps the video to where that spell began. */}
+      {story.length > 0 && (
+        <div className="px-4 pb-4 sm:px-5">
+          <div className="flex h-3 gap-[2px]">
+            {story.map((spell, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() =>
+                  void navigate({
+                    to: "/match/$matchId/match",
+                    params: { matchId },
+                    search: { t: Math.round(spell.fromS * 10) / 10 },
+                  })
+                }
+                className={cn("block", TONE[spell.tone])}
+                style={{ flexGrow: Math.max(spell.toS - spell.fromS, 1) }}
+                title={`${spell.title} ${minute(spell.fromS)}–${minute(spell.toS)}`}
+                aria-label={`${spell.title}, ${minute(spell.fromS)} to ${minute(spell.toS)}`}
+              />
+            ))}
+          </div>
+          <div className="num-flat mt-1 flex justify-between text-[10.5px] text-text-faint">
+            <span>{minute(story[0]!.fromS)}</span>
+            <span>{minute(story.at(-1)!.toS)}</span>
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="flex min-h-10 w-full items-center justify-center gap-1.5 border-t border-wire text-[12px] text-text-faint transition-colors hover:bg-surface-2 hover:text-text"
+      >
+        {open
+          ? "Hide the detail"
+          : `Spell by spell${moments.length > 0 ? ` · ${moments.length} worth watching` : ""}`}
+        <ChevronDown
+          size={14}
+          className={cn("transition-transform", open && "rotate-180")}
+          aria-hidden="true"
+        />
+      </button>
+
       {/* The two or three worth opening, before anything that needs reading. */}
-      {moments.length > 0 && (
+      {open && moments.length > 0 && (
         <div className="border-t border-wire px-4 py-3 sm:px-5">
           <p className="label-xs mb-2 text-text-faint">Worth watching</p>
           <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -358,7 +422,7 @@ export function MatchTimelineCard({
 
       {/* The spells, in the words a coach would use telling someone about the
           match. Each one opens the video where it started. */}
-      {story.length > 0 && (
+      {open && story.length > 0 && (
         <ul className="rule-y border-t border-wire">
           {story.map((spell, i) => (
             <li key={i}>
@@ -400,26 +464,9 @@ export function MatchTimelineCard({
         </ul>
       )}
 
-      {/* The same spells as one ribbon, so the shape of the match is one glance
-          rather than a list to read. */}
-      {story.length > 0 && (
-        <div className="px-4 pb-1 pt-4 sm:px-5">
-          <div className="flex h-3 gap-[2px]">
-            {story.map((spell, i) => (
-              <span
-                key={i}
-                className={cn("block", TONE[spell.tone])}
-                style={{ flexGrow: Math.max(spell.toS - spell.fromS, 1) }}
-                title={`${spell.title} ${minute(spell.fromS)}–${minute(spell.toS)}`}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* First half against second, one row each. The numbers are the answer;
           the thumbnail beside them is how it got there. */}
-      {detailed && (
+      {open && detailed && (
         <div className="rule-y border-y border-wire">
           <div className="grid grid-cols-[1fr_auto_auto_auto_72px] items-center gap-x-3 px-4 py-2 sm:px-5">
             <span className="label-xs text-text-faint">&nbsp;</span>
@@ -459,7 +506,7 @@ export function MatchTimelineCard({
                 >
                   {show(row.second, row.unit)}
                 </span>
-                <Spark points={row.series} colour={teamA.kitColour} />
+                <Spark points={row.series} colour={own.kitColour} />
               </div>
             );
           })}
@@ -468,28 +515,24 @@ export function MatchTimelineCard({
 
       {/* The one chart worth keeping: when the ball changed hands, against the
           goals, with a way into the video. */}
-      {detailed && tilt.first !== null && (
+      {open && detailed && tiltMatch !== null && (
         <div className="border-t border-wire px-4 py-4 sm:px-5">
           <h4 className="text-[13px] font-semibold text-text-bright">Where did we play?</h4>
           <p className="mb-3 mt-0.5 text-[11.5px] text-text-faint">
-            Where the ball was, our goal on the left
+            Of the play in either final third, how much was in theirs. Our goal on the left.
           </p>
-          <TerritoryPitch
-            share={((tilt.first ?? 0) + (tilt.second ?? tilt.first ?? 0)) / 2}
-            teamA={teamA}
-            teamB={teamB}
-          />
+          <TerritoryPitch share={tiltMatch} teamA={own} teamB={other} />
         </div>
       )}
 
-      {detailed && d && (
+      {open && detailed && d && (
         <div className="border-t border-wire px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <h4 className="text-[13px] font-semibold text-text-bright">
               Who had the ball, minute by minute
             </h4>
             <p className="text-[11.5px] text-text-faint">
-              {teamA.shortCode} above the line, {teamB.shortCode} below
+              {own.shortCode} above the line, {other.shortCode} below
             </p>
           </div>
           <div
@@ -514,10 +557,10 @@ export function MatchTimelineCard({
                 </clipPath>
               </defs>
               <rect x="0" y="0" width="100" height="100" fill="var(--surface-2)" />
-              <path d={d.fill} fill={teamA.kitColour} fillOpacity={0.6} clipPath="url(#tl-top)" />
+              <path d={d.fill} fill={own.kitColour} fillOpacity={0.6} clipPath="url(#tl-top)" />
               <path
                 d={d.fill}
-                fill={teamB.kitColour}
+                fill={other.kitColour}
                 fillOpacity={0.55}
                 clipPath="url(#tl-bottom)"
               />

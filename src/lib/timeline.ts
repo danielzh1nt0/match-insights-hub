@@ -1,5 +1,6 @@
 import type { MatchDataFile } from "@/lib/match-source";
 import type { StatsFile, TeamKey } from "@/lib/match-analysis";
+import { completionOf } from "@/lib/export-contract";
 
 /**
  * The match as a sequence rather than a set of totals.
@@ -23,13 +24,24 @@ export type Point = { t: number; value: number | null };
 
 export type GoalMark = { t: number; team: TeamKey; score: string };
 
-export type Bar = { fromS: number; toS: number; a: number; b: number };
+/**
+ * A five-minute block. Null means the file could not fill it.
+ *
+ * This module's own rule, stated at the top of the file: a window the file
+ * cannot fill is left out rather than drawn as zero, because a zero reads as
+ * "they had none", not as "we don't know". The bars were the one series that
+ * broke it -- an empty block came back as 0/0 possession and as a 0 pressing
+ * count, both of which print as a measured figure.
+ */
+export type Bar = { fromS: number; toS: number; a: number | null; b: number | null };
 
 export type MatchTimeline = {
   /** Only the parts of the clock that were actually played. */
   spans: Span[];
   startS: number;
   endS: number;
+  /** The side every "ours" series belongs to. */
+  team: TeamKey;
   goals: GoalMark[];
   /** SFK's share of the ball, 0–1, smoothed. */
   possession: Point[];
@@ -76,25 +88,21 @@ function smooth(points: Point[], windowS: number): Point[] {
   });
 }
 
+/**
+ * Five-minute blocks, cut inside each period from its own kick-off, so no
+ * block straddles half-time. Cut from the start of the recording, the block
+ * across the second kick-off belonged to neither half and first + second
+ * never equalled the total. The last block of a period is shorter.
+ */
 function bars(spans: Span[], startS: number, endS: number) {
   const out: { fromS: number; toS: number }[] = [];
-  for (let from = startS; from < endS; from += BAR_S) {
-    const toS = Math.min(from + BAR_S, endS);
-    if (spans.some((s) => toS > s.fromS && from < s.toS)) out.push({ fromS: from, toS });
+  const cuts = spans.length ? spans : [{ fromS: startS, toS: endS }];
+  for (const span of cuts) {
+    for (let from = span.fromS; from < span.toS; from += BAR_S) {
+      out.push({ fromS: from, toS: Math.min(from + BAR_S, span.toS) });
+    }
   }
   return out;
-}
-
-function countPer(
-  items: { t: number }[],
-  slots: { fromS: number; toS: number }[],
-  pick: (item: never) => boolean,
-) {
-  return slots.map((slot) => ({
-    ...slot,
-    n: items.filter((item) => item.t >= slot.fromS && item.t < slot.toS && pick(item as never))
-      .length,
-  }));
 }
 
 export function buildTimeline({
@@ -115,7 +123,6 @@ export function buildTimeline({
 
   const metrics = (stats?.metrics ?? {}) as Record<string, unknown>;
   const other: TeamKey = team === "A" ? "B" : "A";
-  const ours = (value: unknown) => (team === "A" ? value : 1 - (finite(value) ?? 0));
 
   /* ---- possession and tilt, from the 15 s windows ---- */
   const windows = Array.isArray(metrics["tilt_windows"])
@@ -150,7 +157,9 @@ export function buildTimeline({
     .map((goal) => {
       if (goal.team === "A") a += 1;
       else b += 1;
-      return { ...goal, score: `${a}-${b}` };
+      // Us first, whoever "us" is on this screen.
+      const [ours, theirs] = team === "A" ? [a, b] : [b, a];
+      return { ...goal, score: `${ours}-${theirs}` };
     });
 
   /* ---- five-minute blocks ---- */
@@ -160,7 +169,7 @@ export function buildTimeline({
     const inside = windows
       .map((w) => ({ t: finite(w["t"]) ?? 0, raw: finite(w["possession_A"]) }))
       .filter((w) => w.raw !== null && w.t >= slot.fromS && w.t < slot.toS);
-    if (inside.length === 0) return { ...slot, a: 0, b: 0 };
+    if (inside.length === 0) return { ...slot, a: null, b: null };
     const share = inside.reduce((sum, w) => sum + w.raw!, 0) / inside.length;
     const mine = team === "A" ? share : 1 - share;
     return { ...slot, a: Math.round(mine * 100), b: Math.round((1 - mine) * 100) };
@@ -169,20 +178,28 @@ export function buildTimeline({
   const pressurePoints = Array.isArray(metrics["pressure_points"])
     ? (metrics["pressure_points"] as Record<string, unknown>[])
     : [];
+  // With no pressure_points at all, counting gives 0 for every block, and the
+  // card prints "Pressures applied 0 -> 0" as though it had measured a team
+  // that never pressed. No points means no answer.
+  const hasPressure = pressurePoints.length > 0;
   const pressure: Bar[] = slots.map((slot) => ({
     ...slot,
-    a: pressurePoints.filter(
-      (p) =>
-        (finite(p["t"]) ?? -1) >= slot.fromS &&
-        (finite(p["t"]) ?? -1) < slot.toS &&
-        p["pressing_team"] === team,
-    ).length,
-    b: pressurePoints.filter(
-      (p) =>
-        (finite(p["t"]) ?? -1) >= slot.fromS &&
-        (finite(p["t"]) ?? -1) < slot.toS &&
-        p["pressing_team"] === other,
-    ).length,
+    a: hasPressure
+      ? pressurePoints.filter(
+          (p) =>
+            (finite(p["t"]) ?? -1) >= slot.fromS &&
+            (finite(p["t"]) ?? -1) < slot.toS &&
+            p["pressing_team"] === team,
+        ).length
+      : null,
+    b: hasPressure
+      ? pressurePoints.filter(
+          (p) =>
+            (finite(p["t"]) ?? -1) >= slot.fromS &&
+            (finite(p["t"]) ?? -1) < slot.toS &&
+            p["pressing_team"] === other,
+        ).length
+      : null,
   }));
 
   const highs = Array.isArray(metrics["high_turnovers"])
@@ -212,11 +229,15 @@ export function buildTimeline({
         (finite(pass["t"] ?? pass["time"] ?? pass["start_t"]) ?? -1) >= slot.fromS &&
         (finite(pass["t"] ?? pass["time"] ?? pass["start_t"]) ?? -1) < slot.toS,
     );
-    const done = mine.filter((pass) => pass["completed"] === true).length;
+    // Completion over the passes this file judged, never over all of them.
+    // `completed === true` alone treated a pass graded by `quality` or
+    // `outcome`, and every pass with no verdict, as one that did not arrive --
+    // the rule export-contract exists to stop being rewritten per call site.
+    const split = completionOf(mine);
     return {
       ...slot,
       a: mine.length,
-      b: mine.length === 0 ? 0 : Math.round((done / mine.length) * 100),
+      b: split.pct,
     };
   });
 
@@ -255,6 +276,7 @@ export function buildTimeline({
     lineHeight: { a: shapeOf(team, "line_height"), b: shapeOf(other, "line_height") },
     sequences,
     passes,
+    team,
     empty:
       possession.length === 0 &&
       tilt.length === 0 &&
@@ -287,9 +309,15 @@ export function barHalves(bars: Bar[], spans: Span[], side: "a" | "b" = "a") {
   const sum = (span: Span | undefined) =>
     span === undefined
       ? null
-      : bars
-          .filter((bar) => bar.fromS >= span.fromS - 1 && bar.toS <= span.toS + BAR_S)
-          .reduce((total, bar) => total + bar[side], 0);
+      : (() => {
+          const inside = bars
+            .filter((bar) => bar.fromS >= span.fromS - 1 && bar.toS <= span.toS + BAR_S)
+            .map((bar) => bar[side])
+            .filter((value): value is number => value !== null);
+          // No block the file could answer means no half total, rather than a
+          // zero that reads as a measured nothing.
+          return inside.length === 0 ? null : inside.reduce((total, v) => total + v, 0);
+        })();
   const first = sum(spans[0]);
   const second = sum(spans[1]);
   return { first, second };
@@ -414,9 +442,13 @@ export function buildStory(timeline: MatchTimeline): Spell[] {
     else title = first ? "Even start" : last ? "Even finish" : "Even spell";
     if (spell.tone === "lost") seenLost = true;
 
+    // Blocks that fall inside the spell. The old +300 slack pulled in a whole
+    // five-minute block past the end, so "3 balls won in their half" under a
+    // spell could count balls won minutes after it finished -- evidence
+    // outside the claim it is offered for.
     const won = highs
-      .filter((bar) => bar.fromS >= spell.fromS - 1 && bar.toS <= spell.toS + 300)
-      .reduce((sum, bar) => sum + bar.a, 0);
+      .filter((bar) => bar.fromS >= spell.fromS - 1 && bar.toS <= spell.toS + 1)
+      .reduce((sum, bar) => sum + (bar.a ?? 0), 0);
     // Balls won in their half either way: a number a coach can picture, and a
     // zero during a bad spell says more than a four-figure pressure count.
     return {
@@ -505,7 +537,7 @@ export function keyMoments(timeline: MatchTimeline, story: Spell[]): KeyMoment[]
   if (decisive)
     out.push({
       t: decisive.t,
-      tone: decisive.team === "A" ? "strong" : "lost",
+      tone: decisive.team === timeline.team ? "strong" : "lost",
       label: "Goal",
       note: decisive.score,
     });

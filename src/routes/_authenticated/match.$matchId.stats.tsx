@@ -1,7 +1,7 @@
 import { MatchTimelineCard } from "@/components/ip/match-timeline";
 import { buildTimeline } from "@/lib/timeline";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
 import { Button, Chip } from "@/components/ip/primitives";
@@ -11,6 +11,10 @@ import { ScopeChips } from "@/components/ip/scope-chips";
 import { HeadToHeadBand } from "@/components/ip/head-to-head-band";
 import type { StatsTeamIdentity } from "@/components/ip/stats-team-selector";
 import { useAnalysis } from "@/hooks/use-match";
+import { TeamKpiCard } from "@/components/ip/team-kpi";
+import { CorrectionsCard } from "@/components/ip/corrections-card";
+import { MatchSetupSheet } from "@/components/ip/match-setup-sheet";
+import { buildKpi, kpiTargetsFrom } from "@/lib/kpi";
 import { crestForTeam } from "@/lib/team-crests";
 import { shortTeamCode } from "@/components/team/TeamToken";
 
@@ -35,8 +39,11 @@ function Stats() {
   const { matchId } = Route.useParams();
   const [scope, setScope] = useState<TeamScope>("a");
   const [period, setPeriod] = useState<Period>("full");
+  const [targetsOpen, setTargetsOpen] = useState(false);
   const {
     match,
+    item,
+    label,
     row,
     team,
     colours,
@@ -44,6 +51,7 @@ function Stats() {
     sections,
     players,
     loading,
+    framesLoading,
     events,
     stats,
     file,
@@ -56,6 +64,24 @@ function Stats() {
   const [storyOpen, setStoryOpen] = useState(false);
 
   const active = sections.find((t) => t.key === tab);
+
+  // One timeline for both the story and the KPI card, so the possession the
+  // scorecard grades is the possession the chart draws.
+  const timeline = useMemo(
+    () => buildTimeline({ stats, file, team: team ?? "A" }),
+    [stats, file, team],
+  );
+  const kpi = useMemo(
+    () =>
+      buildKpi({
+        stats,
+        file,
+        team: team ?? "A",
+        timeline,
+        targets: kpiTargetsFrom(label?.thresholds),
+      }),
+    [stats, file, team, timeline, label],
+  );
 
   const crestA = match ? crestForTeam(match.teamA) : undefined;
   const crestB = match ? crestForTeam(match.teamB) : undefined;
@@ -104,6 +130,29 @@ function Stats() {
 
       {match && active && (
         <>
+          {teamA && teamB && (
+            <TeamKpiCard
+              kpi={kpi}
+              teamName={(team === "B" ? teamB : teamA).name}
+              onEditTargets={item ? () => setTargetsOpen(true) : undefined}
+            />
+          )}
+
+          {teamA && teamB && (
+            <CorrectionsCard
+              matchId={matchId}
+              ourPossession={(() => {
+                const rowOf = (t: string) => (stats?.teams ?? []).find((r: { team?: string }) => r?.team === t) as { possession_pct?: unknown } | undefined;
+                const a = rowOf("A")?.possession_pct;
+                const b = rowOf("B")?.possession_pct;
+                return typeof a === "number" && typeof b === "number" ? { A: Math.round(a), B: Math.round(b) } : null;
+              })()}
+              ourScore={match && typeof match.scoreA === "number" && typeof match.scoreB === "number" ? { A: match.scoreA, B: match.scoreB } : null}
+              teamAName={teamA.name}
+              teamBName={teamB.name}
+            />
+          )}
+
           <div
             className="tab-rail -mx-4 px-4 pb-1 md:mx-0 md:px-0"
             role="tablist"
@@ -130,6 +179,15 @@ function Stats() {
 
           <p className="text-[12px] text-text-faint">{shownActive?.caption}</p>
 
+          {teamA && teamB && shownActive && shownActive.rows.length > 0 && (
+            <HeadToHeadBand
+              rows={shownActive.rows}
+              teamA={teamA}
+              teamB={teamB}
+              title={shownActive.label}
+            />
+          )}
+
           {teamA && teamB && (
             <StatsVisuals
               tab={shownActive?.key ?? "shooting"}
@@ -148,14 +206,7 @@ function Stats() {
               teamA={teamA}
               teamB={teamB}
               ballGrade={null}
-            />
-          )}
-          {teamA && teamB && shownActive && shownActive.rows.length > 0 && (
-            <HeadToHeadBand
-              rows={shownActive.rows}
-              teamA={teamA}
-              teamB={teamB}
-              title={shownActive.label}
+              framesLoading={framesLoading}
             />
           )}
           {teamA && teamB && (
@@ -173,16 +224,21 @@ function Stats() {
               {storyOpen && (
                 <div id="stats-match-story" className="mt-3">
                   <MatchTimelineCard
-                    timeline={buildTimeline({ stats, file, team: team ?? "A" })}
+                    timeline={timeline}
                     teamA={teamA}
                     teamB={teamB}
                     matchId={matchId}
+                    ours={team ?? "A"}
                   />
                 </div>
               )}
             </section>
           )}
         </>
+      )}
+
+      {item && (
+        <MatchSetupSheet item={item} open={targetsOpen} onClose={() => setTargetsOpen(false)} />
       )}
     </MatchShell>
   );

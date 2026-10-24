@@ -171,16 +171,8 @@ export function PhasePitch({
                 stroke="rgba(0,0,0,.35)"
                 strokeWidth=".3"
               />
-              <text
-                x={player.x}
-                y={player.y + 1.3}
-                textAnchor="middle"
-                fontSize="3.4"
-                fontWeight="800"
-                fill="#fff"
-              >
-                {player.id}
-              </text>
+              {/* No label: these are tracking ids, not shirt numbers, and a
+                  follow camera splits one player into several of them. */}
             </g>
           ))}
       </svg>
