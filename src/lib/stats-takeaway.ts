@@ -6,6 +6,7 @@ export type StatsTakeaway = { headline: string; evidence: string };
 export type TakeawayInput = {
   tab: string;
   name: string;
+  team: "A" | "B";
   frames: Frame[];
   passes: Record<string, unknown>[];
   events: ReviewedEvent[];
@@ -21,15 +22,13 @@ const median = (numbers: number[]) => {
 
 /** Inputs are already team/period filtered by the Stats visual data path. */
 export function statsTakeaway(input: TakeawayInput): StatsTakeaway {
-  const { tab, name, frames, passes, events, shots, heights } = input;
+  const { tab, name, team, frames, passes, events, shots, heights } = input;
   if (tab === "ball") {
     const known = frames.filter((frame) => frame.possession === "A" || frame.possession === "B");
-    const own = known.filter((frame) => frame.possession === events[0]?.team);
-    // Team selection is carried explicitly below; never infer it from event order.
-    void own;
+    const own = known.filter((frame) => frame.possession === team);
     if (known.length) return {
-      headline: `${name}'s ball control is shown across ${known.length.toLocaleString()} tracked moments.`,
-      evidence: "Tracked moments only; gaps in tracking are excluded.",
+      headline: `${name} had the ball in ${Math.round(own.length / known.length * 100)}% of tracked possession moments.`,
+      evidence: `${known.length.toLocaleString()} moments with a known team in possession; tracking gaps are excluded.`,
     };
   }
   if (tab === "pressing") {

@@ -4,7 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import type { Period, TeamScope } from "@/components/ip/chrome";
 import { MatchShell } from "@/components/ip/match-shell";
-import { Chip } from "@/components/ip/primitives";
+import { Button, Chip } from "@/components/ip/primitives";
+import { ChevronDown } from "lucide-react";
 import { StatsVisuals } from "@/components/ip/stats-visuals";
 import { ScopeChips } from "@/components/ip/scope-chips";
 import { HeadToHeadBand } from "@/components/ip/head-to-head-band";
@@ -52,6 +53,7 @@ function Stats() {
   // Ball opens with possession, which is the least actionable number in the
   // product. Pressing is where the findings come from, so it leads.
   const [tab, setTab] = useState("pressing");
+  const [storyOpen, setStoryOpen] = useState(false);
 
   const active = sections.find((t) => t.key === tab);
 
@@ -102,15 +104,6 @@ function Stats() {
 
       {match && active && (
         <>
-          {teamA && teamB && (
-            <MatchTimelineCard
-              timeline={buildTimeline({ stats, file, team: team ?? "A" })}
-              teamA={teamA}
-              teamB={teamB}
-              matchId={matchId}
-            />
-          )}
-
           <div
             className="tab-rail -mx-4 px-4 pb-1 md:mx-0 md:px-0"
             role="tablist"
@@ -165,6 +158,30 @@ function Stats() {
               teamB={teamB}
               ballGrade={null}
             />
+          )}
+          {teamA && teamB && (
+            <section className="border-t border-wire pt-3">
+              <Button
+                variant="ghost"
+                onClick={() => setStoryOpen((open) => !open)}
+                aria-expanded={storyOpen}
+                aria-controls="stats-match-story"
+                className="min-h-11 w-full justify-between text-text-dim"
+              >
+                The match story
+                <ChevronDown size={18} className={storyOpen ? "rotate-180" : ""} aria-hidden="true" />
+              </Button>
+              {storyOpen && (
+                <div id="stats-match-story" className="mt-3">
+                  <MatchTimelineCard
+                    timeline={buildTimeline({ stats, file, team: team ?? "A" })}
+                    teamA={teamA}
+                    teamB={teamB}
+                    matchId={matchId}
+                  />
+                </div>
+              )}
+            </section>
           )}
         </>
       )}

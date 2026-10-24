@@ -60,6 +60,7 @@ import { buildBlocks } from "@/lib/blocks";
 import { DeepAnswer, LineBreakHero, LineTimeline } from "./line-break-cards";
 import { Button } from "./primitives";
 import { StatsTeamPill, type StatsTeamIdentity } from "./stats-team-selector";
+import { statsTakeaway } from "@/lib/stats-takeaway";
 
 type Props = {
   tab: string;
@@ -3434,8 +3435,40 @@ export function StatsVisuals(props: Props) {
       <PassLog key="log" passes={passes} matchId={props.matchId} />,
     ];
   const shown = cards.filter(Boolean);
+  const summaryTeams = props.scopeBoth ? (["A", "B"] as const) : [props.team];
+  const summaryShots = contractShots(props.stats);
   return (
     <StatsCardContext.Provider value={{ identity, other, both: props.scopeBoth }}>
+      <section aria-label={`${props.tab} summary`} className="border-y border-wire py-5">
+        <p className="label-xs mb-3 text-cream">At a glance</p>
+        <div className={cn("grid gap-5", props.scopeBoth && "sm:grid-cols-2")}>
+          {summaryTeams.map((side) => {
+            const summaryIdentity = side === "A" ? props.teamA : props.teamB;
+            const sideEvents = events.filter((event) => event.team === side && event.status !== "deleted" && insidePeriods(event.t, props.file?.periods));
+            const sideShots = summaryShots.length
+              ? summaryShots.filter((shot) => shot.team === side && inRange(shot.t, range) && insidePeriods(shot.t, props.file?.periods))
+              : sideEvents.filter((event) => event.type === "shot" || event.type === "goal").map((event) => ({
+                  id: event.id, t: event.t, team: side, x: null, y: null,
+                  goal: event.type === "goal",
+                  onTarget: event.type === "goal" ? true : typeof event.payload?.["on_target"] === "boolean" ? event.payload["on_target"] : null,
+                }));
+            const takeaway = statsTakeaway({
+              tab: props.tab, name: summaryIdentity.name, team: side,
+              frames: frames.filter((frame) => insidePeriods(frame.t, props.file?.periods)).map((frame) => ({ ...frame, players: frame.players.filter((player) => player.team === side) })),
+              passes: passSet(props.stats, side, range, props.file?.periods),
+              events: sideEvents, shots: sideShots,
+              heights: side === props.team ? (props.lineDefending?.timeline ?? []).filter((sample) => inRange(sample.t, range) && insidePeriods(sample.t, props.file?.periods)).map((sample) => sample.height).filter(Number.isFinite) : [],
+            });
+            return (
+              <div key={side} className="min-w-0">
+                <StatsTeamPill identity={summaryIdentity} />
+                <h2 className="mt-3 text-[19px] font-semibold leading-snug text-text-bright sm:text-[21px]">{takeaway.headline}</h2>
+                <p className="mt-2 text-[12px] leading-relaxed text-text-faint">{takeaway.evidence}</p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
       {shown.length ? (
         <div className="gap-4 min-[1100px]:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid">
           {shown}
